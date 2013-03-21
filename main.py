@@ -91,6 +91,7 @@ class MainPage(webapp2.RequestHandler):
     def get(self):
         event_list = ""
         event_name = "None"
+        event_id = self.request.get('event_id');
         events=getEvents()
         for event in events:
              event_list+='<option value=' + event[0] + '>' + event[1] + "</option>"
@@ -121,9 +122,6 @@ class PickHandler(webapp2.RequestHandler):
         picks = db.GqlQuery("SELECT * FROM Pick WHERE ANCESTOR IS :1 ORDER BY pick_no LIMIT 25", event.key())
         for pick in picks:
             players[pick.who].append(pick.player)
-            if (event.field.count(pick.player)>0):
-                event.field.remove(pick.player)
-                event.picks.append(pick.player)
 
         pick_no = picks.count()+1
 
@@ -165,6 +163,11 @@ class PickHandler(webapp2.RequestHandler):
         pick.pick_no = int(self.request.get('pick_no'))
         pick.player = self.request.get('player')
         pick.put()
+        # update event (add to picks, remove from field)
+        event = Event.get(event_key(event_id))
+        event.field.remove(pick.player)
+        event.picks.append(pick.player)
+        event.put()
         self.redirect('/pick?event_id=' + event_id)	
 
 class ResultsHandler(webapp2.RequestHandler):   

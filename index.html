@@ -10,7 +10,7 @@
  
    <a href="{{ url }}">{{ url_linktext }}</a>
    {% if event_name=="None" %}
-   <form action="/results" method="get">
+   <form action="/results" method="get" onchange="this.form.submit()">
    Select Event: <select name="event_id">
    {{ event_list }}
 </select>
