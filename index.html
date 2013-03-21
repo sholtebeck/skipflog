@@ -1,0 +1,59 @@
+<html>
+  <head>
+    <link type="text/css" rel="stylesheet" href="/stylesheets/main.css" />
+    <title>skipflog -- major golf picks</title>
+  </head>
+  <body>
+   {% if user %}
+    Logged in as {{ user }}
+   {% endif %}
+ 
+   <a href="{{ url }}">{{ url_linktext }}</a>
+   {% if event_name=="None" %}
+   <form action="/results" method="get">
+   Select Event: <select name="event_id">
+   {{ event_list }}
+</select>
+<input type="submit" value="Get">
+</form>
+   {% else %}
+   <br>Event: {{ event.event_name }} 
+   <table border=1>
+   <tr><th>Steve</th><th>Mark</th><tr>
+   <tr>
+   <td><ol>
+ 	 {% for player in splayers %}
+	  <li>{{ player }}
+     {% endfor %}
+     {% if event.next=="Steve" %}
+     <li>
+     {% endif %}
+    </ol></td>
+   <td><ol>
+ 	 {% for player in mplayers %}
+	  <li>{{ player }}
+     {% endfor %}
+     {% if event.next=="Mark" %}
+     <li>
+     {% endif %}
+    </ol></td>
+   </tr></table>
+   {% if user==event.next %}
+   <form action="/pick" method="post">
+      <div>{{picknum}} pick for {{event.next}}:<select name="player"> 
+  	 {% for player in event.field %}
+     <option>{{player}}</option>
+     {% endfor %}
+     </select>
+      
+      <input type="submit" value="Pick"></div>
+    <input type="hidden" name="who" value="{{event.next}}">
+    <input type="hidden" name="event_id" value="{{event.event_id}}">
+    <input type="hidden" name="pick_no" value="{{pick_no}}">
+    </form>
+   {% else %}
+<br>Waiting for {{picknum}} pick by <b>{{event.next}}</b>
+   {% endif %}
+   {% endif %}
+  </body>
+</html>
