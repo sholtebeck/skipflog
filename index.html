@@ -1,46 +1,127 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
   <head>
     <link type="text/css" rel="stylesheet" href="/stylesheets/main.css" />
     <title>skipflog -- major golf picks</title>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script> 
+<script type="text/javascript">
+$(document).ready(function() {
+
+	$(".tab_content").hide();
+	$(".tab_content:first").show(); 
+
+	$("ul.tabs li").click(function() {
+		$("ul.tabs li").removeClass("active");
+		$(this).addClass("active");
+		$(".tab_content").hide();
+		var activeTab = $(this).attr("rel"); 
+		$("#"+activeTab).fadeIn(); 
+	});
+});
+
+</script> 
+
+<style type="text/css">
+
+	ul.tabs {
+		margin: 0;
+		padding: 0;
+		float: left;
+		list-style: none;
+		height: 32px;
+		border-bottom: 1px solid #999999;
+		border-left: 1px solid #999999;
+		width: 100%;
+	}
+	ul.tabs li {
+		float: left;
+		margin: 0;
+		cursor: pointer;
+		padding: 0px 21px ;
+		height: 31px;
+		line-height: 31px;
+		border: 1px solid #999999;
+		border-left: none;
+		font-weight: bold;
+		background: #EEEEEE;
+		overflow: hidden;
+		position: relative;
+	}
+	ul.tabs li:hover {
+		background: #CCCCCC;
+	}	
+	ul.tabs li.active{
+		background: #FFFFFF;
+		border-bottom: 1px solid #FFFFFF;
+	}
+	.tab_container {
+		border: 1px solid #999999;
+		border-top: none;
+		clear: both;
+		float: left; 
+		width: 100%;
+		background: #FFFFFF;
+	}
+	.tab_content {
+		padding: 20px;
+		font-size: 1.1em;
+		display: none;
+	}
+	body {
+	  font-family: Verdana, Helvetica, sans-serif;	
+          font-size: 1.1em;
+	  background-color: #DDDDDD;
+	}
+	#container {
+		width: 1300px;
+		margin: 0 auto;	
+	}
+</style>
   </head>
   <body>
-   {% if user %}
-    Logged in as {{ user }}
-   {% endif %}
- 
-   <a href="{{ url }}">{{ url_linktext }}</a>
-   {% if event_name=="None" %}
-   <form action="/results" method="get" onchange="this.form.submit()">
-   Select Event: <select name="event_id">
-   {{ event_list }}
-</select>
-<input type="submit" value="Get">
-</form>
-   {% else %}
-   <br>Event: {{ event.event_name }} 
-   <table border=1>
-   <tr><th>Steve</th><th>Mark</th><tr>
-   <tr>
-   <td><ol>
- 	 {% for player in splayers %}
-	  <li>{{ player }}
+{% if user %}
+    &nbsp;Logged in as <b>{{ user }}</b>:
+{% endif %}
+  <a href="{{ url }}">{{ url_linktext }}</a>
+{% if event %}
+     &nbsp;Next Event: <b>{{ event.event_name }}</b><p> 
+{% endif %}
+<div id="container">
+
+  <ul class="tabs"> 
+        <li class="active" rel="tab1"> Picks</li>
+        <li rel="tab2"> Players </li>
+        <li rel="tab3"> Masters </li>
+        <li rel="tab4"> Major Years</li>
+    </ul>
+
+<div class="tab_container"> 
+
+     <div id="tab1" class="tab_content"> 
+
+    {% if event %}
+     <table border=1>
+     <tr><th>Steve</th><th>Mark</th><tr>
+     <tr><td><ol>
+     {% for player in splayers %}
+       <li>{{ player }}
      {% endfor %}
      {% if event.next=="Steve" %}
      <li>
      {% endif %}
     </ol></td>
-   <td><ol>
- 	 {% for player in mplayers %}
-	  <li>{{ player }}
-     {% endfor %}
+    <td><ol>
+    {% for player in mplayers %}
+     <li>{{ player }}
+    {% endfor %}
      {% if event.next=="Mark" %}
      <li>
      {% endif %}
     </ol></td>
    </tr></table>
    {% if user==event.next %}
-   <form action="/pick" method="post">
-      <div>{{picknum}} pick for {{event.next}}:<select name="player"> 
+    <p><form action="/pick" method="post">
+    <div>{{user}}'s {{picknum}} Pick:<select name="player"> 
   	 {% for player in event.field %}
      <option>{{player}}</option>
      {% endfor %}
@@ -52,8 +133,58 @@
     <input type="hidden" name="pick_no" value="{{pick_no}}">
     </form>
    {% else %}
-<br>Waiting for {{picknum}} pick by <b>{{event.next}}</b>
+   {% if event.next=="Done" %}
+   <p>We're Done.
+   {% else %}
+   <br>Waiting for <b>{{event.next}}</b>: <input type="button" value="Reload" onClick="window.location.href=window.location.href">
    {% endif %}
    {% endif %}
-  </body>
+   {% else %}
+   <form action="/pick" method="get" onchange="this.form.submit()">
+   Select Event: <select name="event_id">
+   {{ event_list }}
+</select>
+<input type="submit" value="Get">
+</form>
+   {% endif %}
+
+{% if event %}
+
+</div><!-- #tab1 -->
+<div id="tab2" class="tab_content"> 
+<p><strong>Picks:</strong>
+{% for player in event.picks %}
+<br>{{player}}
+{% endfor %}
+
+{% if event.next!="Done" %}
+<p><strong>Available:</strong>
+{% for player in event.field %}
+<br>{{player}}
+{% endfor %}
+{% endif %}
+
+{% else %}
+ 
+No Event selected
+
+{% endif %}
+
+</div><!-- #tab2 -->
+
+<div id="tab3" class="tab_content"> 
+
+<iframe width='1250' height='800' frameborder='0' src='https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndE5tMHlhZGJRZ01TTk5vMi1WaFRmRHc&single=true&gid=1&output=html&widget=true'></iframe>
+
+</div><!-- #tab3 -->
+
+<div id="tab4" class="tab_content"> 
+
+<iframe width='1250' height='800' frameborder='0' src='https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndE5tMHlhZGJRZ01TTk5vMi1WaFRmRHc&single=true&gid=0&output=html&widget=true'></iframe>
+
+</div><!-- #tab4 -->
+
+</div> <!-- .tab_container --> 
+</div> <!-- #container -->
+</body>
 </html>
