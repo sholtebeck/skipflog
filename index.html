@@ -67,10 +67,14 @@ $(document).ready(function() {
 		display: none;
 	}
 	body {
-	  font-family: Verdana, Helvetica, sans-serif;	
+	  font-family: Verdana, Arial, sans-serif;	
           font-size: 1.1em;
 	  background-color: #DDDDDD;
 	}
+	select {
+	  font-family: Verdana, Arial, sans-serif;
+	  font-size: 1.0em;
+        }
 	#container {
 		width: 1300px;
 		margin: 0 auto;	
@@ -105,22 +109,16 @@ $(document).ready(function() {
      {% for player in splayers %}
        <li>{{ player }}
      {% endfor %}
-     {% if event.next=="Steve" %}
-     <li>
-     {% endif %}
-    </ol></td>
+     </ol></td>
     <td><ol>
     {% for player in mplayers %}
      <li>{{ player }}
     {% endfor %}
-     {% if event.next=="Mark" %}
-     <li>
-     {% endif %}
-    </ol></td>
+   </ol></td>
    </tr></table>
    {% if user==event.next %}
     <p><form action="/pick" method="post">
-    <div>{{user}}'s {{picknum}} Pick:<select name="player"> 
+    <div>{{user}}'s {{picknum}} Pick: <select name="player"> 
   	 {% for player in event.field %}
      <option>{{player}}</option>
      {% endfor %}
@@ -151,10 +149,13 @@ $(document).ready(function() {
 
 </div><!-- #tab1 -->
 <div id="tab2" class="tab_content"> 
+
+{% if event.picks %}
 <p><strong>Picks:</strong>
 {% for player in event.picks %}
 <br>{{player}}
 {% endfor %}
+{% endif %}
 
 {% if event.next!="Done" %}
 <p><strong>Available:</strong>
@@ -162,10 +163,6 @@ $(document).ready(function() {
 <br>{{player}}
 {% endfor %}
 {% endif %}
-
-{% else %}
- 
-No Event selected
 
 {% endif %}
 
