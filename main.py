@@ -45,7 +45,7 @@ def getEvents():
     events = memcache.get('events')
     if not events:
         events=[]
-        events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A3%3AC16&output=csv"
+        events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A3%3AD16&output=csv"
         result = urllib2.urlopen(events_url)
         reader = csv.reader(result)
         for row in reader:
@@ -65,6 +65,36 @@ def getPlayers():
         players.sort()
         memcache.add('players', players)
     return players 
+
+def getPicks():
+    players = memcache.get('picks')
+    if not players:
+        players=[]
+        players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdFJQeUVuLTJqeFRTMGstZ3BZdEI2aWc&single=true&gid=6&range=B3%3AB62&output=csv"
+        result = urllib2.urlopen(players_url)
+        reader = csv.reader(result)
+        for row in reader:
+            players.append(row[0])
+        players.sort()
+        memcache.add('players', players)
+    return players
+
+def getEvent(event_id):
+    event = Event.get(event_key(event_id))
+    if (not event):
+        events=getEvents()
+        for row in events:
+            if (row[0]==event_id):
+                event=Event(key_name=row[0], event_id=int(row[0]))
+                event.event_name=row[1]
+                event.event_url=row[2]
+                event.first=row[3]
+                event.next=pickers[1 - pickers.index(row[3])]
+                event.pickers=[event.first,event.next]
+                event.field=getPicks()
+                event.picks=[]
+                event.put()
+    return event
  
 def nextEvent():
     now=datetime.datetime.now()
@@ -116,8 +146,13 @@ class MainPage(webapp2.RequestHandler):
         self.response.out.write(template.render(template_values))
 
 class PickHandler(webapp2.RequestHandler):
-    def get(self):
-        event = nextEvent()
+    def get(self):     
+        event_id = self.request.get('event_id')
+        if (event_id):
+            event = getEvent(event_id)
+        else:
+            event = nextEvent()
+
         players = {"Steve":[],"Mark":[]}
         picks = db.GqlQuery("SELECT * FROM Pick WHERE ANCESTOR IS :1 ORDER BY pick_no LIMIT 25", event.key())
         for pick in picks:
