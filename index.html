@@ -94,8 +94,11 @@ $(document).ready(function() {
   <ul class="tabs"> 
         <li class="active" rel="tab1"> Picks</li>
         <li rel="tab2"> Players </li>
-        <li rel="tab3"> Masters </li>
-        <li rel="tab4"> Major Years</li>
+{% if results %}
+        <li rel="tab3"> Results </li>
+{% endif %}
+        <li rel="tab4"> Masters </li>
+        <li rel="tab5"> Major Years</li>
     </ul>
 
 <div class="tab_container"> 
@@ -151,7 +154,7 @@ $(document).ready(function() {
 <div id="tab2" class="tab_content"> 
 
 {% if event.picks %}
-<p><strong>Picks:</strong>
+<p><strong>Picked:</strong>
 {% for player in event.picks %}
 <br>{{player}}
 {% endfor %}
@@ -169,16 +172,19 @@ $(document).ready(function() {
 </div><!-- #tab2 -->
 
 <div id="tab3" class="tab_content"> 
-
-<iframe width='1250' height='800' frameborder='0' src='https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndE5tMHlhZGJRZ01TTk5vMi1WaFRmRHc&single=true&gid=1&output=html&widget=true'></iframe>
-
+{{results}}
 </div><!-- #tab3 -->
 
 <div id="tab4" class="tab_content"> 
+<iframe width='1250' height='800' frameborder='0' src='https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndE5tMHlhZGJRZ01TTk5vMi1WaFRmRHc&single=true&gid=1&output=html&widget=true'></iframe>
+
+</div><!-- #tab4 -->
+
+<div id="tab5" class="tab_content"> 
 
 <iframe width='1250' height='800' frameborder='0' src='https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndE5tMHlhZGJRZ01TTk5vMi1WaFRmRHc&single=true&gid=0&output=html&widget=true'></iframe>
 
-</div><!-- #tab4 -->
+</div><!-- #tab5 -->
 
 </div> <!-- .tab_container --> 
 </div> <!-- #container -->

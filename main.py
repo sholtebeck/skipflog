@@ -80,6 +80,13 @@ def getPicks():
         memcache.add('players', players)
     return players
 
+def getResults(event_id):
+    event = getEvent(event_id)
+    results = ""
+    if (event.event_url):
+        results += '<br><iframe src="' + event.event_url + '" width=450 height=350></iframe>'
+    return results
+
 def getEvent(event_id):
     event = Event.get(event_key(event_id))
     if (not event):
@@ -117,31 +124,7 @@ def nextEvent():
         event.picks=[]
         event.put()
     return event
-
-class MailHandler(webapp2.RequestHandler):       
-    def get(self):
-        event_id = self.request.get('event_id')
-        event = getEvent(event_id)
-        message = mail.EmailMessage(sender="skipflog <support@example.com>",
-                            subject=event.event_name+" picks")
-
-        message.to = "sholtebeck@gmail.com"
-        players = {"Steve":[],"Mark":[]}
-        picks = db.GqlQuery("SELECT * FROM Pick WHERE ANCESTOR IS :1 ORDER BY pick_no LIMIT 25", event.key())
-        for pick in picks:
-            players[pick.who].append(pick.player)
-
-        message.body = "Steve's Picks<br>"
-        for player in picks["Steve"]:
-            message.body+=player+"<br>"
-        
-        message.body += "<p>Mark's Picks<br>"
-        for player in picks["Mark"]:
-            message.body+=player+"<br>"
-
-        message.send()
-
-    
+ 
 class MainPage(webapp2.RequestHandler):       
     def get(self):
         event_list = ""
@@ -175,8 +158,10 @@ class PickHandler(webapp2.RequestHandler):
         event_id = self.request.get('event_id')
         if (event_id):
             event = getEvent(event_id)
+            results = getResults(event_id)
         else:
             event = nextEvent()
+            results = ""
 
         players = {"Steve":[],"Mark":[]}
         picks = db.GqlQuery("SELECT * FROM Pick WHERE ANCESTOR IS :1 ORDER BY pick_no LIMIT 25", event.key())
@@ -200,15 +185,14 @@ class PickHandler(webapp2.RequestHandler):
             user = ""
             url = users.create_login_url(self.request.uri)
             url_linktext = 'Login'
-
-        event.put()
-
+     
         template_values = {
             'event': event,
             'mplayers': players['Mark'],
             'splayers': players['Steve'],
             'pick_no': pick_no,
             'picknum': picknum,
+            'results': results,
             'url': url,
             'url_linktext': url_linktext,
             'user': user
@@ -251,10 +235,30 @@ class ResultsHandler(webapp2.RequestHandler):
         self.response.write('<input type="submit" value="Get Results"></form>')
         if (results):
             self.response.write('<br><iframe src="' + results + '" width=450 height=350></iframe>')
- 
+
+    def post(self):
+        event_id = self.request.get('event_id')
+        event = getEvent(event_id)
+        message = mail.EmailMessage(sender="skipflog <support@example.com>",
+                            subject=event.event_name+" picks")
+
+        message.to = "sholtebeck@gmail.com"
+        players = {"Steve":[],"Mark":[]}
+        picks = db.GqlQuery("SELECT * FROM Pick WHERE ANCESTOR IS :1 ORDER BY pick_no LIMIT 25", event.key())
+        for pick in picks:
+            players[pick.who].append(pick.player)
+
+        message.body = "Steve's Picks<br>"
+        for player in picks["Steve"]:
+            message.body+=player+"<br>"
+        
+        message.body += "<p>Mark's Picks<br>"
+        for player in picks["Mark"]:
+            message.body+=player+"<br>"
+        message.send()
+
 app = webapp2.WSGIApplication([
   ('/', MainPage),
-  ('/mail', MailHandler),
   ('/pick', PickHandler),
   ('/results', ResultsHandler)
 ], debug=True)
