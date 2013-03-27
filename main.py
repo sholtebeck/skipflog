@@ -5,7 +5,7 @@ import webapp2
 import os
 
 from google.appengine.ext import db
-#from google.appengine.ext import mail
+from google.appengine.api import mail
 from google.appengine.api import memcache
 from google.appengine.api import users
 
@@ -54,11 +54,14 @@ def getEvents():
         memcache.add('events', events)
     return events
 
-def getPlayers():
+def getPlayers(event_id=0):
     players = memcache.get('players')
     if not players:
         players=[]
-        players_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndE5tMHlhZGJRZ01TTk5vMi1WaFRmRHc&single=true&gid=1&range=B3%3AB90&output=csv"
+        if (event_id!=0): 
+            players_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndE5tMHlhZGJRZ01TTk5vMi1WaFRmRHc&single=true&gid=1&range=B3%3AB90&output=csv"
+        else:
+            players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdFJQeUVuLTJqeFRTMGstZ3BZdEI2aWc&single=true&gid=6&range=B3%3AB62&output=csv"
         result = urllib2.urlopen(players_url)
         reader = csv.reader(result)
         for row in reader:
@@ -67,18 +70,13 @@ def getPlayers():
         memcache.add('players', players)
     return players 
 
-def getPicks():
-    players = memcache.get('picks')
-    if not players:
-        players=[]
-        players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdFJQeUVuLTJqeFRTMGstZ3BZdEI2aWc&single=true&gid=6&range=B3%3AB62&output=csv"
-        result = urllib2.urlopen(players_url)
-        reader = csv.reader(result)
-        for row in reader:
-            players.append(row[0])
-        players.sort()
-        memcache.add('players', players)
-    return players
+def getPicks(event_id):
+    picks = memcache.get('picks'+event_id)
+    if not picks:
+        picks_query = Pick.all().ancestor(event_key(event_id)).order('pick_no')
+        picks = picks_query.fetch(25)
+        memcache.add('picks'+event_id, picks)
+    return picks
 
 def getResults(event_id):
     event = getEvent(event_id)
@@ -99,7 +97,7 @@ def getEvent(event_id):
                 event.first=row[3]
                 event.next=pickers[1 - pickers.index(row[3])]
                 event.pickers=[event.first,event.next]
-                event.field=getPicks()
+                event.field=getPlayers(event.event_id)
                 event.picks=[]
                 event.put()
     return event
@@ -164,11 +162,11 @@ class PickHandler(webapp2.RequestHandler):
             results = ""
 
         players = {"Steve":[],"Mark":[]}
-        picks = db.GqlQuery("SELECT * FROM Pick WHERE ANCESTOR IS :1 ORDER BY pick_no LIMIT 25", event.key())
+        picks = getPicks(event_id)
         for pick in picks:
             players[pick.who].append(pick.player)
 
-        pick_no = picks.count()+1
+        pick_no = len(picks)+1
 
         picknum = pick_ord[pick_no]
         # get next player
@@ -207,6 +205,7 @@ class PickHandler(webapp2.RequestHandler):
         pick.pick_no = int(self.request.get('pick_no'))
         pick.player = self.request.get('player')
         pick.put()
+        memcache.delete('picks'+event_id)
         # update event (add to picks, remove from field)
         event = Event.get(event_key(event_id))
         event.field.remove(pick.player)
@@ -239,23 +238,24 @@ class ResultsHandler(webapp2.RequestHandler):
     def post(self):
         event_id = self.request.get('event_id')
         event = getEvent(event_id)
-        message = mail.EmailMessage(sender="skipflog <support@example.com>",
+        message = mail.EmailMessage(sender="skipflog <support@skipflog.appspot.com>",
                             subject=event.event_name+" picks")
 
         message.to = "sholtebeck@gmail.com"
         players = {"Steve":[],"Mark":[]}
-        picks = db.GqlQuery("SELECT * FROM Pick WHERE ANCESTOR IS :1 ORDER BY pick_no LIMIT 25", event.key())
+        picks = getPicks(event_id)
         for pick in picks:
             players[pick.who].append(pick.player)
 
-        message.body = "Steve's Picks<br>"
-        for player in picks["Steve"]:
-            message.body+=player+"<br>"
+        message.html = "Steve's Picks:<br>"
+        for player in players["Steve"]:
+            message.html+=player+"<br>"
         
-        message.body += "<p>Mark's Picks<br>"
-        for player in picks["Mark"]:
-            message.body+=player+"<br>"
+        message.html += "<p>Mark's Picks:<br>"
+        for player in players["Mark"]:
+            message.html+=player+"<br>"
         message.send()
+        self.redirect('/pick?event_id=' + event_id)
 
 app = webapp2.WSGIApplication([
   ('/', MainPage),
