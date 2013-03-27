@@ -239,7 +239,6 @@ class ResultsHandler(webapp2.RequestHandler):
         event_id = self.request.get('event_id')
         event = getEvent(event_id)
         user = users.get_current_user()
-        message.sender = user.email()
         message = mail.EmailMessage(sender=user.email(),
                             subject=event.event_name+" picks")
 
