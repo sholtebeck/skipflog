@@ -215,25 +215,11 @@ class PickHandler(webapp2.RequestHandler):
 
 class ResultsHandler(webapp2.RequestHandler):   
     def get(self):
-        event_id = self.request.get('event_id');
-        events = getEvents()
-        self.response.write('<form action="/results" onchange="this.form.submit()">')
-        self.response.write('<select name="event_id">')
-        #build the dropdown list
-        results=""
-        sel=""
-        for event in events:
-             if (event_id and int(event_id)==int(event[0])):
-                sel=" selected"
-                results=event[2]
- 
-             self.response.write('<option value=' + event[0] + sel+'>' + event[1] + "</option>")      
-             sel=""             
-            
-        self.response.write('</select>')
-        self.response.write('<input type="submit" value="Get Results"></form>')
-        if (results):
-            self.response.write('<br><iframe src="' + results + '" width=450 height=350></iframe>')
+        event_id = self.request.get('event_id')
+        players = {"Steve":[],"Mark":[]}
+        picks = getPicks(event_id)
+        for pick in picks:
+            self.response.write(event_id+","+str(pick.pick_no)+","+pick.who+","+pick.player+'<br>')
 
     def post(self):
         event_id = self.request.get('event_id')
@@ -247,17 +233,13 @@ class ResultsHandler(webapp2.RequestHandler):
         picks = getPicks(event_id)
         for pick in picks:
             players[pick.who].append(pick.player)
-
-        message.html = "Steve's Picks:<ol>"
-        for player in players["Steve"]:
-            message.html+="<li>"+player
-        message.html+="</ol>"
-
-        message.html += "<p>Mark's Picks:<ol>"
-        for player in players["Mark"]:
-            message.html+="<li>"+player
-        message.html+="</ol>"
+        for picker in pickers:
+            message.html += picker+"'s Picks:<ol>"
+            for player in players[picker]:
+                message.html+="<li>"+player
+            message.html+="</ol>"
         message.send()
+
         self.redirect('/pick?event_id=' + event_id)
 
 app = webapp2.WSGIApplication([
