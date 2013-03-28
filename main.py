@@ -219,16 +219,16 @@ class ResultsHandler(webapp2.RequestHandler):
         players = {"Steve":[],"Mark":[]}
         picks = getPicks(event_id)
         for pick in picks:
-            self.response.write(event_id+","+str(pick.pick_no)+","+pick.who+","+pick.player+'<br>')
+            self.response.write(event_id+","+str(pick.pick_no)+","+pick.who+","+pick.player+'\n')
 
     def post(self):
         event_id = self.request.get('event_id')
         event = getEvent(event_id)
         user = users.get_current_user()
-        message = mail.EmailMessage(sender=user.email(),
+        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event.event_name+" picks")
-
         message.to = "mholtebeck@gmail.com,sholtebeck@gmail.com"
+        message.html=event.event_name+"<p>"
         players = {"Steve":[],"Mark":[]}
         picks = getPicks(event_id)
         for pick in picks:

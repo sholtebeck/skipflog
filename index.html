@@ -136,7 +136,7 @@ setInterval('window.location.reload()', 30000);
    {% if event.next=="Done" %}
    {% if user %}
    <p><form action="/results" method="post">We're Done. <input type="hidden" name="event_id" value="{{event.event_id}}">
-      <input type="submit" value="Post Results"></form>
+      <input type="submit" value="Email Picks"></form>
    {% else %}
    <p>We're Done.
    {% endif %}
