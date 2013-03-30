@@ -82,7 +82,7 @@ def getResults(event_id):
     event = getEvent(event_id)
     results = ""
     if (event.event_url):
-        results += '<br><iframe src="' + event.event_url + '" width=450 height=350></iframe>'
+        results += '<br><iframe src="' + event.event_url + '" width=500 height=800></iframe>'
     return results
 
 def getEvent(event_id):
