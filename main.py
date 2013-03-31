@@ -46,7 +46,7 @@ def getEvents():
     events = memcache.get('events')
     if not events:
         events=[]
-        events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A3%3AD16&output=csv"
+        events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AD16&output=csv"
         result = urllib2.urlopen(events_url)
         reader = csv.reader(result)
         for row in reader:
@@ -122,7 +122,17 @@ def nextEvent():
         event.picks=[]
         event.put()
     return event
- 
+
+def updateEvents():
+    events=getEvents()      
+    for row in events:
+        event = Event.get(event_key(row[0]))
+        if event:
+            event.event_name=row[1]
+            event.event_url=row[2]
+            event.first=row[3]
+            event.put()
+
 class MainPage(webapp2.RequestHandler):       
     def get(self):
         event_list = ""
@@ -216,10 +226,13 @@ class PickHandler(webapp2.RequestHandler):
 class ResultsHandler(webapp2.RequestHandler):   
     def get(self):
         event_id = self.request.get('event_id')
-        players = {"Steve":[],"Mark":[]}
-        picks = getPicks(event_id)
-        for pick in picks:
-            self.response.write(event_id+","+str(pick.pick_no)+","+pick.who+","+pick.player+'\n')
+        if not event_id:
+            updateEvents()
+        else:
+            players = {"Steve":[],"Mark":[]}
+            picks = getPicks(event_id)
+            for pick in picks:
+                self.response.write(event_id+","+str(pick.pick_no)+","+pick.who+","+pick.player+'\n')
 
     def post(self):
         event_id = self.request.get('event_id')
@@ -228,7 +241,7 @@ class ResultsHandler(webapp2.RequestHandler):
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event.event_name+" picks")
         message.to = "mholtebeck@gmail.com,sholtebeck@gmail.com"
-        message.html=event.event_name+"<p>"
+        message.html=event.event_name+"<br"+event.event_url+"<p>"
         players = {"Steve":[],"Mark":[]}
         picks = getPicks(event_id)
         for pick in picks:

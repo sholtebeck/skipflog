@@ -2,7 +2,9 @@
 <html>
   <head>
     <title>skipflog -- major golf picks</title>
+  {% if user and user!=event.next %}
     <meta http-equiv="refresh" content="30"/>
+  {% endif %}
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script> 
 <script type="text/javascript">
 $(document).ready(function() {
