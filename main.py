@@ -46,7 +46,7 @@ def getEvents():
     events = memcache.get('events')
     if not events:
         events=[]
-        events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AD16&output=csv"
+        events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AD15&output=csv"
         result = urllib2.urlopen(events_url)
         reader = csv.reader(result)
         for row in reader:

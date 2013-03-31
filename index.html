@@ -89,13 +89,15 @@ $(document).ready(function() {
 {% endif %}
   <a href="{{ url }}">{{ url_linktext }}</a>
 {% if event %}
-     &nbsp;Event: <b>{{ event.event_name }}</b><p> 
+     &nbsp;Event: <b>{{ event.event_name }}</b>
 {% endif %}
-<div id="container">
+<p><div id="container">
 
   <ul class="tabs"> 
         <li class="active" rel="tab1"> Picks</li>
+{% if event %}
         <li rel="tab2"> Players </li>
+{% endif %}
 {% if results %}
         <li rel="tab3"> Results </li>
 {% endif %}
