@@ -2,8 +2,8 @@
 <html>
   <head>
     <title>skipflog -- major golf picks</title>
-  {% if user and user!=event.next %}
-    <meta http-equiv="refresh" content="30"/>
+  {% if user and event and user!=event.next %}
+   <script>setInterval('window.location.reload()', 20000);</script>
   {% endif %}
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script> 
 <script type="text/javascript">
@@ -20,7 +20,7 @@ $(document).ready(function() {
 		$("#"+activeTab).fadeIn(); 
 	});
 });
-setInterval('window.location.reload()', 30000);
+
 </script> 
 <style type="text/css">
 
@@ -108,6 +108,9 @@ setInterval('window.location.reload()', 30000);
      <div id="tab1" class="tab_content"> 
 
     {% if event %}
+   {% if lastpick %}
+   Last Pick: {{lastpick}} <p>
+   {% endif %}
      <table border=1>
      <tr><th>Steve</th><th>Mark</th><tr>
      <tr><td><ol>

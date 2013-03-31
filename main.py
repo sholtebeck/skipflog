@@ -54,18 +54,15 @@ def getEvents():
         memcache.add('events', events)
     return events
 
-def getPlayers(event_id=0):
+def getPlayers(event_id='0'):
     players = memcache.get('players')
     if not players:
         players=[]
-        if (event_id!=0): 
-            players_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndE5tMHlhZGJRZ01TTk5vMi1WaFRmRHc&single=true&gid=1&range=B3%3AB90&output=csv"
-        else:
-            players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdFJQeUVuLTJqeFRTMGstZ3BZdEI2aWc&single=true&gid=6&range=B3%3AB62&output=csv"
+        players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdFJQeUVuLTJqeFRTMGstZ3BZdEI2aWc&single=true&gid=6&range=B3%3AB62&output=csv"
         result = urllib2.urlopen(players_url)
         reader = csv.reader(result)
         for row in reader:
-            players.append(row[0])
+            players.append(str(row[0]))
         players.sort()
         memcache.add('players', players)
     return players 
@@ -198,6 +195,7 @@ class PickHandler(webapp2.RequestHandler):
             'event': event,
             'mplayers': players['Mark'],
             'splayers': players['Steve'],
+            'lastpick': memcache.get("lastpick"),
             'pick_no': pick_no,
             'picknum': picknum,
             'results': results,
@@ -216,6 +214,10 @@ class PickHandler(webapp2.RequestHandler):
         pick.player = self.request.get('player')
         pick.put()
         memcache.delete('picks'+event_id)
+        # update last pick message
+        lastpick=pick.who+" picked "+pick.player
+        memcache.delete('lastpick')
+        memcache.add("lastpick",lastpick)
         # update event (add to picks, remove from field)
         event = Event.get(event_key(event_id))
         event.field.remove(pick.player)
