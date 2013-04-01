@@ -226,13 +226,12 @@ class ResultsHandler(webapp2.RequestHandler):
         else:
             event = getEvent(event_id)
             if event:
-                event.field=getPlayers(event_id)
-                picks = getPicks(event_id)
-                for pick in picks:
-                    if pick.who in event.field:
-                        event.field.remove(pick.who)
-                    self.response.write(event_id+","+str(pick.pick_no)+","+pick.who+","+pick.player+'\n')
+                players=getPlayers(event_id)
+                event.field=[p for p in players if p not in event.picks]
                 event.put()
+                for pick in getPicks(event_id):
+                    self.response.write(event_id+","+str(pick.pick_no)+","+pick.who+","+pick.player+'\n')
+
 
     def post(self):
         event_id = self.request.get('event_id')
