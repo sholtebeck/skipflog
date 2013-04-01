@@ -58,7 +58,7 @@ def getPlayers(event_id='0'):
     players = memcache.get('players')
     if not players:
         players=[]
-        players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdFJQeUVuLTJqeFRTMGstZ3BZdEI2aWc&single=true&gid=6&range=B3%3AB62&output=csv"
+        players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB90&output=csv"
         result = urllib2.urlopen(players_url)
         reader = csv.reader(result)
         for row in reader:
@@ -121,14 +121,7 @@ def nextEvent():
     return event
 
 def updateEvents():
-    events=getEvents()      
-    for row in events:
-        event = Event.get(event_key(row[0]))
-        if event:
-            event.event_name=row[1]
-            event.event_url=row[2]
-            event.first=row[3]
-            event.put()
+    return
 
 class MainPage(webapp2.RequestHandler):       
     def get(self):
@@ -231,10 +224,15 @@ class ResultsHandler(webapp2.RequestHandler):
         if not event_id:
             updateEvents()
         else:
-            players = {"Steve":[],"Mark":[]}
-            picks = getPicks(event_id)
-            for pick in picks:
-                self.response.write(event_id+","+str(pick.pick_no)+","+pick.who+","+pick.player+'\n')
+            event = getEvent(event_id)
+            if event:
+                event.field=getPlayers(event_id)
+                picks = getPicks(event_id)
+                for pick in picks:
+                    if pick.who in event.field:
+                        event.field.remove(pick.who)
+                    self.response.write(event_id+","+str(pick.pick_no)+","+pick.who+","+pick.player+'\n')
+                event.put()
 
     def post(self):
         event_id = self.request.get('event_id')
