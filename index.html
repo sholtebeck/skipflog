@@ -142,7 +142,7 @@ $(document).ready(function() {
    {% else %}
    {% if event.next=="Done" %}
    {% if user %}
-   <p><form action="/results" method="post">We're Done. <input type="hidden" name="event_id" value="{{event.event_id}}">
+   <p><form action="/mail" method="post">We're Done. <input type="hidden" name="event_id" value="{{event.event_id}}">
       <input type="submit" value="Email Picks"></form>
    {% else %}
    <p>We're Done.

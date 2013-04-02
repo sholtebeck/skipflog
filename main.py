@@ -151,6 +151,49 @@ class MainPage(webapp2.RequestHandler):
         template = jinja_environment.get_template('index.html')
         self.response.out.write(template.render(template_values))
 
+class MailHandler(webapp2.RequestHandler):       
+    def get(self):
+        event_id = self.request.get('event_id')
+        if event_id:
+            event = getEvent(event_id)
+        else:
+            event = nextEvent()
+
+        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
+                            subject=event.event_name+" picks")
+        message.to = "sholtebeck@gmail.com"
+        message.html=event.event_name+"<br"+event.event_url+"<p>"
+        players = {"Steve":[],"Mark":[]}
+        picks = getPicks(event_id)
+        for pick in picks:
+            players[pick.who].append(pick.player)
+        for picker in pickers:
+            message.html += picker+"'s Picks:<ol>"
+            for player in players[picker]:
+                message.html+="<li>"+player
+            message.html+="</ol>"
+        message.send()
+
+    def post(self):
+        event_id = self.request.get('event_id')
+        event = getEvent(event_id)
+        user = users.get_current_user()
+        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
+                            subject=event.event_name+" picks")
+        message.to = "mholtebeck@gmail.com,sholtebeck@gmail.com"
+        message.html=event.event_name+"<br"+event.event_url+"<p>"
+        players = {"Steve":[],"Mark":[]}
+        picks = getPicks(event_id)
+        for pick in picks:
+            players[pick.who].append(pick.player)
+        for picker in pickers:
+            message.html += picker+"'s Picks:<ol>"
+            for player in players[picker]:
+                message.html+="<li>"+player
+            message.html+="</ol>"
+        message.send()
+        self.redirect('/pick?event_id=' + event_id)
+
 class PickHandler(webapp2.RequestHandler):
     def get(self):     
         event_id = self.request.get('event_id')
@@ -207,15 +250,15 @@ class PickHandler(webapp2.RequestHandler):
         pick.player = self.request.get('player')
         pick.put()
         memcache.delete('picks'+event_id)
-        # update last pick message
-        lastpick=pick.who+" picked "+pick.player
-        memcache.delete('lastpick')
-        memcache.add("lastpick",lastpick)
         # update event (add to picks, remove from field)
         event = Event.get(event_key(event_id))
         event.field.remove(pick.player)
         event.picks.append(pick.player)
         event.put()
+        # update last pick message
+        lastpick=pick.who+" picked "+pick.player
+        memcache.delete('lastpick')
+        memcache.add("lastpick",lastpick)
         self.redirect('/pick?event_id=' + event_id)	
 
 class ResultsHandler(webapp2.RequestHandler):   
@@ -226,36 +269,13 @@ class ResultsHandler(webapp2.RequestHandler):
         else:
             event = getEvent(event_id)
             if event:
-                players=getPlayers(event_id)
-                event.field=[p for p in players if p not in event.picks]
-                event.put()
                 for pick in getPicks(event_id):
                     self.response.write(event_id+","+str(pick.pick_no)+","+pick.who+","+pick.player+'\n')
 
 
-    def post(self):
-        event_id = self.request.get('event_id')
-        event = getEvent(event_id)
-        user = users.get_current_user()
-        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
-                            subject=event.event_name+" picks")
-        message.to = "mholtebeck@gmail.com,sholtebeck@gmail.com"
-        message.html=event.event_name+"<br"+event.event_url+"<p>"
-        players = {"Steve":[],"Mark":[]}
-        picks = getPicks(event_id)
-        for pick in picks:
-            players[pick.who].append(pick.player)
-        for picker in pickers:
-            message.html += picker+"'s Picks:<ol>"
-            for player in players[picker]:
-                message.html+="<li>"+player
-            message.html+="</ol>"
-        message.send()
-
-        self.redirect('/pick?event_id=' + event_id)
-
 app = webapp2.WSGIApplication([
   ('/', MainPage),
+  ('/mail', MailHandler),
   ('/pick', PickHandler),
   ('/results', ResultsHandler)
 ], debug=True)
