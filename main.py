@@ -161,8 +161,8 @@ class MailHandler(webapp2.RequestHandler):
 
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event.event_name+" picks")
-        message.to = "sholtebeck@gmail.com"
-        message.html=event.event_name+"<br"+event.event_url+"<p>"
+        message.to = "mholtebeck@gmail.com,sholtebeck@gmail.com"
+        message.html=event.event_name+"<br>"+event.event_url+"<p>"
         players = {"Steve":[],"Mark":[]}
         picks = getPicks(event_id)
         for pick in picks:
@@ -172,6 +172,8 @@ class MailHandler(webapp2.RequestHandler):
             for player in players[picker]:
                 message.html+="<li>"+player
             message.html+="</ol>"
+        message.html+="<br>Next Pick: "+event.next
+        message.html+="<br>http://skipflog.appspot.com/pick?event_id="+event_id
         message.send()
 
     def post(self):
