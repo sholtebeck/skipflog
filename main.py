@@ -159,20 +159,18 @@ class MailHandler(webapp2.RequestHandler):
         else:
             event = nextEvent()
 
-        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
-                            subject=event.event_name+" picks")
-        message.to = "mholtebeck@gmail.com,sholtebeck@gmail.com"
-        message.html=event.event_name+"<br>"+event.event_url+"<p>"
-        players = {"Steve":[],"Mark":[]}
-        picks = getPicks(event_id)
-        for pick in picks:
-            players[pick.who].append(pick.player)
-        for picker in pickers:
-            message.html += picker+"'s Picks:<ol>"
-            for player in players[picker]:
-                message.html+="<li>"+player
-            message.html+="</ol>"
-        message.html+="<br>Next Pick: "+event.next
+        current=datetime.datetime.now()
+        event_day = current_day-10
+        if (event_day >=1 and event_day < 5):
+            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
+                            subject=event.event_name+" results (day "+str(event_day)+")")
+            message.to = "mholtebeck@gmail.com,sholtebeck@gmail.com"
+        else:
+            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
+                            subject=event.event_name+" test results")
+            message.to = "sholtebeck@gmail.com"
+        result = urllib2.urlopen(event.event_url)
+        message.html=result.read()
         message.html+="<br>http://skipflog.appspot.com/pick?event_id="+event_id
         message.send()
 
