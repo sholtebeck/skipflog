@@ -15,6 +15,9 @@ yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
 names={'sholtebeck':'Steve','mholtebeck':'Mark'}
 pickers=('Steve','Mark')
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
+events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AD15&output=csv"
+players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB90&output=csv"
+results_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
 
 jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
@@ -46,7 +49,6 @@ def getEvents():
     events = memcache.get('events')
     if not events:
         events=[]
-        events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AD15&output=csv"
         result = urllib2.urlopen(events_url)
         reader = csv.reader(result)
         for row in reader:
@@ -58,7 +60,6 @@ def getPlayers(event_id='0'):
     players = memcache.get('players')
     if not players:
         players=[]
-        players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB90&output=csv"
         result = urllib2.urlopen(players_url)
         reader = csv.reader(result)
         for row in reader:
@@ -160,16 +161,16 @@ class MailHandler(webapp2.RequestHandler):
             event = nextEvent()
 
         current=datetime.datetime.now()
-        event_day = current_day-10
+        event_day = current.day-10
         if (event_day >=1 and event_day < 5):
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event.event_name+" results (day "+str(event_day)+")")
             message.to = "mholtebeck@gmail.com,sholtebeck@gmail.com"
         else:
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
-                            subject=event.event_name+" test results")
+                            subject=event.event_name+" test results ("+str(event_day)+")")
             message.to = "sholtebeck@gmail.com"
-        result = urllib2.urlopen(event.event_url)
+        result = urllib2.urlopen(results_url)
         message.html=result.read()
         message.html+="<br>http://skipflog.appspot.com/pick?event_id="+event_id
         message.send()
