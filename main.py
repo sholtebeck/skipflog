@@ -161,10 +161,10 @@ class MailHandler(webapp2.RequestHandler):
             event = nextEvent()
 
         current=datetime.datetime.now()
-        event_day = current.day-10
-        if (event_day >=1 and event_day < 5):
+        event_day = int(current.day-11)
+        if (event_day >=0 and event_day < 5):
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
-                            subject=event.event_name+" results (day "+str(event_day)+")")
+                            subject=event.event_name+" results (round "+str(event_day)+")")
             message.to = "mholtebeck@gmail.com,sholtebeck@gmail.com"
         else:
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
@@ -172,7 +172,6 @@ class MailHandler(webapp2.RequestHandler):
             message.to = "sholtebeck@gmail.com"
         result = urllib2.urlopen(results_url)
         message.html=result.read()
-        message.html+="<br>http://skipflog.appspot.com/pick?event_id="+event_id
         message.send()
 
     def post(self):
