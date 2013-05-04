@@ -16,7 +16,7 @@ names={'sholtebeck':'Steve','mholtebeck':'Mark'}
 pickers=('Steve','Mark')
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
 events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AD15&output=csv"
-players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB90&output=csv"
+players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B1%3AB145&output=csv"
 results_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
 
 jinja_environment = jinja2.Environment(
@@ -166,13 +166,9 @@ class MailHandler(webapp2.RequestHandler):
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event.event_name+" results (round "+str(event_day)+")")
             message.to = "mholtebeck@gmail.com,sholtebeck@gmail.com"
-        else:
-            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
-                            subject=event.event_name+" test results ("+str(event_day)+")")
-            message.to = "sholtebeck@gmail.com"
-        result = urllib2.urlopen(results_url)
-        message.html=result.read()
-        message.send()
+            result = urllib2.urlopen(results_url)
+            message.html=result.read()
+            message.send()
 
     def post(self):
         event_id = self.request.get('event_id')
