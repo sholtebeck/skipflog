@@ -161,7 +161,7 @@ class MailHandler(webapp2.RequestHandler):
             event = nextEvent()
 
         current=datetime.datetime.now()
-        event_day = int(current.day-11)
+        event_day = int(current.day-9)
         if (event_day >=0 and event_day < 5):
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event.event_name+" results (round "+str(event_day)+")")
