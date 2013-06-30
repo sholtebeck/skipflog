@@ -3,7 +3,7 @@
   <head>
     <title>skipflog -- major golf picks</title>
   {% if user and event and user!=event.next %}
-   <script>setInterval('window.location.reload()', 20000);</script>
+   <script>setInterval('window.location.reload()', 60000);</script>
   {% endif %}
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script> 
 <script type="text/javascript">
@@ -97,11 +97,9 @@ $(document).ready(function() {
         <li class="active" rel="tab1"> Picks</li>
 {% if event %}
         <li rel="tab2"> Players </li>
-{% endif %}
-{% if results %}
         <li rel="tab3"> Results </li>
+        <li rel="tab4"> {{ event.event_name[4:] }} </li>
 {% endif %}
-        <li rel="tab4"> Open Championship </li>
         <li rel="tab5"> Major Years</li>
         <li rel="tab6"> PGA Rank</li>
     </ul>
