@@ -162,11 +162,12 @@ class MailHandler(webapp2.RequestHandler):
             event = nextEvent()
 
         current=datetime.datetime.now()
-        event_day = int(current.day-8)
-        if (event_day >=0 and event_day < 5):
+        event_day = int(current.day-19)
+        event_name = "Tour Championship"
+        if (event_day >=1 and event_day < 4):
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
-                            subject=event.event_name+" results (round "+str(event_day)+")")
-            message.to = "mholtebeck@gmail.com,sholtebeck@gmail.com"
+                            subject=event_name+" results (round "+str(event_day)+")")
+            message.to = "skipflog@googlegroups.com"
             result = urllib2.urlopen(results_url)
             message.html=result.read()
             message.send()
@@ -177,8 +178,8 @@ class MailHandler(webapp2.RequestHandler):
         user = users.get_current_user()
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event.event_name+" picks")
-        message.to = "mholtebeck@gmail.com,sholtebeck@gmail.com"
-        message.html=event.event_name+"<br"+event.event_url+"<p>"
+        message.to = "sholtebeck@gmail.com"
+        message.html=event.event_name+"<br>"
         players = {"Steve":[],"Mark":[]}
         picks = getPicks(event_id)
         for pick in picks:
