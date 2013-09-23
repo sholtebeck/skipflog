@@ -162,9 +162,9 @@ class MailHandler(webapp2.RequestHandler):
             event = nextEvent()
 
         current=datetime.datetime.now()
-        event_day = int(current.day-19)
+        event_day = int(current.day-18)
         event_name = "Tour Championship"
-        if (event_day >=1 and event_day < 4):
+        if (event_day >0 and event_day < 5):
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event_name+" results (round "+str(event_day)+")")
             message.to = "skipflog@googlegroups.com"
