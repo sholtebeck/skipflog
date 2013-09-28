@@ -1,3 +1,4 @@
+# Main program for golfpicks app (skipflog.appspot.com)
 import cgi,csv,datetime
 import jinja2
 import logging
@@ -16,7 +17,7 @@ yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
 names={'sholtebeck':'Steve','mholtebeck':'Mark'}
 pickers=('Steve','Mark')
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
-events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AD16&output=csv"
+events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AE16&output=csv"
 players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B1%3AB70&output=csv"
 results_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
 
@@ -32,7 +33,8 @@ class Event(db.Model):
     next = db.StringProperty()
     field = db.StringListProperty()
     pickers = db.StringListProperty()
-    picks = db.StringListProperty()  
+    picks = db.StringListProperty()
+    start = db.IntegerProperty()  
 
 class Pick(db.Model):
     who = db.StringProperty()
@@ -98,6 +100,7 @@ def getEvent(event_id):
                 event.pickers=[event.first,event.next]
                 event.field=getPlayers(event.event_id)
                 event.picks=[]
+                event.start=int(row[4])
                 event.put()
     return event
  
@@ -162,8 +165,8 @@ class MailHandler(webapp2.RequestHandler):
             event = nextEvent()
 
         current=datetime.datetime.now()
-        event_day = int(current.day-18)
-        event_name = "Tour Championship"
+        event_day = int(current.day-event.start)
+        event_name = event.event_name
         if (event_day >0 and event_day < 5):
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event_name+" results (round "+str(event_day)+")")
@@ -178,7 +181,7 @@ class MailHandler(webapp2.RequestHandler):
         user = users.get_current_user()
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event.event_name+" picks")
-        message.to = "sholtebeck@gmail.com"
+        message.to = "skipflog@googlegroups.com"
         message.html=event.event_name+"<br>"
         players = {"Steve":[],"Mark":[]}
         picks = getPicks(event_id)

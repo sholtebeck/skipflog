@@ -89,7 +89,7 @@ $(document).ready(function() {
 {% endif %}
   <a href="{{ url }}">{{ url_linktext }}</a>
 {% if event %}
-     &nbsp;Event: <b>{{ event.event_name }}</b> <a href="/">Clear</a>
+     &nbsp;Event: <b>{{ event.event_name }}</b> ({{ event.event_id % 100 }}/{{ event.start+1 }}-{{ event.start+4 }}) <a href="/">Clear</a>
 {% endif %}
 <p><div id="container">
 
