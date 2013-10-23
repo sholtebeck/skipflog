@@ -66,8 +66,8 @@ def getPlayers(event_id='0'):
         result = urllib2.urlopen(players_url)
         reader = csv.reader(result)
         for row in reader:
-            players.append(str(row[0]))
-        players.sort()
+            players.append(str(row[0]).strip())
+#       players.sort()
         memcache.add('players', players)
     return players 
 
@@ -253,8 +253,10 @@ class PickHandler(webapp2.RequestHandler):
         memcache.delete('picks'+event_id)
         # update event (add to picks, remove from field)
         event = Event.get(event_key(event_id))
-        event.field.remove(pick.player)
-        event.picks.append(pick.player)
+        player = pick.player
+        if player in event.field:
+            event.field.remove(player)
+            event.picks.append(player)
         event.put()
         # update last pick message
         lastpick=pick.who+" picked "+pick.player
