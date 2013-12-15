@@ -17,9 +17,11 @@ yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
 names={'sholtebeck':'Steve','mholtebeck':'Mark'}
 pickers=('Steve','Mark')
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
+event_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=1&output=html&widget=true"
 events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AE16&output=csv"
-players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B1%3AB70&output=csv"
+players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B1%3AB30&output=csv"
 results_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
+ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
 
 jinja_environment = jinja2.Environment(
     loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
@@ -47,6 +49,10 @@ def event_key(event_id):
   """Constructs a Datastore key for an Event entity with event_id."""
   return db.Key.from_path('Event', event_id)
 
+def currentEvent():
+    now=datetime.datetime.now()
+    event_current=100*(now.year-2000)+now.month
+    return event_current    
 
 def getEvents():
     events = memcache.get('events')
@@ -66,7 +72,7 @@ def getPlayers(event_id='0'):
         result = urllib2.urlopen(players_url)
         reader = csv.reader(result)
         for row in reader:
-            players.append(str(row[0]).strip())
+            players.append(str(row[0]))
 #       players.sort()
         memcache.add('players', players)
     return players 
@@ -81,9 +87,10 @@ def getPicks(event_id):
 
 def getResults(event_id):
     event = getEvent(event_id)
-    results = ""
-    if (event.event_url):
-        results += '<br><iframe src="' + event.event_url + '" width=500 height=800></iframe>'
+    if (event.event_url and int(event_id)<currentEvent()):
+        results = "<iframe width='1250' height='800' frameborder='0' src='"+event.event_url+"'&widget=true'></iframe>"
+    else:
+        results = "<iframe width='1250' height='800' frameborder='0' src='"+results_url+"'&widget=true'></iframe>"
     return results
 
 def getEvent(event_id):
@@ -103,10 +110,9 @@ def getEvent(event_id):
                 event.start=int(row[4])
                 event.put()
     return event
- 
+
 def nextEvent():
-    now=datetime.datetime.now()
-    event_current=100*(now.year-2000)+now.month
+    event_current=currentEvent()
     query= Event.all().filter("event_id >=", event_current)
     event = query.get()
     if (not event):
@@ -167,6 +173,15 @@ class MailHandler(webapp2.RequestHandler):
         current=datetime.datetime.now()
         event_day = int(current.day-event.start)
         event_name = event.event_name
+        # Special Handler for weekly job
+        if (event_id == "1401"):
+            event_week=current.isocalendar()[1]
+            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
+                            subject=event_name+" results (week "+str(event_week)+")")
+            message.to = "skipfloguser@gmail.com"
+            result = urllib2.urlopen(ranking_url)
+            message.html=result.read()
+            message.send()
         if (event_day >0 and event_day < 5):
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event_name+" results (round "+str(event_day)+")")
@@ -253,10 +268,8 @@ class PickHandler(webapp2.RequestHandler):
         memcache.delete('picks'+event_id)
         # update event (add to picks, remove from field)
         event = Event.get(event_key(event_id))
-        player = pick.player
-        if player in event.field:
-            event.field.remove(player)
-            event.picks.append(player)
+        event.field.remove(pick.player)
+        event.picks.append(pick.player)
         event.put()
         # update last pick message
         lastpick=pick.who+" picked "+pick.player
