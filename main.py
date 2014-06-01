@@ -1,5 +1,5 @@
 # Main program for golfpicks app (skipflog.appspot.com)
-import cgi,csv,datetime
+import cgi,csv,json,datetime
 import jinja2
 import logging
 import urllib2
@@ -18,8 +18,8 @@ names={'sholtebeck':'Steve','mholtebeck':'Mark'}
 pickers=('Steve','Mark')
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
 event_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=1&output=html&widget=true"
-events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AE16&output=csv"
-players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B1%3AB30&output=csv"
+events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AE20&output=csv"
+players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B1%3AB128&output=csv"
 results_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
 ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
 
@@ -73,7 +73,7 @@ def getPlayers(event_id='0'):
         reader = csv.reader(result)
         for row in reader:
             players.append(str(row[0]))
-#       players.sort()
+        players.sort()
         memcache.add('players', players)
     return players 
 
@@ -277,23 +277,53 @@ class PickHandler(webapp2.RequestHandler):
         memcache.add("lastpick",lastpick)
         self.redirect('/pick?event_id=' + event_id)	
 
-class ResultsHandler(webapp2.RequestHandler):   
+class EventsHandler(webapp2.RequestHandler):   
     def get(self):
         event_id = self.request.get('event_id')
+        output_format = self.request.get('output')
+        if not output_format:
+            output_format='csv'
+        events=getEvents()
+        for row in events:
+            if (row[0]==event_id or not event_id):
+                event=getEvent(row[0])
+                if output_format=='csv':
+                    event_list=[event.event_id, event.event_name, event.start, event.picks]
+                    self.response.write(",".join(str(entry) for entry in event_list)+'\n')
+                elif output_format=='json':
+                    event_dict={'id':event.event_id,'name':event.event_name, 'start':event.start, 'picks':event.picks}
+                    self.response.write(json.dumps(event_dict)+'\n')
+                elif output_format=='xml':
+                    self.response.write(event.to_xml())
+
+class PicksHandler(webapp2.RequestHandler):   
+    def get(self):
+        output_format = self.request.get('output')
+        if not output_format:
+            output_format='csv'
+        event_id = self.request.get('event_id')
         if not event_id:
-            updateEvents()
+            self.redirect('/events')	
         else:
             event = getEvent(event_id)
             if event:
                 for pick in getPicks(event_id):
-                    self.response.write(event_id+","+str(pick.pick_no)+","+pick.who+","+pick.player+'\n')
+                    if output_format=='csv':                   
+                        pick_list=[event_id, pick.pick_no, pick.who, pick.player]
+                        self.response.write(",".join(str(entry) for entry in pick_list)+'\n')
+                    elif output_format=='json':
+                        pick_dict={'event_id':event_id,'pick_no':pick.pick_no, 'who':pick.who, 'player':pick.player}
+                        self.response.write(json.dumps(pick_dict)+'\n')
+                    elif output_format=='xml':
+                        self.response.write(pick.to_xml())
 
 
 app = webapp2.WSGIApplication([
   ('/', MainPage),
+  ('/events', EventsHandler),
   ('/mail', MailHandler),
   ('/pick', PickHandler),
-  ('/results', ResultsHandler)
+  ('/picks', PicksHandler)
 ], debug=True)
 
 def main():
