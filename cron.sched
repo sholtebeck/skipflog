@@ -1,0 +1,4 @@
+- description: daily email
+  url: /mail?event_id=1404
+  schedule: every day 17:00
+  timezone: America/Los_Angeles

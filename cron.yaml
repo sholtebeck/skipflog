@@ -1,2 +1,10 @@
 cron:
+- description: weekly email
+  url: /mail?event_id=1401
+  schedule: every tuesday 10:00
+  timezone: America/Los_Angeles
 
+- description: daily email
+  url: /mail?event_id=1406
+  schedule: every day 17:00
+  timezone: America/Los_Angeles

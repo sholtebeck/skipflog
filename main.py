@@ -19,7 +19,7 @@ pickers=('Steve','Mark')
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
 event_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=1&output=html&widget=true"
 events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AE20&output=csv"
-players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B1%3AB128&output=csv"
+players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B1%3AB156&output=csv"
 results_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
 ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
 
@@ -85,6 +85,10 @@ def getPicks(event_id):
         memcache.add('picks'+event_id, picks)
     return picks
 
+def deleteEvent(event_id):
+    Event.delete(event_key(event_id))
+    Pick.delete(all().ancestor(event_key(event_id)))
+
 def getResults(event_id):
     event = getEvent(event_id)
     if (event.event_url and int(event_id)<currentEvent()):
@@ -92,6 +96,7 @@ def getResults(event_id):
     else:
         results = "<iframe width='1250' height='800' frameborder='0' src='"+results_url+"'&widget=true'></iframe>"
     return results
+    Event.delete(event_key(event_id))
 
 def getEvent(event_id):
     event = Event.get(event_key(event_id))
