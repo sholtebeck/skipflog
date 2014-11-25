@@ -1,0 +1,10 @@
+{% extends "index.html" %}
+{% block content %}
+   <form action="/pick" method="get" onchange="this.form.submit()">
+   Select Event: <select name="event_id">
+   {% for event in event_list %}
+    <option value="{{event.event_id}}">{{event.event_name}}</option>
+   {% endfor %}
+   </select><input type="submit" value="Get">
+</form>
+{% endblock content %}

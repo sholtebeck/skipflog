@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% block content %}
+
+{% if event.picks %}
+<p><strong>Picked:</strong>
+{% for player in event.picks %}
+<br>{{player}}
+{% endfor %}
+{% endif %}
+
+{% if event.next!="Done" %}
+<p><strong>Available:</strong>
+{% for player in event.field %}
+<br>{{player}}
+{% endfor %}
+{% endif %}
+{% endif %}
+
+{% endblock %}

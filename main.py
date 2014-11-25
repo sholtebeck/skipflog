@@ -26,9 +26,10 @@ results_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU0
 ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
 leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"
 
-jinja_environment = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
-      
+#Load templates from 'templates' folder
+#jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
+jinja_environment = jinja2.Environment(autoescape=True,loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
+     
    
 class Event(db.Model):
     event_id = db.IntegerProperty(required=True)
@@ -55,16 +56,24 @@ def event_key(event_id):
 def currentEvent():
     now=datetime.datetime.now()
     event_current=100*(now.year-2000)+now.month
-    return event_current    
+    return event_current
+
+def fetchEvents():
+    result = urllib2.urlopen(events_url)
+    reader = csv.reader(result)
+    event_list=[]
+    for row in reader:
+        event_list.append(row)
+    return event_list
 
 def getEvents():
     events = memcache.get('events')
     if not events:
         events=[]
-        result = urllib2.urlopen(events_url)
-        reader = csv.reader(result)
-        for row in reader:
-            events.append(row)
+        rows=fetchEvents()
+        for row in rows:
+            event=Event(key_name=row[0], event_id=int(row[0]), event_name=row[1], event_url=row[2])
+            events.append(event)
         memcache.add('events', events)
     return events
 
@@ -104,7 +113,7 @@ def getResults(event_id):
 def getEvent(event_id):
     event = Event.get(event_key(event_id))
     if (not event):
-        events=getEvents()
+        events=fetchEvents()
         for row in events:
             if (row[0]==event_id):
                 event=Event(key_name=row[0], event_id=int(row[0]))
@@ -144,12 +153,13 @@ def updateEvents():
 
 class MainPage(webapp2.RequestHandler):       
     def get(self):
-        event_list = ""
+        event_list = []
         event_name = "None"
         event_id = self.request.get('event_id');
         events=getEvents()
         for event in events:
-             event_list+='<option value=' + event[0] + '>' + event[1] + "</option>"
+             event_list.append(event)
+#            event_list+='<option value=' + event[0] + '>' + event[1] + "</option>"
     
         if users.get_current_user():
             user = names[users.get_current_user().nickname()]
@@ -163,6 +173,7 @@ class MainPage(webapp2.RequestHandler):
         template_values = {
             'event_list': event_list,
             'event_name': event_name,
+            'title': "Events",
             'url': url,
             'url_linktext': url_linktext,
             'user': user,
@@ -259,11 +270,12 @@ class PickHandler(webapp2.RequestHandler):
             'pick_no': pick_no,
             'picknum': picknum,
             'results': results,
+            'title': 'Picks',
             'url': url,
             'url_linktext': url_linktext,
             'user': user
         }
-        template = jinja_environment.get_template('index.html')
+        template = jinja_environment.get_template('picks.html')
         self.response.out.write(template.render(template_values))
 
     def post(self):
@@ -292,9 +304,12 @@ class EventsHandler(webapp2.RequestHandler):
         if not output_format:
             output_format='csv'
         events=getEvents()
-        for row in events:
-            if (row[0]==event_id or not event_id):
-                event=getEvent(row[0])
+        if output_format=='html':
+            template_values = {'events': events }
+            template = jinja_environment.get_template('events.html')
+            self.response.out.write(template.render(template_values))
+        for event in events:
+            if (event.event_id==event_id or not event_id):
                 if output_format=='csv':
                     event_list=[event.event_id, event.event_name, event.start, event.picks]
                     self.response.write(",".join(str(entry) for entry in event_list)+'\n')
@@ -350,9 +365,6 @@ class ResultsHandler(webapp2.RequestHandler):
             headers = fetch_headers(page)
             if output_format=='csv':
                 self.response.write('Pos,Player,Scores,Today,Total,Points'+br)
-            elif output_format=='html':
-                self.response.write('<table>')
-                self.response.write(page.find('thead'))
             elif output_format=='json':
                 self.response.write(json.dumps(headers))
             # Get header
@@ -365,8 +377,6 @@ class ResultsHandler(webapp2.RequestHandler):
                         self.response.write(str(res.get('Rank'))+','+res.get('Name')+','+res.get('Scores')+',')
                         self.response.write(res.get('Time')+','+res.get('Total')+','+str(res.get('Points')))
                         self.response.write(br)
-                    elif output_format=='html':
-                        self.response.write(row)
                     elif output_format=='json':                 
                         self.response.write(json.dumps(res))
 

@@ -1,0 +1,24 @@
+{% extends "index.html" %}
+{% block content %}
+    <table>
+    <thead>
+    <tr><th>Pos</th>
+       <th>Player</th>
+       <th>Scores</th>
+       <th>Today</th>
+       <th>Total</th>
+       <th>Points</th>
+       <th>Picker</th></tr>
+    </thead><tbody>
+    {% for result in results %}
+    <tr><td>{{result.Pos}}</td>
+       <td>{{result.Name}}</td>
+       <td>{{result.Scores}}</td>
+       <td>{{result.Today}}</td>
+       <td>{{result.Total}}</td>
+       <td>{{result.Points}}</td>
+       <td>{{result.Picker}}</td></tr>
+    {% endfor %}
+    </tbody>
+    </table>
+{% endblock %}

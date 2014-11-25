@@ -1,0 +1,169 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>skipflog -- major golf picks</title>
+  {% if user and event and user!=event.next %}
+   <script>setInterval('window.location.reload()', 60000);</script>
+  {% endif %}
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script> 
+<script type="text/javascript">
+$(document).ready(function() {
+
+	$(".tab_content").hide();
+	$(".tab_content:first").show(); 
+
+	$("ul.tabs li").click(function() {
+		$("ul.tabs li").removeClass("active");
+		$(this).addClass("active");
+		$(".tab_content").hide();
+		var activeTab = $(this).attr("rel"); 
+		$("#"+activeTab).fadeIn(); 
+	});
+});
+
+</script> 
+<style type="text/css">
+
+	ul.tabs {
+		margin: 0;
+		padding: 0;
+		float: left;
+		list-style: none;
+		height: 32px;
+		border-bottom: 1px solid #999999;
+		border-left: 1px solid #999999;
+		width: 100%;
+	}
+	ul.tabs li {
+		float: left;
+		margin: 0;
+		cursor: pointer;
+		padding: 0px 21px ;
+		height: 31px;
+		line-height: 31px;
+		border: 1px solid #999999;
+		border-left: none;
+		font-weight: bold;
+		background: #EEEEEE;
+		overflow: hidden;
+		position: relative;
+	}
+	ul.tabs li:hover {
+		background: #CCCCCC;
+	}	
+	ul.tabs li.active{
+		background: #FFFFFF;
+		border-bottom: 1px solid #FFFFFF;
+	}
+	.tab_container {
+		border: 1px solid #999999;
+		border-top: none;
+		clear: both;
+		float: left; 
+		width: 100%;
+		background: #FFFFFF;
+	}
+	.tab_content {
+		padding: 20px;
+		font-size: 1.1em;
+		display: none;
+	}
+	body {
+	  font-family: Verdana, Arial, sans-serif;	
+          font-size: 1.1em;
+	  background-color: #DDDDDD;
+	}
+	select {
+	  font-family: Verdana, Arial, sans-serif;
+	  font-size: 1.0em;
+        }
+	#container {
+		width: 1300px;
+		margin: 0 auto;	
+	}
+</style>
+  </head>
+  <body>
+{% if user %}
+    &nbsp;Logged in as <b>{{ user }}</b>:
+{% endif %}
+  <a href="{{ url }}">{{ url_linktext }}</a>
+{% if event %}
+     &nbsp;Event: <b>{{ event.event_name }}</b> <a href="/">Clear</a>
+{% endif %}
+<p><div id="container">
+
+  <ul class="tabs"> 
+        <li class="active" rel="tab1"> {{title}}</li>
+{% if event %}
+        <li rel="tab2"> Players </li>
+        <li rel="tab3"> Results </li>
+        <li rel="tab4"> {{ event.event_name[4:] }} </li>
+        <li rel="tab5"> Major Years</li>
+        <li rel="tab6"> PGA Rank</li>
+{% endif %}
+    </ul>
+
+<div class="tab_container"> 
+
+     <div id="tab1" class="tab_content"> 
+
+{% if event %}
+   {% block content %}
+   {% endblock %}
+{% else %}
+   <form action="/pick" method="get" onchange="this.form.submit()">
+   Select Event: <select name="event_id">
+   {% for event in event_list %}
+    <option value="{{event.event_id}}">{{event.event_name}}</option>
+   {% endfor %}
+   </select><input type="submit" value="Get">
+</form>
+   {% endif %}
+
+{% if event %}
+
+</div><!-- #tab1 -->
+<div id="tab2" class="tab_content"> 
+
+{% if event.picks %}
+<p><strong>Picked:</strong>
+{% for player in event.picks %}
+<br>{{player}}
+{% endfor %}
+{% endif %}
+
+{% if event.next!="Done" %}
+<p><strong>Available:</strong>
+{% for player in event.field %}
+<br>{{player}}
+{% endfor %}
+{% endif %}
+
+{% endif %}
+
+</div><!-- #tab2 -->
+
+<div id="tab3" class="tab_content"> 
+<iframe width='1250' height='800' frameborder='0' src='https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html&widget=true'></iframe>
+</div><!-- #tab3 -->
+
+<div id="tab4" class="tab_content"> 
+<iframe width='1250' height='800' frameborder='0' src='https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=1&output=html&widget=true'></iframe>
+
+</div><!-- #tab4 -->
+
+<div id="tab5" class="tab_content"> 
+
+<iframe width='1250' height='800' frameborder='0' src='https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=0&output=html&widget=true'></iframe>
+
+</div><!-- #tab5 -->
+<div id="tab6" class="tab_content"> 
+
+<iframe width='1250' height='800' frameborder='0' src='https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=2&output=html&widget=true'></iframe>
+
+</div><!-- #tab6 -->
+</div> <!-- .tab_container --> 
+</div> <!-- #container -->
+</body>
+</html>
