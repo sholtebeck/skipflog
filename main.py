@@ -145,6 +145,7 @@ def nextEvent():
         event.pickers=[event.first,event.next]
         event.field=getPlayers()
         event.picks=[]
+        event.start=0
         event.put()
     return event
 
@@ -188,13 +189,18 @@ class MailHandler(webapp2.RequestHandler):
             event = getEvent(event_id)
         else:
             event = nextEvent()
-
+ 
         current=datetime.datetime.now()
-        event_day = int(current.day-event.start)
-        event_name = event.event_name
+        if event:
+            event_day = int(current.day-event.start)
+            event_name = event.event_name
+        else:
+            event_day=0
+            event_name="None"
         # Special Handler for weekly job
         if (event_id == "1401"):
             event_week=current.isocalendar()[1]-1
+            event_update=post_rankings()
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event_name+" results (week "+str(event_week)+")")
             message.to = "skipflog@googlegroups.com"
