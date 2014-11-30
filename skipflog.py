@@ -21,7 +21,7 @@ pga_url="http://www.pga.com/news/golf-leaderboard/pga-tour-leaderboard"
 pgatour_url="http://www.pgatour.com/leaderboard.html"
 picks_csv = "picks.csv"
 picks_url = "http://skipflog.appspot.com/picks?event_id="
-ranking_url="http://www.officialworldgolfranking.com/ranking"
+ranking_url="http://www.owgr.com/ranking"
 yahoo_base_url="http://sports.yahoo.com"
 yahoo_url=yahoo_base_url+"/golf/pga/leaderboard"
 debug=False
@@ -52,17 +52,18 @@ def get_picks(event_id):
     picks={}
     for picker in skip_pickers:
         picks[picker]=[]
-    debug_values("fetching .. ", picks_csv)
-    result = open(picks_csv, "rb")
-    if not result:
+    try:
+        debug_values("fetching .. ", picks_csv)
+        result = open(picks_csv, "rb")
+    except IOError:
         picks_url = "http://skipflog.appspot.com/picks?event_id="+str(event_id)
         debug_values("fetching .. ", picks_url)
         result = urllib2.urlopen(picks_url)
     reader = csv.reader(result)
     for row in reader:
         debug_values(row[0],row)
-        if int(row[2])<=20 and row[0]==str(event_id):
-            picker=row[1]
+        if int(row[1])<=20 and row[0]==str(event_id):
+            picker=row[2]
             player=row[3]
             picks[player]=picker
             picks[picker].append(player)
@@ -101,6 +102,20 @@ def fetch_headers(soup):
                 headers['Columns'].append(header)
                 colnum+=1
     return headers
+
+def fetch_rankings(row):
+    name = row.find('a')
+    cols = row.findAll('td')
+    player={}
+    if name and len(cols)>=10:
+        player_name=str(name.string)
+        player={'Rank': int(cols[0].text), 'Name': player_name }
+        player['Country']= str(cols[3].img.get('title'))
+        player['Average']=float(cols[5].text)
+        player['Total']=float(cols[6].text)
+        player['Events']=int(cols[7].text)
+        player['Points']=float(cols[9].text) 
+    return player
        
 def fetch_results(row, columns):
     results={}
@@ -191,8 +206,29 @@ def fetch_rows(page):
     return page.findAll('tr')    
 
 # Run routes
+def get_players(page):
+    skip_picks={
+    'Adam Scott': 'Steve', 'Bill Haas': 'Steve', 'Billy Horschel': 'Steve', 'Brandt Snedeker': 'Mark', 
+    'Bubba Watson': 'Steve', 'Charl Schwartzel': 'Mark', 'Dustin Johnson': 'Steve', 'Ernie Els': 'Mark',
+    'Graeme McDowell': 'Mark', 'Harris English': 'Mark', 'Jason Day': 'Steve', 'Jason Dufner': 'Mark', 
+    'Jim Furyk': 'Mark', 'Jimmy Walker': 'Steve', 'John Senden': 'Mark', 'Jonas Blixt': 'Steve',
+    'Jordan Spieth': 'Steve', 'Justin Rose': 'Mark', 'Keegan Bradley': 'Mark', 'Lee Westwood': 'Steve', 
+    'Louis Oosthuizen': 'Steve', 'Luke Donald': 'Mark', 'Matt Every': 'Steve', 'Matt Jones': 'Steve', 
+    'Matt Kuchar': 'Mark', 'Patrick Reed': 'Mark', 'Phil Mickelson': 'Mark', 'Rickie Fowler': 'Mark', 
+    'Rory McIlroy': 'Steve', 'Sergio Garcia': 'Mark', 'Stephen Gallacher': 'Steve', 'Steve Stricker':'Steve',
+    'Tiger Woods': 'Steve','Webb Simpson': 'Mark', 'Zach Johnson': 'Steve'   }
+    players=[]
+    current_rank=1
+    for row in fetch_rows(page):
+        player=fetch_rankings(row)
+        if player.get('Name') in skip_picks.keys():
+            player['Picker']=skip_picks[player.get('Name')]
+            players.append([current_rank,player['Name'],player['Average'],player['Total'],
+            player['Rank'],player['Points'], skip_picks[player.get('Name')]])
+            current_rank+=1
+    return players
+
 def get_results(event_id):
-    skip_picks=get_picks(event_id)
     page=soup_results(yahoo_url)
     headers=fetch_headers(page)
     results=[headers]
@@ -203,4 +239,51 @@ def get_results(event_id):
             results.append(res)
     return results
 
+# Post the rankings to the "Rankings" tab
+def post_rankings():
+    worksheet=open_worksheet('Majors','Rankings')
+    soup=soup_results(ranking_url)
+    #get date and week number from header
+    current_time=str(soup.find('time').string)
+    week_no=str(soup.find('h2').string)[5:]
+    worksheet_time=str(worksheet.acell('B1').value)
+    # check if update required
+    if (current_time == worksheet_time):
+        return False
+    else:
+        worksheet.update_cell(1, 4, week_no)
+        worksheet.update_cell(1, 2, current_time.string )
+    #get all table rows from the page
+    players=get_players(soup)
+    players.sort(key=lambda player:player[5], reverse=True)
+    current_row=3
+    pickvals={}
+    for picker in skip_pickers:
+        pickvals[picker]={'count':0,'total':0.0,'points':0.0 }
+    for player in players:
+        picker = player[6]
+        if (pickvals[picker]['count']<15):
+            player[0]=current_row-2
+            cell_values = worksheet.range('A'+str(current_row)+':G'+str(current_row))
+            for col,cell in zip(player,cell_values):
+                cell.value=col
+            worksheet.update_cells(cell_values)
+            pickvals[picker]['total']+=float(player[3])
+            pickvals[picker]['points']+=player[5]
+            pickvals[picker]['count']+=1
+            current_row += 1
+    # update totals
+    if pickvals[skip_pickers[1]]['points']>pickvals[skip_pickers[0]]['points']:
+        skip_pickers.reverse()
+    current_row+=1
+    for picker in skip_pickers:
+        idx = skip_pickers.index(picker)
+        worksheet.update_cell(current_row, 1, idx+1)
+        worksheet.update_cell(current_row, 2, picker)
+        worksheet.update_cell(current_row, 3, pickvals[picker]['points']/pickvals[picker]['count'])
+        worksheet.update_cell(current_row, 4, pickvals[picker]['total'])
+        worksheet.update_cell(current_row, 5, pickvals[picker]['count'])
+        worksheet.update_cell(current_row, 6, pickvals[picker]['points'])
+        current_row+=1    
+    return True
 

@@ -195,6 +195,7 @@ class MailHandler(webapp2.RequestHandler):
         # Special Handler for weekly job
         if (event_id == "1401"):
             event_week=current.isocalendar()[1]-1
+            event_update=post_rankings()
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event_name+" results (week "+str(event_week)+")")
             message.to = "skipflog@googlegroups.com"
