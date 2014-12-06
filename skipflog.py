@@ -81,13 +81,14 @@ def soup_results(url):
     return soup
 
 def fetch_headers(soup):
-    headers={}
+    event_year = str(soup.title.string[:4])
+    headers = { 'Year':event_year }
     event_name = soup.find('h4',{'class': "yspTitleBar"})
     if event_name and event_name.string:
-        headers['Event Name']= str(event_name.string.replace(u'\xa0',u''))
+        headers['Event']= str(event_name.string.replace(u'\xa0',u''))
     last_update = soup.find('span',{'class': "ten"})
     if last_update:
-        headers['Last Update']= str(last_update.string[-13:])
+        headers['Last Update']= str(last_update.string)
 #   headers['thead']=soup.find('thead')
     columns=soup.findAll('th')
     colnum=0
@@ -123,8 +124,8 @@ def fetch_results(row, columns):
     if player:
         results['Name']=str(player.string)
         debug_values('Name',results['Name'])
-        results['Link']=yahoo_base_url+str(player.get('href'))
-        debug_values('Link',results['Link'])
+#       results['Link']=yahoo_base_url+str(player.get('href'))
+#       debug_values('Link',results['Link'])
         results['Scores']=""
         results['Total']=0
         cols=row.findAll('td')
@@ -143,11 +144,13 @@ def fetch_results(row, columns):
                     if value.isdigit():
                         results['Total']=int(value)
                         results['Today']=value
+                        results[column]=value
                 elif column in ('2','3','4'):
                     if value.isdigit():
                         results['Scores']+="-"+value
                         results['Total']+=int(value)
                         results['Today']=value
+                        results[column]=value
                     elif value [-2:] in ('am','pm'):
                         results['Time']=value
                     elif value in ('MC','WD','CUT'):
@@ -229,13 +232,13 @@ def get_players(page):
     return players
 
 def get_results(event_id):
-    page=soup_results(yahoo_url)
+    page=soup_results(yahoo_url+event_id)
     headers=fetch_headers(page)
+    headers['Week']=event_id[-2:]
     results=[headers]
-    rows=fetch_rows(page)
-    for row in rows:
+    for row in fetch_rows(page):
         res=fetch_results(row, headers.get('Columns'))
-        if res.get('Rank') in range(1,10) or res.get('Name') in skip_picks.keys():
+        if res.get('Points')>0: 
             results.append(res)
     return results
 
