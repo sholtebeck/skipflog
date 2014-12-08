@@ -255,7 +255,7 @@ def post_rankings():
         return False
     else:
         worksheet.update_cell(1, 4, week_no)
-        worksheet.update_cell(1, 2, current_time.string )
+        worksheet.update_cell(1, 2, current_time )
     #get all table rows from the page
     players=get_players(soup)
     players.sort(key=lambda player:player[5], reverse=True)
