@@ -23,7 +23,7 @@ picks_csv = "picks.csv"
 picks_url = "http://skipflog.appspot.com/picks?event_id="
 ranking_url="http://www.owgr.com/ranking"
 yahoo_base_url="http://sports.yahoo.com"
-yahoo_url=yahoo_base_url+"/golf/pga/leaderboard"
+yahoo_url=yahoo_base_url+"/golf/pga/leaderboard/"
 debug=False
 
 # debug values
@@ -31,16 +31,27 @@ def debug_values(number, string):
     if debug:
         print number, string
 
+# custom string handler
+def xstr(string):
+    if string is None:
+        return None 
+    elif string.isdigit():
+        return int(string)
+    else:
+        return str(string.encode('ascii','ignore').strip())
+
 # Function to get_points for a Position
 def get_rank(position):
-    if not position.replace('T','').isdigit():
+    if not position:
+        return -1
+    elif not position.replace('T','').isdigit():
         return 0
     else:
         rank = int(position.replace('T',''))
         return rank
 
 def get_points(rank):
-    if rank < len(skip_points):
+    if rank in range(1,len(skip_points)):
         return skip_points[rank]
     elif rank <= 67:
         return 1
@@ -82,13 +93,14 @@ def soup_results(url):
 
 def fetch_headers(soup):
     event_year = str(soup.title.string[:4])
-    headers = { 'Year':event_year }
+    headers = { 'Year':event_year, 'Found':False }
     event_name = soup.find('h4',{'class': "yspTitleBar"})
     if event_name and event_name.string:
+        headers['Found']=True
         headers['Event']= str(event_name.string.replace(u'\xa0',u''))
     last_update = soup.find('span',{'class': "ten"})
     if last_update:
-        headers['Last Update']= str(last_update.string)
+        headers['Last Update']= str(last_update.string)[15:]
 #   headers['thead']=soup.find('thead')
     columns=soup.findAll('th')
     colnum=0
@@ -99,7 +111,7 @@ def fetch_headers(soup):
             if header=='Pos': 
                 headers['Columns']=[header]
                 colnum=1
-            elif headers.get('Columns') and header!='Name':
+            elif headers.get('Columns'):
                 headers['Columns'].append(header)
                 colnum+=1
     return headers
@@ -178,6 +190,16 @@ def fetch_results(row, columns):
                 last_value=value
     return results
 
+# A more general version of fetch_results()
+def player_results(row, keys):
+    values=[xstr(td.string) for td in row.findAll('td')]
+    player=dict(zip(keys,values))
+    if row.a:
+        player['Name']=xstr(row.a.string)
+        player['Rank']=get_rank(player.get('Pos'))
+        player['Points']=get_points(player.get('Rank'))
+    return player
+
 def fetch_scores(url):
     scores=[[],[], 0,0]
     page=soup_results(url)
@@ -236,10 +258,12 @@ def get_results(event_id):
     headers=fetch_headers(page)
     headers['Week']=event_id[-2:]
     results=[headers]
-    for row in fetch_rows(page):
-        res=fetch_results(row, headers.get('Columns'))
-        if res.get('Points')>0: 
-            results.append(res)
+    keys=headers.get('Columns')
+    if keys:
+        for row in fetch_rows(page):
+            res=player_results(row, headers.get('Columns'))
+            if res.get('Points') in range(1,101): 
+                results.append(res)
     return results
 
 # Post the rankings to the "Rankings" tab
