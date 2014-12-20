@@ -1,5 +1,5 @@
 # skipflog functions
-import csv,sys,urllib2
+import csv,json,sys,urllib2
 # External modules (gspread, bs4)
 import sys
 sys.path[0:0] = ['libs']
@@ -21,17 +21,19 @@ pga_url="http://www.pga.com/news/golf-leaderboard/pga-tour-leaderboard"
 pgatour_url="http://www.pgatour.com/leaderboard.html"
 picks_csv = "picks.csv"
 picks_url = "http://skipflog.appspot.com/picks?event_id="
+rankings_api = "http://knarflog.appspot.com/api/rankings"
 ranking_url="http://www.owgr.com/ranking"
 yahoo_base_url="http://sports.yahoo.com"
-yahoo_url=yahoo_base_url+"/golf/pga/leaderboard/"
+yahoo_url=yahoo_base_url+"/golf/pga/leaderboard"
 debug=False
+
 
 # debug values
 def debug_values(number, string):
     if debug:
         print number, string
 
-# custom string handler
+# Handler for string values to ASCII or integer
 def xstr(string):
     if string is None:
         return None 
@@ -42,21 +44,20 @@ def xstr(string):
 
 # Function to get_points for a Position
 def get_rank(position):
-    if not position:
-        return -1
-    elif not position.replace('T','').isdigit():
+    if not position.replace('T','').isdigit():
         return 0
     else:
         rank = int(position.replace('T',''))
         return rank
 
 def get_points(rank):
-    if rank in range(1,len(skip_points)):
+    if rank < len(skip_points):
         return skip_points[rank]
     elif rank <= 67:
         return 1
     else:
         return 0
+
 
 # Get the picks for an event
 def get_picks(event_id):
@@ -86,21 +87,25 @@ def open_worksheet(spread,work):
     worksheet=spreadsheet.worksheet(work)
     return worksheet
 
+# json_results -- get results for a url
+def json_results(url):
+    page=urllib2.urlopen(url)
+    results=json.load(page)
+    return results
+
 def soup_results(url):
     page=urllib2.urlopen(url)
     soup = BeautifulSoup(page.read())
     return soup
 
 def fetch_headers(soup):
-    event_year = str(soup.title.string[:4])
-    headers = { 'Year':event_year, 'Found':False }
+    headers={}
     event_name = soup.find('h4',{'class': "yspTitleBar"})
     if event_name and event_name.string:
-        headers['Found']=True
-        headers['Event']= str(event_name.string.replace(u'\xa0',u''))
+        headers['Event Name']= str(event_name.string.replace(u'\xa0',u''))
     last_update = soup.find('span',{'class': "ten"})
     if last_update:
-        headers['Last Update']= str(last_update.string)[15:]
+        headers['Last Update']= str(last_update.string[-13:])
 #   headers['thead']=soup.find('thead')
     columns=soup.findAll('th')
     colnum=0
@@ -111,7 +116,7 @@ def fetch_headers(soup):
             if header=='Pos': 
                 headers['Columns']=[header]
                 colnum=1
-            elif headers.get('Columns'):
+            elif headers.get('Columns') and header!='Name':
                 headers['Columns'].append(header)
                 colnum+=1
     return headers
@@ -136,8 +141,8 @@ def fetch_results(row, columns):
     if player:
         results['Name']=str(player.string)
         debug_values('Name',results['Name'])
-#       results['Link']=yahoo_base_url+str(player.get('href'))
-#       debug_values('Link',results['Link'])
+        results['Link']=yahoo_base_url+str(player.get('href'))
+        debug_values('Link',results['Link'])
         results['Scores']=""
         results['Total']=0
         cols=row.findAll('td')
@@ -156,13 +161,11 @@ def fetch_results(row, columns):
                     if value.isdigit():
                         results['Total']=int(value)
                         results['Today']=value
-                        results[column]=value
                 elif column in ('2','3','4'):
                     if value.isdigit():
                         results['Scores']+="-"+value
                         results['Total']+=int(value)
                         results['Today']=value
-                        results[column]=value
                     elif value [-2:] in ('am','pm'):
                         results['Time']=value
                     elif value in ('MC','WD','CUT'):
@@ -189,16 +192,6 @@ def fetch_results(row, columns):
                 colnum+=1
                 last_value=value
     return results
-
-# A more general version of fetch_results()
-def player_results(row, keys):
-    values=[xstr(td.string) for td in row.findAll('td')]
-    player=dict(zip(keys,values))
-    if row.a:
-        player['Name']=xstr(row.a.string)
-        player['Rank']=get_rank(player.get('Pos'))
-        player['Points']=get_points(player.get('Rank'))
-    return player
 
 def fetch_scores(url):
     scores=[[],[], 0,0]
@@ -230,58 +223,43 @@ def fetch_scores(url):
 def fetch_rows(page):
     return page.findAll('tr')    
 
-# Run routes
-def get_players(page):
-    skip_picks={
-    'Adam Scott': 'Steve', 'Bill Haas': 'Steve', 'Billy Horschel': 'Steve', 'Brandt Snedeker': 'Mark', 
-    'Bubba Watson': 'Steve', 'Charl Schwartzel': 'Mark', 'Dustin Johnson': 'Steve', 'Ernie Els': 'Mark',
-    'Graeme McDowell': 'Mark', 'Harris English': 'Mark', 'Jason Day': 'Steve', 'Jason Dufner': 'Mark', 
-    'Jim Furyk': 'Mark', 'Jimmy Walker': 'Steve', 'John Senden': 'Mark', 'Jonas Blixt': 'Steve',
-    'Jordan Spieth': 'Steve', 'Justin Rose': 'Mark', 'Keegan Bradley': 'Mark', 'Lee Westwood': 'Steve', 
-    'Louis Oosthuizen': 'Steve', 'Luke Donald': 'Mark', 'Matt Every': 'Steve', 'Matt Jones': 'Steve', 
-    'Matt Kuchar': 'Mark', 'Patrick Reed': 'Mark', 'Phil Mickelson': 'Mark', 'Rickie Fowler': 'Mark', 
-    'Rory McIlroy': 'Steve', 'Sergio Garcia': 'Mark', 'Stephen Gallacher': 'Steve', 'Steve Stricker':'Steve',
-    'Tiger Woods': 'Steve','Webb Simpson': 'Mark', 'Zach Johnson': 'Steve'   }
-    players=[]
+# Get the list of players
+def get_players(playlist):
     current_rank=1
-    for row in fetch_rows(page):
-        player=fetch_rankings(row)
-        if player.get('Name') in skip_picks.keys():
-            player['Picker']=skip_picks[player.get('Name')]
-            players.append([current_rank,player['Name'],player['Average'],player['Total'],
-            player['Rank'],player['Points'], skip_picks[player.get('Name')]])
+    players=[]
+    for player in playlist:
+        if player.get('Picker'):
+            players.append([current_rank,player['Name'],player['Avg'],player['Total'],player['Rank'],player['Points'],player['Picker']])
             current_rank+=1
     return players
 
 def get_results(event_id):
-    page=soup_results(yahoo_url+event_id)
+    page=soup_results(yahoo_url)
     headers=fetch_headers(page)
-    headers['Week']=event_id[-2:]
     results=[headers]
-    keys=headers.get('Columns')
-    if keys:
-        for row in fetch_rows(page):
-            res=player_results(row, headers.get('Columns'))
-            if res.get('Points') in range(1,101): 
-                results.append(res)
+    rows=fetch_rows(page)
+    for row in rows:
+        res=fetch_results(row, headers.get('Columns'))
+        if res.get('Rank') in range(1,10) or res.get('Name') in skip_picks.keys():
+            results.append(res)
     return results
 
 # Post the rankings to the "Rankings" tab
 def post_rankings():
+    results=json_results(rankings_api)
     worksheet=open_worksheet('Majors','Rankings')
-    soup=soup_results(ranking_url)
     #get date and week number from header
-    current_time=str(soup.find('time').string)
-    week_no=str(soup.find('h2').string)[5:]
-    worksheet_time=str(worksheet.acell('B1').value)
+    results_date=results['headers']['date']
+    results_week=int(results['headers']['Week'])
+    worksheet_week=int(worksheet.acell('D1').value)
     # check if update required
-    if (current_time == worksheet_time):
+    if (results_week==worksheet_week):
         return False
     else:
-        worksheet.update_cell(1, 4, week_no)
-        worksheet.update_cell(1, 2, current_time )
+        worksheet.update_cell(1, 4, results_week)
+        worksheet.update_cell(1, 2, results_date)
     #get all table rows from the page
-    players=get_players(soup)
+    players=get_players(results['players'])
     players.sort(key=lambda player:player[5], reverse=True)
     current_row=3
     pickvals={}
