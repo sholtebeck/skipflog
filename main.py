@@ -24,6 +24,7 @@ events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05
 players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B1%3AB156&output=csv"
 results_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
 ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
+rankings_url="http://knarflog.appspot.com/app/rankings.html"
 leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard/2015/397"
 
 #Load templates from 'templates' folder
@@ -205,6 +206,14 @@ class MailHandler(webapp2.RequestHandler):
                             subject=event_name+" results (week "+str(event_week)+")")
             message.to = "skipflog@googlegroups.com"
             result = urllib2.urlopen(ranking_url)
+            message.html=result.read()
+            message.send()
+        if (event_id == "2015"):
+            event_week=current.isocalendar()[1]-1
+            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
+                            subject=event_name+" results (week "+str(event_week)+")")
+            message.to = "sholtebeck@gmail.com"
+            result = urllib2.urlopen(rankings_url)
             message.html=result.read()
             message.send()
         elif (event_day >0 and event_day < 5):
