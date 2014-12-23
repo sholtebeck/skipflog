@@ -6,25 +6,8 @@ import urllib2
 import webapp2
 import os,sys
 
-from google.appengine.ext import db
-from google.appengine.api import mail
-from google.appengine.api import memcache
-from google.appengine.api import users
+from google.appengine.ext import db,mail,memcache,taskqueue,users
 from skipflog import *
-
-br="</br>"
-events={ 4:'Masters',6:'US Open', 7:'Open Championship', 8:'PGA Championship'}
-mypicks = [1,4,5,8,9,12,13,16,17,20,22]
-yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
-names={'sholtebeck':'Steve','mholtebeck':'Mark'}
-pickers=('Steve','Mark')
-pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
-event_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=1&output=html&widget=true"
-events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AE20&output=csv"
-players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B1%3AB156&output=csv"
-results_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
-ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
-leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"
 
 #Load templates from 'templates' folder
 #jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
@@ -120,7 +103,7 @@ def getEvent(event_id):
                 event.event_name=row[1]
                 event.event_url=row[2]
                 event.first=row[3]
-                event.next=pickers[1 - pickers.index(row[3])]
+                event.next=skip_pickers[1 - pickers.index(row[3])]
                 event.pickers=[event.first,event.next]
                 event.field=getPlayers(event.event_id)
                 event.picks=[]
@@ -189,7 +172,6 @@ class MailHandler(webapp2.RequestHandler):
             event = getEvent(event_id)
         else:
             event = nextEvent()
- 
         current=datetime.datetime.now()
         if event:
             event_day = int(current.day-event.start)
@@ -198,16 +180,7 @@ class MailHandler(webapp2.RequestHandler):
             event_day=0
             event_name="None"
         # Special Handler for weekly job
-        if (event_id == "1401"):
-            event_week=current.isocalendar()[1]-1
-            event_update=post_rankings()
-            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
-                            subject=event_name+" results (week "+str(event_week)+")")
-            message.to = "skipflog@googlegroups.com"
-            result = urllib2.urlopen(ranking_url)
-            message.html=result.read()
-            message.send()
-        elif (event_day >0 and event_day < 5):
+        if (event_day >0 and event_day < 5):
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event_name+" results (round "+str(event_day)+")")
             message.to = "skipflog@googlegroups.com"
@@ -359,32 +332,49 @@ class PlayersHandler(webapp2.RequestHandler):
         else:            
             self.response.write(players)
 
+class RankingHandler(webapp2.RequestHandler): 
+    def get(self):
+        current=datetime.datetime.now()
+        taskqueue.add(url='/ranking', params={'event_week': current.isocalendar()[1]-1 })
+        
+    def post(self):
+        event_update=post_rankings()
+        event_week = self.request.get('event_week')
+        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com', subject=event_name+" (week "+str(event_week)+")")
+        message.to = "skipflog@googlegroups.com"
+        result = urllib2.urlopen(ranking_url)
+        message.html=result.read()
+        message.send()        
+            
 class ResultsHandler(webapp2.RequestHandler):   
     def get(self):
         output_format = self.request.get('output')
         if not output_format:
-            output_format='csv'
+            output_format='json'
         event_id = self.request.get('event_id')
         if event_id:
             event = getEvent(event_id)
-            page = soup_results(leaderboard_url)
-            headers = fetch_headers(page)
-            if output_format=='csv':
-                self.response.write('Pos,Player,Scores,Today,Total,Points'+br)
-            elif output_format=='json':
-                self.response.write(json.dumps(headers))
-            # Get header
-            head_columns=headers.get('Columns')
-            rows = fetch_rows(page)
-            for row in rows:
-                res=fetch_results(row, headers.get('Columns'))
-                if res.get('Rank') in range(1,10) or res.get('Name') in event.picks:
-                    if output_format=='csv':
-                        self.response.write(str(res.get('Rank'))+','+res.get('Name')+','+res.get('Scores')+',')
-                        self.response.write(res.get('Time')+','+res.get('Total')+','+str(res.get('Points')))
-                        self.response.write(br)
-                    elif output_format=='json':                 
-                        self.response.write(json.dumps(res))
+        else:
+            event = Event(key_name='9999',event_id=9999)
+            event.picks=[]
+        page = soup_results(leaderboard_url)
+        headers = fetch_headers(page)
+        if output_format=='csv':
+            self.response.write('Pos,Player,Scores,Today,Total,Points'+br)
+        elif output_format=='json':
+            self.response.write(json.dumps(headers))
+        # Get header
+        head_columns=headers.get('Columns')
+        rows = fetch_rows(page)
+        for row in rows:
+            res=fetch_results(row, headers.get('Columns'))
+            if res.get('Rank') in range(1,20) or res.get('Name') in event.picks:
+                if output_format=='csv':
+                    self.response.write(str(res.get('Rank'))+','+res.get('Name')+','+res.get('Scores')+',')
+                    self.response.write(res.get('Time')+','+res.get('Total')+','+str(res.get('Points')))
+                    self.response.write(br)
+                elif output_format=='json':                 
+                    self.response.write(json.dumps(res))
 
 app = webapp2.WSGIApplication([
   ('/', MainPage),
@@ -393,6 +383,7 @@ app = webapp2.WSGIApplication([
   ('/pick', PickHandler),
   ('/picks', PicksHandler),
   ('/players', PlayersHandler),
+  ('/ranking', RankingHandler),
   ('/results', ResultsHandler)  
 ], debug=True)
 

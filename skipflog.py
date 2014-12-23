@@ -1,5 +1,5 @@
 # skipflog functions
-import csv,sys,urllib2
+import csv,json,sys,urllib2
 # External modules (gspread, bs4)
 import sys
 sys.path[0:0] = ['libs']
@@ -7,6 +7,19 @@ import gspread
 from bs4 import BeautifulSoup
 
 # Misc properties
+br="</br>"
+events={ 4:'Masters',6:'US Open', 7:'Open Championship', 8:'PGA Championship'}
+mypicks = [1,4,5,8,9,12,13,16,17,20,22]
+yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
+names={'sholtebeck':'Steve','mholtebeck':'Mark'}
+pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
+event_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=1&output=html&widget=true"
+events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AE20&output=csv"
+players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B1%3AB156&output=csv"
+results_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
+ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
+rankings_url="http://knarflog.appspot.com/ranking"
+leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard/2015/397"
 skip_user="skipfloguser"
 skip_pass="sK2pfL1g"
 skip_picks={}
@@ -21,15 +34,26 @@ pga_url="http://www.pga.com/news/golf-leaderboard/pga-tour-leaderboard"
 pgatour_url="http://www.pgatour.com/leaderboard.html"
 picks_csv = "picks.csv"
 picks_url = "http://skipflog.appspot.com/picks?event_id="
+rankings_api = "http://knarflog.appspot.com/api/rankings"
 ranking_url="http://www.owgr.com/ranking"
 yahoo_base_url="http://sports.yahoo.com"
 yahoo_url=yahoo_base_url+"/golf/pga/leaderboard"
 debug=False
 
+
 # debug values
 def debug_values(number, string):
     if debug:
         print number, string
+
+# Handler for string values to ASCII or integer
+def xstr(string):
+    if string is None:
+        return None 
+    elif string.isdigit():
+        return int(string)
+    else:
+        return str(string.encode('ascii','ignore').strip())
 
 # Function to get_points for a Position
 def get_rank(position):
@@ -46,6 +70,7 @@ def get_points(rank):
         return 1
     else:
         return 0
+
 
 # Get the picks for an event
 def get_picks(event_id):
@@ -74,6 +99,12 @@ def open_worksheet(spread,work):
     spreadsheet=gc.open(spread)
     worksheet=spreadsheet.worksheet(work)
     return worksheet
+
+# json_results -- get results for a url
+def json_results(url):
+    page=urllib2.urlopen(url)
+    results=json.load(page)
+    return results
 
 def soup_results(url):
     page=urllib2.urlopen(url)
@@ -205,26 +236,13 @@ def fetch_scores(url):
 def fetch_rows(page):
     return page.findAll('tr')    
 
-# Run routes
-def get_players(page):
-    skip_picks={
-    'Adam Scott': 'Steve', 'Bill Haas': 'Steve', 'Billy Horschel': 'Steve', 'Brandt Snedeker': 'Mark', 
-    'Bubba Watson': 'Steve', 'Charl Schwartzel': 'Mark', 'Dustin Johnson': 'Steve', 'Ernie Els': 'Mark',
-    'Graeme McDowell': 'Mark', 'Harris English': 'Mark', 'Jason Day': 'Steve', 'Jason Dufner': 'Mark', 
-    'Jim Furyk': 'Mark', 'Jimmy Walker': 'Steve', 'John Senden': 'Mark', 'Jonas Blixt': 'Steve',
-    'Jordan Spieth': 'Steve', 'Justin Rose': 'Mark', 'Keegan Bradley': 'Mark', 'Lee Westwood': 'Steve', 
-    'Louis Oosthuizen': 'Steve', 'Luke Donald': 'Mark', 'Matt Every': 'Steve', 'Matt Jones': 'Steve', 
-    'Matt Kuchar': 'Mark', 'Patrick Reed': 'Mark', 'Phil Mickelson': 'Mark', 'Rickie Fowler': 'Mark', 
-    'Rory McIlroy': 'Steve', 'Sergio Garcia': 'Mark', 'Stephen Gallacher': 'Steve', 'Steve Stricker':'Steve',
-    'Tiger Woods': 'Steve','Webb Simpson': 'Mark', 'Zach Johnson': 'Steve'   }
-    players=[]
+# Get the list of players
+def get_players(playlist):
     current_rank=1
-    for row in fetch_rows(page):
-        player=fetch_rankings(row)
-        if player.get('Name') in skip_picks.keys():
-            player['Picker']=skip_picks[player.get('Name')]
-            players.append([current_rank,player['Name'],player['Average'],player['Total'],
-            player['Rank'],player['Points'], skip_picks[player.get('Name')]])
+    players=[]
+    for player in playlist:
+        if player.get('Picker'):
+            players.append([current_rank,player['Name'],player['Avg'],player['Total'],player['Rank'],player['Points'],player['Picker']])
             current_rank+=1
     return players
 
@@ -241,20 +259,20 @@ def get_results(event_id):
 
 # Post the rankings to the "Rankings" tab
 def post_rankings():
+    results=json_results(rankings_api)
     worksheet=open_worksheet('Majors','Rankings')
-    soup=soup_results(ranking_url)
     #get date and week number from header
-    current_time=str(soup.find('time').string)
-    week_no=str(soup.find('h2').string)[5:]
-    worksheet_time=str(worksheet.acell('B1').value)
+    results_date=results['headers']['date']
+    results_week=int(results['headers']['Week'])
+    worksheet_week=int(worksheet.acell('D1').value)
     # check if update required
-    if (current_time == worksheet_time):
+    if (results_week==worksheet_week):
         return False
     else:
-        worksheet.update_cell(1, 4, week_no)
-        worksheet.update_cell(1, 2, current_time.string )
+        worksheet.update_cell(1, 4, results_week)
+        worksheet.update_cell(1, 2, results_date)
     #get all table rows from the page
-    players=get_players(soup)
+    players=get_players(results['players'])
     players.sort(key=lambda player:player[5], reverse=True)
     current_row=3
     pickvals={}
