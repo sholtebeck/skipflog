@@ -1,5 +1,5 @@
 cron:
 - description: weekly email
   url: /ranking
-  schedule: every monday 10:00
+  schedule: every monday 08:00
   timezone: America/Los_Angeles

@@ -6,7 +6,11 @@ import urllib2
 import webapp2
 import os,sys
 
-from google.appengine.ext import db,mail,memcache,taskqueue,users
+from google.appengine.ext import db
+from google.appengine.api import mail
+from google.appengine.api import memcache
+from google.appengine.api import taskqueue
+from google.appengine.api import users
 from skipflog import *
 
 #Load templates from 'templates' folder
@@ -103,7 +107,7 @@ def getEvent(event_id):
                 event.event_name=row[1]
                 event.event_url=row[2]
                 event.first=row[3]
-                event.next=skip_pickers[1 - pickers.index(row[3])]
+                event.next=skip_pickers[1 - skip_pickers.index(row[3])]
                 event.pickers=[event.first,event.next]
                 event.field=getPlayers(event.event_id)
                 event.picks=[]
@@ -178,7 +182,7 @@ class MailHandler(webapp2.RequestHandler):
             event_name = event.event_name
         else:
             event_day=0
-            event_name="None"
+            event_name=None
         # Special Handler for weekly job
         if (event_day >0 and event_day < 5):
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
@@ -335,12 +339,14 @@ class PlayersHandler(webapp2.RequestHandler):
 class RankingHandler(webapp2.RequestHandler): 
     def get(self):
         current=datetime.datetime.now()
-        taskqueue.add(url='/ranking', params={'event_week': current.isocalendar()[1]-1 })
+        taskqueue.add(url='/ranking', params={'event_week': current.isocalendar()[1]-1,'event_year':current.year })
         
     def post(self):
         event_update=post_rankings()
         event_week = self.request.get('event_week')
-        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com', subject=event_name+" (week "+str(event_week)+")")
+        event_year = self.request.get('event_year')
+        event_name = event_year + " World Golf Rankings (Week "+str(event_week)+")"
+        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name)
         message.to = "skipflog@googlegroups.com"
         result = urllib2.urlopen(ranking_url)
         message.html=result.read()
