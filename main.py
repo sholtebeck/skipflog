@@ -304,24 +304,26 @@ class EventsHandler(webapp2.RequestHandler):
 
 class PicksHandler(webapp2.RequestHandler):   
     def get(self):
-        output_format = self.request.get('output')
-        if not output_format:
-            output_format='csv'
+        output_format = self.request.get('output','json')
         event_id = self.request.get('event_id')
         if not event_id:
             self.redirect('/events')	
         else:
             event = getEvent(event_id)
             if event:
+                pick_dict={'event_id':event_id,'event_name': event.event_name,'picks':{} }
+                for picker in skip_pickers:
+                    pick_dict['picks'][picker]=[]
                 for pick in getPicks(event_id):
                     if output_format=='csv':                   
                         pick_list=[event_id, pick.pick_no, pick.who, pick.player]
                         self.response.write(",".join(str(entry) for entry in pick_list)+'\n')
-                    elif output_format=='json':
-                        pick_dict={'event_id':event_id,'pick_no':pick.pick_no, 'who':pick.who, 'player':pick.player}
-                        self.response.write(json.dumps(pick_dict)+'\n')
+                    elif output_format=='json' and pick.pick_no<=20:
+                        pick_dict['picks'][pick.who].append(pick.player)
                     elif output_format=='xml':
                         self.response.write(pick.to_xml())
+                if output_format=='json':
+                    self.response.write(json.dumps(pick_dict))
 
 class PlayersHandler(webapp2.RequestHandler):   
     def get(self):
