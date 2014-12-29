@@ -35,7 +35,7 @@ pgatour_url="http://www.pgatour.com/leaderboard.html"
 picks_csv = "picks.csv"
 picks_url = "http://skipflog.appspot.com/picks?event_id="
 rankings_api = "http://knarflog.appspot.com/api/rankings"
-ranking_url="http://www.owgr.com/ranking"
+owg_ranking_url="http://www.owgr.com/ranking"
 yahoo_base_url="http://sports.yahoo.com"
 yahoo_url=yahoo_base_url+"/golf/pga/leaderboard"
 debug=False
