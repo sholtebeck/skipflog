@@ -340,8 +340,7 @@ class PlayersHandler(webapp2.RequestHandler):
 
 class RankingHandler(webapp2.RequestHandler): 
     def get(self):
-        current=datetime.datetime.now()
-        taskqueue.add(url='/ranking', params={'event_week': current.isocalendar()[1]-1,'event_year':current.year })
+        taskqueue.add(url='/ranking', params={'event_week': current_week(),'event_year': current_year()})
         
     def post(self):
         event_update=post_rankings()

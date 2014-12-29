@@ -1,5 +1,6 @@
 # skipflog functions
 import csv,json,sys,urllib2
+from time import gmtime, strftime
 # External modules (gspread, bs4)
 import sys
 sys.path[0:0] = ['libs']
@@ -40,6 +41,18 @@ yahoo_base_url="http://sports.yahoo.com"
 yahoo_url=yahoo_base_url+"/golf/pga/leaderboard"
 debug=False
 
+# get current week and year
+def current_month():
+    this_month=strftime("%m",gmtime())
+    return int(this_month) 
+
+def current_week():
+    this_week=strftime("%U",gmtime())
+    return int(this_week) 
+
+def current_year():
+    this_year=strftime("%Y",gmtime())
+    return int(this_year) 
 
 # debug values
 def debug_values(number, string):
