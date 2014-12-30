@@ -1,5 +1,5 @@
 # skipflog functions
-import csv,json,sys,urllib2
+import csv,datetime,json,sys,urllib2
 from time import gmtime, strftime
 # External modules (gspread, bs4)
 import sys
@@ -20,7 +20,7 @@ players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU0
 results_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
 ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
 rankings_url="http://knarflog.appspot.com/ranking"
-leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard/2015/397"
+leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard/2014/33"
 skip_user="skipfloguser"
 skip_pass="sK2pfL1g"
 skip_picks={}
@@ -89,12 +89,12 @@ def get_points(rank):
 def get_picks(event_id):
     picks={}
     for picker in skip_pickers:
-        picks[picker]=[]
+        picks[picker]={'Name':picker,'Count':0,'Picks':[],'Points':0}
     try:
         debug_values("fetching .. ", picks_csv)
         result = open(picks_csv, "rb")
     except IOError:
-        picks_url = "http://skipflog.appspot.com/picks?event_id="+str(event_id)
+        picks_url = "http://skipflog.appspot.com/picks?event_id="+str(event_id)+"&output=csv"
         debug_values("fetching .. ", picks_url)
         result = urllib2.urlopen(picks_url)
     reader = csv.reader(result)
@@ -104,7 +104,8 @@ def get_picks(event_id):
             picker=row[2]
             player=row[3]
             picks[player]=picker
-            picks[picker].append(player)
+            picks[picker]['Count']+=1
+            picks[picker]['Picks'].append(player)
     return picks
 
 def open_worksheet(spread,work):
@@ -197,6 +198,7 @@ def fetch_results(row, columns):
                     elif value in ('MC','WD','CUT'):
                         results['Pos']=value
                         results['Points']=0
+                        results['Today']=value
                         results['Total']=0
                 elif column == 'Today':
                      if results['Total'] and value[0] in ('+','-','E'):
@@ -260,14 +262,20 @@ def get_players(playlist):
     return players
 
 def get_results(event_id):
+    picks=get_picks(event_id)
     page=soup_results(leaderboard_url)
     headers=fetch_headers(page)
     results=[headers]
     rows=fetch_rows(page)
     for row in rows:
         res=fetch_results(row, headers.get('Columns'))
-        if res.get('Points')>0:
+        if res.get('Name') in picks.keys():
+            picker=picks[res['Name']]
+            res['Picker']=picker
+            picks[picker]['Points']+=res['Points']
+        if res.get('Points')>10 or res.get('Picker'):
             results.append(res)
+    results.append([picks[key] for key in picks.keys() if key in picks.values()])
     return results
 
 # Post the rankings to the "Rankings" tab
@@ -318,3 +326,38 @@ def post_rankings():
         current_row+=1    
     return True
 
+def post_results(event_id):
+    results=get_results(event_id)
+    gc = gspread.login(skip_user,skip_pass)
+    spreadsheet=gc.open('Majors')
+    worksheet=spreadsheet.worksheet('Results')
+    worksheet.update_cell(1, 2, results[0].get('Event Name'))
+    worksheet.update_cell(1, 4, results[0].get('Last Update'))
+    # Clear worksheet
+    cell_list = worksheet.range('A3:G60')
+    for cell in cell_list:
+        cell.value=''
+    worksheet.update_cells(cell_list)
+    player_row=1
+    current=datetime.datetime.now()
+    current_round = int(current.weekday()) - 2
+    worksheet.update_cell(1, 6, current_round)
+    current_row=3
+    for player in results[1:-1]:
+        player_values = [player['Rank'],player['Name'],player['Scores'],player.get('Today',''),player['Total'],player['Points'],player.get('Picker','')]
+        cell_values = worksheet.range('A'+str(current_row)+':G'+str(current_row))
+        for player_value,cell in zip(player_values,cell_values):
+            cell.value=player_value
+        worksheet.update_cells(cell_values)
+        current_row += 1
+    # update points per picker
+    pickers=results[-1]
+    if pickers[1]['Points']>pickers[0]['Points']:
+        pickers.reverse()
+    current_row+=1
+    for picker in pickers:
+        idx = pickers.index(picker)
+        worksheet.update_cell(current_row, 1, idx+1)
+        worksheet.update_cell(current_row, 2, picker['Name'])
+        worksheet.update_cell(current_row, 6, picker['Points'])
+        current_row+=1    
