@@ -20,7 +20,7 @@ players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU0
 results_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
 ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
 rankings_url="http://knarflog.appspot.com/ranking"
-leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard/2014/33"
+leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"
 skip_user="skipfloguser"
 skip_pass="sK2pfL1g"
 skip_picks={}
@@ -126,6 +126,8 @@ def soup_results(url):
     return soup
 
 def fetch_headers(soup):
+    if not soup:
+        return None
     headers={}
     event_name = soup.find('h4',{'class': "yspTitleBar"})
     if event_name and event_name.string:
@@ -257,7 +259,7 @@ def get_players(playlist):
     players=[]
     for player in playlist:
         if player.get('Picker'):
-            players.append([current_rank,player['Name'],player['Avg'],player['Total'],player['Rank'],player['Points'],player['Picker']])
+            players.append([current_rank,player['Name'],player['Avg'],player['Week'],player['Rank'],player['Points'],player['Picker']])
             current_rank+=1
     return players
 
@@ -270,7 +272,7 @@ def get_results(event_id):
     for row in rows:
         res=fetch_results(row, headers.get('Columns'))
         if res.get('Name') in picks.keys():
-            picker=picks[res['Name']]
+            picker=xstr(picks[res['Name']])
             res['Picker']=picker
             picks[picker]['Points']+=res['Points']
         if res.get('Points')>10 or res.get('Picker'):
