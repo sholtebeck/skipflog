@@ -35,7 +35,8 @@ pga_url="http://www.pga.com/news/golf-leaderboard/pga-tour-leaderboard"
 pgatour_url="http://www.pgatour.com/leaderboard.html"
 picks_csv = "picks.csv"
 picks_url = "http://skipflog.appspot.com/picks?event_id="
-rankings_api = "http://knarflog.appspot.com/api/rankings"
+rankings_api = "http://knarflog.appspot.com/api/rankings/"
+results_api = "http://knarflog.appspot.com/api/results/"
 owg_ranking_url="http://www.owgr.com/ranking"
 yahoo_base_url="http://sports.yahoo.com"
 yahoo_url=yahoo_base_url+"/golf/pga/leaderboard"
@@ -282,7 +283,8 @@ def get_results(event_id):
 
 # Post the rankings to the "Rankings" tab
 def post_rankings():
-    results=json_results(rankings_api)
+    this_week=str((current_year()-2000)*100+current_week())
+    results=json_results(rankings_api+this_week)
     worksheet=open_worksheet('Majors','Rankings')
     #get date and week number from header
     results_date=results['headers']['date']
@@ -328,38 +330,56 @@ def post_rankings():
         current_row+=1    
     return True
 
-def post_results(event_id):
-    results=get_results(event_id)
+def post_results(week_id):
+#   results=get_results(event_id)
+    if not week_id:
+        week_id=str((current_year()-2000)*100+current_week())
+    results=json_results(results_api+str(week_id))
     gc = gspread.login(skip_user,skip_pass)
     spreadsheet=gc.open('Majors')
     worksheet=spreadsheet.worksheet('Results')
-    worksheet.update_cell(1, 2, results[0].get('Event Name'))
-    worksheet.update_cell(1, 4, results[0].get('Last Update'))
+    #get date and week number from header
+    results_week=int(results['results'][0]['Week'])
+    worksheet_week=int(worksheet.acell('I2').value)
+    # check if update required
+    if (results_week==worksheet_week):
+        return False
+    # Update points per player
+    points={picker:0 for picker in skip_pickers}
     # Clear worksheet
-    cell_list = worksheet.range('A3:G60')
+    cell_list = worksheet.range('A2:I40')
     for cell in cell_list:
         cell.value=''
     worksheet.update_cells(cell_list)
-    player_row=1
-    current=datetime.datetime.now()
-    current_round = int(current.weekday()) - 2
-    worksheet.update_cell(1, 6, current_round)
-    current_row=3
-    for player in results[1:-1]:
-        player_values = [player['Rank'],player['Name'],player['Scores'],player.get('Today',''),player['Total'],player['Points'],player.get('Picker','')]
-        cell_values = worksheet.range('A'+str(current_row)+':G'+str(current_row))
-        for player_value,cell in zip(player_values,cell_values):
-            cell.value=player_value
-        worksheet.update_cells(cell_values)
-        current_row += 1
+    current_row=2
+    for event in results['results']:
+        worksheet.update_cell(current_row, 1, 'Event:')
+        worksheet.update_cell(current_row, 2, event.get('Event Name'))
+        worksheet.update_cell(current_row, 7, event.get('Year'))
+        worksheet.update_cell(current_row, 8, 'Week:')
+        worksheet.update_cell(current_row, 9, event.get('Week'))
+        current_row+=1
+        for player in event['Results']:
+            worksheet.update_cell(current_row, 1, player['Rank'])
+            worksheet.update_cell(current_row, 2, player['Name'])
+            worksheet.update_cell(current_row, 3, player['R1'])
+            worksheet.update_cell(current_row, 4, player['R2'])
+            worksheet.update_cell(current_row, 5, player['R3'])
+            worksheet.update_cell(current_row, 6, player['R4'])
+            worksheet.update_cell(current_row, 7, player['Agg'])
+            worksheet.update_cell(current_row, 8, player['Points'])
+            worksheet.update_cell(current_row, 9, player['Picker'])
+            points[player['Picker']]+=player['Points']
+            current_row += 1
     # update points per picker
-    pickers=results[-1]
-    if pickers[1]['Points']>pickers[0]['Points']:
+    pickers=skip_pickers
+    if points[pickers[1]]>points[pickers[0]]:
         pickers.reverse()
     current_row+=1
     for picker in pickers:
         idx = pickers.index(picker)
         worksheet.update_cell(current_row, 1, idx+1)
-        worksheet.update_cell(current_row, 2, picker['Name'])
-        worksheet.update_cell(current_row, 6, picker['Points'])
+        worksheet.update_cell(current_row, 2, picker)
+        worksheet.update_cell(current_row, 3, points[picker])
         current_row+=1    
+    return True

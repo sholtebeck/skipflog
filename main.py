@@ -341,6 +341,7 @@ class PlayersHandler(webapp2.RequestHandler):
 class RankingHandler(webapp2.RequestHandler): 
     def get(self):
         taskqueue.add(url='/ranking', params={'event_week': current_week(),'event_year': current_year()})
+        taskqueue.add(url='/results', params={'event_week': current_week(),'event_year': current_year()})
         
     def post(self):
         event_update=post_rankings()
@@ -382,6 +383,17 @@ class ResultsHandler(webapp2.RequestHandler):
                     self.response.write(br)
                 elif output_format=='json':                 
                     self.response.write(json.dumps(res))
+    def post(self):
+        event_week = self.request.get('event_week')
+        event_year = self.request.get('event_year')
+        this_week = str((int(event_year)-2000)*100+int(event_week))
+        event_update=post_results(this_week)
+        event_name = event_year + " Golf Results(Week "+str(event_week)+")"
+        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name)
+        message.to = "skipflog@googlegroups.com"
+        result = urllib2.urlopen(results_url)
+        message.html=result.read()
+        message.send()        
 
 app = webapp2.WSGIApplication([
   ('/', MainPage),
