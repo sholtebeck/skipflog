@@ -360,7 +360,7 @@ def post_results(week_id):
         worksheet.update_cell(current_row, 9, event.get('Week'))
         current_row+=1
         for player in event['Results']:
-            worksheet.update_cell(current_row, 1, player['Rank'])
+            worksheet.update_cell(current_row, 1, player['Pos'])
             worksheet.update_cell(current_row, 2, player['Name'])
             worksheet.update_cell(current_row, 3, player['R1'])
             worksheet.update_cell(current_row, 4, player['R2'])
@@ -380,6 +380,6 @@ def post_results(week_id):
         idx = pickers.index(picker)
         worksheet.update_cell(current_row, 1, idx+1)
         worksheet.update_cell(current_row, 2, picker)
-        worksheet.update_cell(current_row, 3, points[picker])
+        worksheet.update_cell(current_row, 8, points[picker])
         current_row+=1    
     return True

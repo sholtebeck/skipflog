@@ -388,7 +388,7 @@ class ResultsHandler(webapp2.RequestHandler):
         event_year = self.request.get('event_year')
         this_week = str((int(event_year)-2000)*100+int(event_week))
         event_update=post_results(this_week)
-        event_name = event_year + " Golf Results(Week "+str(event_week)+")"
+        event_name = event_year + " World Golf Results (Week "+str(event_week)+")"
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name)
         message.to = "skipflog@googlegroups.com"
         result = urllib2.urlopen(results_url)
