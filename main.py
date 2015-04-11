@@ -204,7 +204,7 @@ class MailHandler(webapp2.RequestHandler):
         picks = getPicks(event_id)
         for pick in picks:
             players[pick.who].append(pick.player)
-        for picker in pickers:
+        for picker in skip_pickers:
             message.html += picker+"'s Picks:<ol>"
             for player in players[picker]:
                 message.html+="<li>"+player
@@ -395,6 +395,15 @@ class ResultsHandler(webapp2.RequestHandler):
         message.html=result.read()
         message.send()        
 
+class UpdateHandler(webapp2.RequestHandler):
+    def get(self):
+        current=datetime.datetime.now()
+        if current.day in range(9,12) :
+            taskqueue.add(url='/update', params={'event_id': currentEvent()})
+    def post(self):
+        event_id = self.request.get('event_id')
+        event_update=update_results(event_id)
+
 app = webapp2.WSGIApplication([
   ('/', MainPage),
   ('/events', EventsHandler),
@@ -403,7 +412,8 @@ app = webapp2.WSGIApplication([
   ('/picks', PicksHandler),
   ('/players', PlayersHandler),
   ('/ranking', RankingHandler),
-  ('/results', ResultsHandler)  
+  ('/results', ResultsHandler), 
+  ('/update', UpdateHandler)  
 ], debug=True)
 
 def main():

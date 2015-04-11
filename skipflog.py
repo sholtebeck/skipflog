@@ -137,6 +137,7 @@ def fetch_headers(soup):
     if last_update:
         headers['Last Update']= str(last_update.string[-13:])
 #   headers['thead']=soup.find('thead')
+    headers['Round']=datetime.datetime.today().weekday()-2
     columns=soup.findAll('th')
     colnum=0
     for col in columns:
@@ -197,7 +198,7 @@ def fetch_results(row, columns):
                         results['Total']+=int(value)
                         results['Today']=value
                     elif value [-2:] in ('am','pm'):
-                        results['Time']=value
+                        results['Time']='@'+value
                     elif value in ('MC','WD','CUT'):
                         results['Pos']=value
                         results['Points']=0
@@ -383,3 +384,61 @@ def post_results(week_id):
         worksheet.update_cell(current_row, 8, points[picker])
         current_row+=1    
     return True
+
+def update_results(event_id):
+    results=get_results(event_id)
+    gc = gspread.login(skip_user,skip_pass)
+    spreadsheet=gc.open('Majors')
+    worksheet=spreadsheet.worksheet('Results')
+    #get date and week number from header
+    results_update=str(results[0]['Last Update'])
+    worksheet_update=str(worksheet.acell('D1').value)
+    # check if update required
+    if (results_update==worksheet_update):
+        return False
+    # Update header information
+    worksheet.update_cell(1, 2, results[0].get('Event Name'))
+    worksheet.update_cell(1, 4, results_update)
+    worksheet.update_cell(1, 6, results[0].get('Round'))
+    worksheet.update_cell(2, 1, 'Pos')
+    worksheet.update_cell(2, 2, 'Player')
+    worksheet.update_cell(2, 3, 'Scores')
+    worksheet.update_cell(2, 4, 'Today')
+    worksheet.update_cell(2, 5, 'Total')
+    worksheet.update_cell(2, 6, 'Points')
+    worksheet.update_cell(2, 7, 'Picked By')
+    # Update points per player
+    points={picker:0 for picker in skip_pickers}
+    # Clear worksheet
+    cell_list = worksheet.range('A3:G40')
+    for cell in cell_list:
+        cell.value=''
+    worksheet.update_cells(cell_list)
+    current_row=3
+    for player in results[1:-1]:
+        worksheet.update_cell(current_row, 1, player['Rank'])
+        worksheet.update_cell(current_row, 2, player['Name'])
+        worksheet.update_cell(current_row, 3, player['Scores'])
+        if player.get('Time'):
+            worksheet.update_cell(current_row, 4, player['Time'])
+        else:
+            worksheet.update_cell(current_row, 4, player['Today'])
+        worksheet.update_cell(current_row, 5, player['Total'])
+        worksheet.update_cell(current_row, 6, player['Points'])
+        if player.get('Picker'):
+            worksheet.update_cell(current_row, 7, player.get('Picker'))
+            points[player['Picker']]+=player['Points']
+        current_row += 1
+    # update points per picker
+    pickers=skip_pickers
+    if points[pickers[1]]>points[pickers[0]]:
+        pickers.reverse()
+    current_row+=1
+    for picker in pickers:
+        idx = pickers.index(picker)
+        worksheet.update_cell(current_row, 1, idx+1)
+        worksheet.update_cell(current_row, 2, picker)
+        worksheet.update_cell(current_row, 6, points[picker])
+        current_row+=1
+    return True
+
