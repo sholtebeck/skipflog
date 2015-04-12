@@ -205,6 +205,7 @@ def fetch_results(row, columns):
             results['Time']='@ '+results['THRU']
         elif results['THRU'] in ('MC','CUT'):
             results['Rank']=results['THRU']
+            results['Today']=results['THRU']
         # Get Total
         results['Total']=results['TOT']+'('+results['TO PAR']+')'
     return results
