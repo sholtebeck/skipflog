@@ -194,12 +194,13 @@ def fetch_results(row, columns):
             for score in scores:
                 if score.isdigit():
                     results['Scores']+="-"+score
+                    results['Today']=score
             results['Scores']+="="+results.get('TOT')
         # Get Today
-        if results.get('TODAY'):
-            results['Today']=results['TODAY']
+        if results.get('THRU')=='F':
+            results['Today']+='('+results['TODAY']+')'
         if results.get('THRU').isdigit():
-            results['Today']+=' thru '+results['THRU']
+            results['Today']=results['TODAY']+' thru '+results['THRU']
         elif results['THRU'][-2:] in ('AM','PM'):
             results['Time']='@ '+results['THRU']
         elif results['THRU'] in ('MC','CUT'):
