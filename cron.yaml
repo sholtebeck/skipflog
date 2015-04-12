@@ -9,5 +9,5 @@ cron:
   timezone: America/Los_Angeles
 - description: hourly update
   url: /update
-  schedule: every 30 minutes from 11:45 to 17:45
+  schedule: every 15 minutes from 11:40 to 16:40
   timezone: America/Los_Angeles

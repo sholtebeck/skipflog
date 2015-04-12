@@ -55,6 +55,10 @@ def current_year():
     this_year=strftime("%Y",gmtime())
     return int(this_year) 
 
+def current_time():
+    right_now=strftime("%H:%M",gmtime())
+    return str(right_now) 
+
 # debug values
 def debug_values(number, string):
     if debug:
@@ -72,7 +76,7 @@ def xstr(string):
 # Function to get_points for a Position
 def get_rank(position):
     if not position.replace('T','').isdigit():
-        return 0
+        return 99
     else:
         rank = int(position.replace('T',''))
         return rank
@@ -130,24 +134,27 @@ def fetch_headers(soup):
     if not soup:
         return None
     headers={}
-    event_name = soup.find('h4',{'class': "yspTitleBar"})
+#   event_name = soup.find('h4',{'class': "yspTitleBar"})
+    event_name = soup.find('h1',{'class': "tourney-name"})
     if event_name and event_name.string:
         headers['Event Name']= str(event_name.string.replace(u'\xa0',u''))
     last_update = soup.find('span',{'class': "ten"})
     if last_update:
         headers['Last Update']= str(last_update.string[-13:])
+    else:
+        headers['Last Update']= current_time()
 #   headers['thead']=soup.find('thead')
     headers['Round']=datetime.datetime.today().weekday()-2
-    columns=soup.findAll('th')
+    columns=soup.find('tr').findAll('th')
     colnum=0
     for col in columns:
         if col.string:
             header=str(col.string.replace('\n','').replace(u'\xd1','').replace(u'\xbb',''))
             debug_values(colnum, header)
-            if header=='Pos': 
+            if header=='POS': 
                 headers['Columns']=[header]
                 colnum=1
-            elif headers.get('Columns') and header!='Name':
+            elif headers.get('Columns'):
                 headers['Columns'].append(header)
                 colnum+=1
     return headers
@@ -172,57 +179,33 @@ def fetch_results(row, columns):
     if player:
         results['Name']=str(player.string)
         debug_values('Name',results['Name'])
-        results['Link']=yahoo_base_url+str(player.get('href'))
-        debug_values('Link',results['Link'])
-        results['Scores']=""
-        results['Total']=0
-        cols=row.findAll('td')
-        colnum=0
-        for col in cols:
-            if col.string and colnum<=len(columns):
-                column=columns[colnum].replace('R','')
-                value=str(col.string.replace('\n',''))
-                debug_values(columns[colnum],value)
-                if column=='Pos':
-                    results['Pos']=value
-                    results['Rank']=get_rank(value)
-                    results['Points']=get_points(results['Rank'])
-                elif column == '1':
-                    results['Scores']=value
-                    if value.isdigit():
-                        results['Total']=int(value)
-                        results['Today']=value
-                elif column in ('2','3','4'):
-                    if value.isdigit():
-                        results['Scores']+="-"+value
-                        results['Total']+=int(value)
-                        results['Today']=value
-                    elif value [-2:] in ('am','pm'):
-                        results['Time']='@'+value
-                    elif value in ('MC','WD','CUT'):
-                        results['Pos']=value
-                        results['Points']=0
-                        results['Today']=value
-                        results['Total']=0
-                elif column == 'Today':
-                     if results['Total'] and value[0] in ('+','-','E'):
-                        results['Today']=results.get('Today')+"("+value+")"
-                elif column == 'Thru':
-                    results[column]=value
-                    if value not in ('-','F'):
-                        results['Today']=results.get('Today')+" thru "+value
-                elif column == 'Total':
-                    if value[0] in ('+','-','E'):
-                        results['Total']="("+value+")"
-                elif column in ('Agg','Strokes'):
-                    if value.isdigit():
-                        if results.get('Scores')!=value:
-                            results['Scores']+="-"+value
-                        results['Total']=value+"("+last_value+")"
-                else:
-                        results[column]=value
-                colnum+=1
-                last_value=value
+#       results['Link']=yahoo_base_url+str(player.get('href'))
+#       debug_values('Link',results['Link'])
+        values=[str(val.string) for val in row.findAll('td')]
+        for col,val in zip(columns,values):
+            results[col]=val
+        # Get Rank and Points
+        results['Rank']=get_rank(results['POS'])
+        results['Points']=get_points(results['Rank'])
+        # Get Scores
+        if results.get('R1'):
+            results['Scores']=results['R1']
+            scores=[results['R2'],results['R3'],results['R4']]
+            for score in scores:
+                if score.isdigit():
+                    results['Scores']+="-"+score
+            results['Scores']+="="+results.get('TOT')
+        # Get Today
+        if results.get('TODAY'):
+            results['Today']=results['TODAY']
+        if results.get('THRU').isdigit():
+            results['Today']+=' thru '+results['THRU']
+        elif results['THRU'][-2:] in ('AM','PM'):
+            results['Time']='@ '+results['THRU']
+        elif results['THRU'] in ('MC','CUT'):
+            results['Rank']=results['THRU']
+        # Get Total
+        results['Total']=results['TOT']+'('+results['TO PAR']+')'
     return results
 
 def fetch_scores(url):
@@ -253,7 +236,7 @@ def fetch_scores(url):
 
 # fetch all table rows
 def fetch_rows(page):
-    return page.findAll('tr')    
+    return page.find('table').findAll('tr')    
 
 # Get the list of players
 def get_players(playlist):
@@ -267,7 +250,7 @@ def get_players(playlist):
 
 def get_results(event_id):
     picks=get_picks(event_id)
-    page=soup_results(leaderboard_url)
+    page=soup_results(espn_url)
     headers=fetch_headers(page)
     results=[headers]
     rows=fetch_rows(page)
