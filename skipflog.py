@@ -197,9 +197,11 @@ def fetch_results(row, columns):
                     results['Today']=score
             results['Scores']+="="+results.get('TOT')
         # Get Today
-        if results.get('THRU')=='F':
+        if not results.get('THRU'):
+            results['Today']='-'
+        elif results.get('THRU')=='F':
             results['Today']+='('+results['TODAY']+')'
-        if results.get('THRU').isdigit():
+        elif results.get('THRU').isdigit():
             results['Today']=results['TODAY']+' thru '+results['THRU']
         elif results['THRU'][-2:] in ('AM','PM'):
             results['Time']='@ '+results['THRU']
@@ -346,7 +348,7 @@ def post_results(week_id):
         worksheet.update_cell(current_row, 9, event.get('Week'))
         current_row+=1
         for player in event['Results']:
-            worksheet.update_cell(current_row, 1, player['Pos'])
+            worksheet.update_cell(current_row, 1, player['Rank'])
             worksheet.update_cell(current_row, 2, player['Name'])
             worksheet.update_cell(current_row, 3, player['R1'])
             worksheet.update_cell(current_row, 4, player['R2'])
@@ -377,25 +379,28 @@ def update_results(event_id):
     worksheet=spreadsheet.worksheet('Results')
     #get date and week number from header
     results_update=str(results[0]['Last Update'])
-    worksheet_update=str(worksheet.acell('D1').value)
+    worksheet_update=str(worksheet.acell('G2').value)
     # check if update required
     if (results_update==worksheet_update):
         return False
     # Update header information
-    worksheet.update_cell(1, 2, results[0].get('Event Name'))
-    worksheet.update_cell(1, 4, results_update)
+    worksheet.update_cell(2, 2, results[0].get('Event Name'))
+    worksheet.update_cell(2, 5, results_update)
     worksheet.update_cell(1, 6, results[0].get('Round'))
-    worksheet.update_cell(2, 1, 'Pos')
-    worksheet.update_cell(2, 2, 'Player')
-    worksheet.update_cell(2, 3, 'Scores')
-    worksheet.update_cell(2, 4, 'Today')
-    worksheet.update_cell(2, 5, 'Total')
-    worksheet.update_cell(2, 6, 'Points')
-    worksheet.update_cell(2, 7, 'Picked By')
+    worksheet.update_cell(1, 1, 'Pos')
+    worksheet.update_cell(1, 2, 'Player')
+    worksheet.update_cell(1, 3, 'R1')
+    worksheet.update_cell(1, 4, 'R2')
+    worksheet.update_cell(1, 5, 'R3')
+    worksheet.update_cell(1, 6, 'R4')
+    worksheet.update_cell(1, 7, 'Total')
+    worksheet.update_cell(1, 8, 'Points')
+    worksheet.update_cell(1, 9, 'Picker')
+    worksheet.update_cell(1, 3, 'Today')
     # Update points per player
     points={picker:0 for picker in skip_pickers}
     # Clear worksheet
-    cell_list = worksheet.range('A3:G40')
+    cell_list = worksheet.range('A3:J40')
     for cell in cell_list:
         cell.value=''
     worksheet.update_cells(cell_list)
@@ -403,15 +408,18 @@ def update_results(event_id):
     for player in results[1:-1]:
         worksheet.update_cell(current_row, 1, player['Rank'])
         worksheet.update_cell(current_row, 2, player['Name'])
-        worksheet.update_cell(current_row, 3, player['Scores'])
+        worksheet.update_cell(current_row, 3, player['R1'])
+        worksheet.update_cell(current_row, 4, player['R2'])
+        worksheet.update_cell(current_row, 5, player['R3'])
+        worksheet.update_cell(current_row, 6, player['R4'])
+        worksheet.update_cell(current_row, 7, player['Total'])
+        worksheet.update_cell(current_row, 8, player['Points'])
         if player.get('Time'):
-            worksheet.update_cell(current_row, 4, player['Time'])
+            worksheet.update_cell(current_row, 10, player['Time'])
         else:
-            worksheet.update_cell(current_row, 4, player['Today'])
-        worksheet.update_cell(current_row, 5, player['Total'])
-        worksheet.update_cell(current_row, 6, player['Points'])
+            worksheet.update_cell(current_row, 10, player['Today'])
         if player.get('Picker'):
-            worksheet.update_cell(current_row, 7, player.get('Picker'))
+            worksheet.update_cell(current_row, 9, player.get('Picker'))
             points[player['Picker']]+=player['Points']
         current_row += 1
     # update points per picker
@@ -423,7 +431,7 @@ def update_results(event_id):
         idx = pickers.index(picker)
         worksheet.update_cell(current_row, 1, idx+1)
         worksheet.update_cell(current_row, 2, picker)
-        worksheet.update_cell(current_row, 6, points[picker])
+        worksheet.update_cell(current_row, 8, points[picker])
         current_row+=1
     return True
 
