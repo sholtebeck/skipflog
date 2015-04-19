@@ -56,7 +56,7 @@ def current_year():
     return int(this_year) 
 
 def current_time():
-    right_now=strftime("%H:%M",gmtime())
+    right_now=strftime("%H%M",gmtime())
     return str(right_now) 
 
 # debug values
@@ -190,6 +190,7 @@ def fetch_results(row, columns):
         # Get Scores
         if results.get('R1'):
             results['Scores']=results['R1']
+            results['Today']=results['R1']
             scores=[results['R2'],results['R3'],results['R4']]
             for score in scores:
                 if score.isdigit():
@@ -379,14 +380,14 @@ def update_results(event_id):
     worksheet=spreadsheet.worksheet('Results')
     #get date and week number from header
     results_update=str(results[0]['Last Update'])
-    worksheet_update=str(worksheet.acell('G2').value)
+    worksheet_update=str(worksheet.acell('I2').value)
     # check if update required
     if (results_update==worksheet_update):
         return False
     # Update header information
     worksheet.update_cell(2, 2, results[0].get('Event Name'))
-    worksheet.update_cell(2, 5, results_update)
-    worksheet.update_cell(1, 6, results[0].get('Round'))
+    worksheet.update_cell(2, 8, 'Update:')
+    worksheet.update_cell(2, 9, results_update)
     worksheet.update_cell(1, 1, 'Pos')
     worksheet.update_cell(1, 2, 'Player')
     worksheet.update_cell(1, 3, 'R1')
@@ -420,8 +421,6 @@ def update_results(event_id):
         worksheet.update_cell(current_row, 9, player['Points'])
         if player.get('Picker'):
             worksheet.update_cell(current_row, 10, player.get('Picker'))
-        if player.get('Picker'):
-            worksheet.update_cell(current_row, 9, player.get('Picker'))
             points[player['Picker']]+=player['Points']
         current_row += 1
     # update points per picker
