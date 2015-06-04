@@ -1,12 +1,12 @@
 # skipflog functions
 import csv,datetime,json,sys,urllib2
 from time import gmtime, strftime
-from oauth2client.client import SignedJwtAssertionCredentials
 # External modules (gspread, bs4)
 import sys
 sys.path[0:0] = ['libs']
 import gspread
 from bs4 import BeautifulSoup
+from oauth2client.client import SignedJwtAssertionCredentials
 
 # Misc properties
 br="</br>"
