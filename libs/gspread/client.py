@@ -9,15 +9,12 @@ Google Data API.
 
 """
 import re
-
-try:
-    from urllib import urlencode
-except ImportError:
-    from urllib.parse import urlencode
+import warnings
 
 from xml.etree import ElementTree
 
 from . import __version__
+from . import urlencode
 from .ns import _ns
 from .httpsession import HTTPSession, HTTPError
 from .models import Spreadsheet
@@ -31,32 +28,49 @@ from .exceptions import (AuthenticationError, SpreadsheetNotFound,
 AUTH_SERVER = 'https://www.google.com'
 SPREADSHEETS_SERVER = 'spreadsheets.google.com'
 
-_url_key_re = re.compile(r'key=([^&#]+)')
+_url_key_re_v1 = re.compile(r'key=([^&#]+)')
+_url_key_re_v2 = re.compile(r'spreadsheets/d/([^&#]+)/edit')
 
 
 class Client(object):
+
     """An instance of this class communicates with Google Data API.
 
     :param auth: A tuple containing an *email* and a *password* used for ClientLogin
-                 authentication.
+                 authentication or an OAuth2 credential object. Credential objects are those created by the
+                 oauth2client library. https://github.com/google/oauth2client
     :param http_session: (optional) A session object capable of making HTTP requests while persisting headers.
                                     Defaults to :class:`~gspread.httpsession.HTTPSession`.
 
     >>> c = gspread.Client(auth=('user@example.com', 'qwertypassword'))
-    >>>
+
+    or
+
+    >>> c = gspread.Client(auth=OAuthCredentialObject)
+
 
     """
     def __init__(self, auth, http_session=None):
         self.auth = auth
-
-        if not http_session:
-            self.session = HTTPSession()
+        self.session = http_session or HTTPSession()
 
     def _get_auth_token(self, content):
         for line in content.splitlines():
             if line.startswith('Auth='):
                 return line[5:]
         return None
+
+    def _deprecation_warning(self):
+        warnings.warn("""
+            ClientLogin is deprecated:
+            https://developers.google.com/identity/protocols/AuthForInstalledApps?csw=1
+
+            Authorization with email and password will stop working on April 20, 2015.
+
+            Please use oAuth2 authorization instead:
+            http://gspread.readthedocs.org/en/latest/oauth2.html
+
+        """, Warning)
 
     def _add_xml_header(self, data):
         return "<?xml version='1.0' encoding='UTF-8'?>%s" % data.decode()
@@ -75,32 +89,40 @@ class Client(object):
         source = 'burnash-gspread-%s' % __version__
         service = 'wise'
 
-        data = {'Email': self.auth[0],
-                'Passwd': self.auth[1],
-                'accountType': 'HOSTED_OR_GOOGLE',
-                'service': service,
-                'source': source}
+        if hasattr(self.auth, 'access_token'):
+            if not self.auth.access_token or \
+                    (hasattr(self.auth, 'access_token_expired') and self.auth.access_token_expired):
+                import httplib2
 
-        url = AUTH_SERVER + '/accounts/ClientLogin'
+                http = httplib2.Http()
+                self.auth.refresh(http)
 
-        try:
-            r = self.session.post(url, data)
-            content = r.read().decode()
-            token = self._get_auth_token(content)
-            auth_header = "GoogleLogin auth=%s" % token
-            self.session.add_header('Authorization', auth_header)
+            self.session.add_header('Authorization', "Bearer " + self.auth.access_token)
 
-        except HTTPError as ex:
-            if ex.code == 403:
-                content = ex.read().decode()
-                if content.strip() == 'Error=BadAuthentication':
+        else:
+            self._deprecation_warning()
+
+            data = {'Email': self.auth[0],
+                    'Passwd': self.auth[1],
+                    'accountType': 'HOSTED_OR_GOOGLE',
+                    'service': service,
+                    'source': source}
+
+            url = AUTH_SERVER + '/accounts/ClientLogin'
+
+            try:
+                r = self.session.post(url, data)
+                content = r.read().decode()
+                token = self._get_auth_token(content)
+                auth_header = "GoogleLogin auth=%s" % token
+                self.session.add_header('Authorization', auth_header)
+
+            except HTTPError as ex:
+                if ex.message.strip() == '403: Error=BadAuthentication':
                     raise AuthenticationError("Incorrect username or password")
                 else:
-                    raise AuthenticationError("Unable to authenticate. %s code" % ex.code)
-
-            else:
-                raise AuthenticationError("Unable to authenticate. %s code" % ex.code)
-
+                    raise AuthenticationError(
+                        "Unable to authenticate. %s" % ex.message)
 
     def open(self, title):
         """Opens a spreadsheet, returning a :class:`~gspread.Spreadsheet` instance.
@@ -144,9 +166,14 @@ class Client(object):
         for elem in feed.findall(_ns('entry')):
             alter_link = finditem(lambda x: x.get('rel') == 'alternate',
                                   elem.findall(_ns('link')))
-            m = _url_key_re.search(alter_link.get('href'))
+            m = _url_key_re_v1.search(alter_link.get('href'))
             if m and m.group(1) == key:
                 return Spreadsheet(self, elem)
+
+            m = _url_key_re_v2.search(alter_link.get('href'))
+            if m and m.group(1) == key:
+                return Spreadsheet(self, elem)
+
         else:
             raise SpreadsheetNotFound
 
@@ -164,11 +191,17 @@ class Client(object):
         >>> c.open_by_url('https://docs.google.com/spreadsheet/ccc?key=0Bm...FE&hl')
 
         """
-        m = _url_key_re.search(url)
-        if m:
-            return self.open_by_key(m.group(1))
+        m1 = _url_key_re_v1.search(url)
+        if m1:
+            return self.open_by_key(m1.group(1))
+
         else:
-            raise NoValidUrlKeyFound
+            m2 = _url_key_re_v2.search(url)
+            if m2:
+                return self.open_by_key(m2.group(1))
+
+            else:
+                raise NoValidUrlKeyFound
 
     def openall(self, title=None):
         """Opens all available spreadsheets,
@@ -221,8 +254,17 @@ class Client(object):
         r = self.session.get(url)
         return ElementTree.fromstring(r.read())
 
+    def del_worksheet(self, worksheet):
+        url = construct_url(
+            'worksheet', worksheet, 'private', 'full', worksheet_version=worksheet.version)
+        r = self.session.delete(url)
+        # Even though there is nothing interesting in the response body
+        # we have to read it or the next request from this session will get a
+        # httplib.ResponseNotReady error.
+        r.read()
+
     def get_cells_cell_id_feed(self, worksheet, cell_id,
-                       visibility='private', projection='full'):
+                               visibility='private', projection='full'):
         url = construct_url('cells_cell_id', worksheet, cell_id=cell_id,
                             visibility=visibility, projection=projection)
 
@@ -230,7 +272,8 @@ class Client(object):
         return ElementTree.fromstring(r.read())
 
     def put_feed(self, url, data):
-        headers = {'Content-Type': 'application/atom+xml'}
+        headers = {'Content-Type': 'application/atom+xml',
+                   'If-Match': '*'}
         data = self._add_xml_header(data)
 
         try:
@@ -257,7 +300,8 @@ class Client(object):
         return ElementTree.fromstring(r.read())
 
     def post_cells(self, worksheet, data):
-        headers = {'Content-Type': 'application/atom+xml'}
+        headers = {'Content-Type': 'application/atom+xml',
+                   'If-Match': '*'}
         data = self._add_xml_header(data)
         url = construct_url('cells_batch', worksheet)
         r = self.session.post(url, data, headers=headers)
@@ -277,3 +321,17 @@ def login(email, password):
     client = Client(auth=(email, password))
     client.login()
     return client
+
+def authorize(credentials):
+    """Login to Google API using OAuth2 credentials.
+
+    This is a shortcut function which instantiates :class:`Client`
+    and performes login right away.
+
+    :returns: :class:`Client` instance.
+
+    """
+    client = Client(auth=credentials)
+    client.login()
+    return client
+

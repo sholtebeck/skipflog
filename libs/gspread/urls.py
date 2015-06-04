@@ -34,6 +34,7 @@ SPREADSHEETS_FEED_URL = 'https://%s/%s/' % (SPREADSHEETS_SERVER, 'feeds')
 
 _feed_types = {'spreadsheets': 'spreadsheets/{visibility}/{projection}',
                'worksheets': 'worksheets/{spreadsheet_id}/{visibility}/{projection}',
+               'worksheet': 'worksheets/{spreadsheet_id}/{visibility}/{projection}/{worksheet_id}/{version}',
                'cells': 'cells/{spreadsheet_id}/{worksheet_id}/{visibility}/{projection}',
                'cells_batch': 'cells/{spreadsheet_id}/{worksheet_id}/{visibility}/{projection}/batch',
                'cells_cell_id': 'cells/{spreadsheet_id}/{worksheet_id}/{visibility}/{projection}/{cell_id}'}
@@ -42,8 +43,11 @@ _fields_cache = {}
 
 
 _field_re = re.compile(r'{(\w+)}')
+
+
 def _extract_fields(patternstr):
     return _field_re.findall(patternstr)
+
 
 def construct_url(feedtype=None,
                   obj=None,
@@ -51,7 +55,8 @@ def construct_url(feedtype=None,
                   projection='full',
                   spreadsheet_id=None,
                   worksheet_id=None,
-                  cell_id=None):
+                  cell_id=None,
+                  worksheet_version=None):
     """Constructs URL to be used for API request.
     """
     try:
@@ -68,10 +73,11 @@ def construct_url(feedtype=None,
     params = {'visibility': visibility,
               'projection': projection,
               'spreadsheet_id': (spreadsheet_id if spreadsheet_id
-                                    else obj_fields.get('spreadsheet_id')),
+                                 else obj_fields.get('spreadsheet_id')),
               'worksheet_id': (worksheet_id if worksheet_id
-                                    else obj_fields.get('worksheet_id')),
-              'cell_id': cell_id}
+                               else obj_fields.get('worksheet_id')),
+              'cell_id': cell_id,
+              'version': worksheet_version}
 
     params = dict((k, v) for k, v in params.items() if v is not None)
 

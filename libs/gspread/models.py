@@ -7,6 +7,8 @@ gspread.models
 This module contains common spreadsheets' models
 
 """
+
+
 import re
 from collections import defaultdict
 from itertools import chain
@@ -14,6 +16,7 @@ from itertools import chain
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element, SubElement
 
+from . import urlencode
 from .ns import _ns, _ns1, ATOM_NS, BATCH_NS, SPREADSHEET_NS
 from .urls import construct_url
 from .utils import finditem, numericise_all
@@ -29,13 +32,15 @@ except NameError:
 
 # Patch ElementTree._escape_attrib
 _elementtree_escape_attrib = ElementTree._escape_attrib
+
+
 def _escape_attrib(text, encoding=None, replace=None):
     try:
         text = _elementtree_escape_attrib(text)
     except TypeError as e:
         if str(e) == '_escape_attrib() takes exactly 2 arguments (1 given)':
             text = _elementtree_escape_attrib(text, encoding)
-    entities = {'\n': '&#10;', '\r': '&#13;', '\t':'&#9;'}
+    entities = {'\n': '&#10;', '\r': '&#13;', '\t': '&#9;'}
     for key, value in entities.items():
         text = text.replace(key, value)
     return text
@@ -44,14 +49,17 @@ ElementTree._escape_attrib = _escape_attrib
 
 
 class Spreadsheet(object):
-    """A class for a spreadsheet object.
 
-    """
+    """ A class for a spreadsheet object."""
+
     def __init__(self, client, feed_entry):
         self.client = client
-        id_parts = feed_entry.find(_ns('id')).text.split('/')
-        self.id = id_parts[-1]
         self._sheet_list = []
+        self._feed_entry = feed_entry
+
+    @property
+    def id(self):
+        return self._feed_entry.find(_ns('id')).text.split('/')[-1]
 
     def get_id_fields(self):
         return {'spreadsheet_id': self.id}
@@ -71,7 +79,7 @@ class Spreadsheet(object):
         Returns a newly created :class:`worksheets <Worksheet>`.
         """
         feed = Element('entry', {'xmlns': ATOM_NS,
-                                'xmlns:gs': SPREADSHEET_NS})
+                                 'xmlns:gs': SPREADSHEET_NS})
 
         SubElement(feed, 'title').text = title
         SubElement(feed, 'gs:rowCount').text = str(rows)
@@ -85,8 +93,18 @@ class Spreadsheet(object):
 
         return worksheet
 
+    def del_worksheet(self, worksheet):
+        """Deletes a worksheet from a spreadsheet.
+
+        :param worksheet: The worksheet to be deleted.
+
+        """
+        self.client.del_worksheet(worksheet)
+        self._sheet_list.remove(worksheet)
+
     def worksheets(self):
-        """Returns a list of all :class:`worksheets <Worksheet>` in a spreadsheet.
+        """Returns a list of all :class:`worksheets <Worksheet>`
+        in a spreadsheet.
 
         """
         if not self._sheet_list:
@@ -116,7 +134,6 @@ class Spreadsheet(object):
         except StopIteration:
             raise WorksheetNotFound(title)
 
-
     def get_worksheet(self, index):
         """Returns a worksheet with specified `index`.
 
@@ -143,22 +160,31 @@ class Spreadsheet(object):
         """Shortcut property for getting the first worksheet."""
         return self.get_worksheet(0)
 
+    @property
+    def title(self):
+        return self._feed_entry.find(_ns('title')).text
 
 class Worksheet(object):
-    """A class for worksheet object.
 
-    """
+    """A class for worksheet object."""
+
     def __init__(self, spreadsheet, element):
         self.spreadsheet = spreadsheet
         self.client = spreadsheet.client
         self._id = element.find(_ns('id')).text.split('/')[-1]
         self._title = element.find(_ns('title')).text
         self._element = element
+        try:
+            self.version = self._get_link(
+                'edit', element).get('href').split('/')[-1]
+        except:
+            # not relevant for read-only spreadsheets
+            self.version = None
 
     def __repr__(self):
-        return '<%s "%s" id:%s>' % (self.__class__.__name__,
-                                     self.title,
-                                     self.id)
+        return '<%s %s id:%s>' % (self.__class__.__name__,
+                                  repr(self.title),
+                                  self.id)
 
     @property
     def id(self):
@@ -194,7 +220,7 @@ class Worksheet(object):
 
     def _get_link(self, link_type, feed):
         return finditem(lambda x: x.get('rel') == link_type,
-                feed.findall(_ns('link')))
+                        feed.findall(_ns('link')))
 
     def _fetch_cells(self):
         feed = self.client.get_cells_feed(self)
@@ -202,6 +228,7 @@ class Worksheet(object):
 
     _MAGIC_NUMBER = 64
     _cell_addr_re = re.compile(r'([A-Za-z]+)(\d+)')
+
     def get_int_addr(self, label):
         """Translates cell's label address to a tuple of integers.
 
@@ -253,11 +280,14 @@ class Worksheet(object):
             raise IncorrectCellLabel('(%s, %s)' % (row, col))
 
         div = col
-        column_label = str()
+        column_label = ''
 
         while div:
             (div, mod) = divmod(div, 26)
-            column_label = chr(mod+self._MAGIC_NUMBER) + column_label
+            if mod == 0:
+                mod = 26
+                div -= 1
+            column_label = chr(mod + self._MAGIC_NUMBER) + column_label
 
         label = '%s%s' % (column_label, row)
         return label
@@ -314,16 +344,20 @@ class Worksheet(object):
             row = rows.setdefault(int(cell.row), defaultdict(str))
             row[cell.col] = cell.value
 
-        # we return a whole rectangular region worth of cells, including empties
+        # we return a whole rectangular region worth of cells, including
+        # empties
+        if not rows:
+            return []
+
         all_row_keys = chain.from_iterable(row.keys() for row in rows.values())
-        rect_cols = range(1, max(all_row_keys)+1)
-        rect_rows = range(1, max(rows.keys())+1)
+        rect_cols = range(1, max(all_row_keys) + 1)
+        rect_rows = range(1, max(rows.keys()) + 1)
 
         return [[rows[i][j] for j in rect_cols] for i in rect_rows]
 
-    def get_all_records(self, empty2zero=False):
+    def get_all_records(self, empty2zero=False, head=1):
         """Returns a list of dictionaries, all of them having:
-            - the contents of the spreadsheet's first row of cells as keys,
+            - the contents of the spreadsheet's with the head row as keys,
             And each of these dictionaries holding
             - the contents of subsequent rows of cells as values.
 
@@ -331,14 +365,17 @@ class Worksheet(object):
         Cell values are numericised (strings that can be read as ints
         or floats are converted).
 
-        :param empty2zero: determines whether empty cells are converted to zeros."""
+        :param empty2zero: determines whether empty cells are converted to zeros.
+        :param head: determines wich row to use as keys, starting from 1
+            following the numeration of the spreadsheet."""
+
+        idx = head - 1
 
         data = self.get_all_values()
-        keys = data[0]
-        values = [numericise_all(row, empty2zero) for row in data[1:]]
+        keys = data[idx]
+        values = [numericise_all(row, empty2zero) for row in data[idx + 1:]]
 
         return [dict(zip(keys, row)) for row in values]
-
 
     def _list_values(self, index, cell_tuple, position):
         cells_list = self._fetch_cells()
@@ -419,12 +456,13 @@ class Worksheet(object):
         for cell in cell_list:
             entry = SubElement(feed, 'entry')
 
-            SubElement(entry, 'batch:id').text = cell.element.find(_ns('title')).text
+            SubElement(entry, 'batch:id').text = cell.element.find(
+                _ns('title')).text
             SubElement(entry, 'batch:operation', {'type': 'update'})
             SubElement(entry, 'id').text = cell.element.find(_ns('id')).text
 
             edit_link = finditem(lambda x: x.get('rel') == 'edit',
-                    cell.element.findall(_ns('link')))
+                                 cell.element.findall(_ns('link')))
 
             SubElement(entry, 'link', {'rel': 'edit',
                                        'type': edit_link.get('type'),
@@ -502,6 +540,30 @@ class Worksheet(object):
 
         self.update_cells(cell_list)
 
+    def insert_row(self, values, index=1):
+        """"Adds a row to the worksheet at the specified index and populates it with values.
+        Widens the worksheet if there are more values than columns.
+
+        :param values: List of values for the new row.
+        """
+        self.add_rows(1)
+        data_width = len(values)
+        if self.col_count < data_width:
+            self.resize(cols=data_width)
+
+        all_cells = self.get_all_values()
+        rows_after_insert = all_cells[index - 1:self.row_count]
+
+        rows_after_insert.insert(0, values)
+
+        updated_cell_list = []
+        for r, row in enumerate(rows_after_insert, start=1):
+            for c, cell in enumerate(row, start=1):
+                newcell = self.cell(r + (index - 1), c)
+                newcell.value = rows_after_insert[r - 1][c - 1]
+                updated_cell_list.append(newcell)
+        self.update_cells(updated_cell_list)
+
     def _finder(self, func, query):
         cells = self._fetch_cells()
 
@@ -529,19 +591,44 @@ class Worksheet(object):
         """
         return self._finder(filter, query)
 
+    def export(self, format='csv'):
+        """Export the worksheet in specified format.
+
+        :param format: A format of the output.
+        """
+        export_link = self._get_link(
+            'http://schemas.google.com/spreadsheets/2006#exportcsv',
+            self._element).get('href')
+
+        url, qs = export_link.split('?')
+        params = dict(param.split('=') for param in  qs.split('&'))
+
+        params['format'] = format
+
+        params = urlencode(params)
+        export_link = '%s?%s' % (url, params)
+
+        return self.client.session.get(export_link)
+
 
 class Cell(object):
-    """An instance of this class represents a single cell in a :class:`worksheet <Worksheet>`.
+
+    """An instance of this class represents a single cell
+    in a :class:`worksheet <Worksheet>`.
 
     """
+
     def __init__(self, worksheet, element):
         self.element = element
         cell_elem = element.find(_ns1('cell'))
         self._row = int(cell_elem.get('row'))
         self._col = int(cell_elem.get('col'))
+        self.input_value = cell_elem.get('inputValue')
+        numeric_value = cell_elem.get('numericValue')
+        self.numeric_value = float(numeric_value) if numeric_value else None
 
         #: Value of the cell.
-        self.value = cell_elem.text
+        self.value = cell_elem.text or ''
 
     @property
     def row(self):
@@ -555,6 +642,6 @@ class Cell(object):
 
     def __repr__(self):
         return '<%s R%sC%s %s>' % (self.__class__.__name__,
-                                     self.row,
-                                     self.col,
-                                     repr(self.value))
+                                   self.row,
+                                   self.col,
+                                   repr(self.value))

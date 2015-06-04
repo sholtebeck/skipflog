@@ -1,6 +1,7 @@
 # skipflog functions
 import csv,datetime,json,sys,urllib2
 from time import gmtime, strftime
+from oauth2client.client import SignedJwtAssertionCredentials
 # External modules (gspread, bs4)
 import sys
 sys.path[0:0] = ['libs']
@@ -29,6 +30,7 @@ skip_points=[0, 100, 60, 40, 35, 30, 25, 20, 15, 10, 9, 9, 8, 8, 7, 7, 7, 6, 6, 
 
 # Misc urls
 espn_url="http://espn.go.com/golf/leaderboard"
+feed_url='https://spreadsheets.google.com/feeds'
 golfchannel_url="http://www.golfchannel.com/tours/usga/2014/us-open/"
 owg_url="http://www.owgr.com/en/Events/EventResult.aspx?eventid=5520"
 pga_url="http://www.pga.com/news/golf-leaderboard/pga-tour-leaderboard"
@@ -114,7 +116,10 @@ def get_picks(event_id):
     return picks
 
 def open_worksheet(spread,work):
-    gc = gspread.login(skip_user,skip_pass)
+    json_key = json.load(open('skipflog.json'))
+    scope = [feed_url]
+    credentials = SignedJwtAssertionCredentials(json_key['client_email'], json_key['private_key'], scope)
+    gc = gspread.authorize(credentials)
     spreadsheet=gc.open(spread)
     worksheet=spreadsheet.worksheet(work)
     return worksheet
@@ -324,9 +329,7 @@ def post_results(week_id):
     if not week_id:
         week_id=str((current_year()-2000)*100+current_week())
     results=json_results(results_api+str(week_id))
-    gc = gspread.login(skip_user,skip_pass)
-    spreadsheet=gc.open('Majors')
-    worksheet=spreadsheet.worksheet('Results')
+    worksheet=open_worksheet('Majors','Results')
     #get date and week number from header
     results_week=int(results['results'][0]['Week'])
     worksheet_week=int(worksheet.acell('I2').value)

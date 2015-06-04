@@ -8,15 +8,14 @@ This module contains a class for working with http sessions.
 
 """
 
-
 try:
-    import urllib2 as request
+    import httplib as client
+    from urlparse import urlparse
     from urllib import urlencode
-    from urllib2 import HTTPError
 except ImportError:
-    from urllib import request
+    from http import client
+    from urllib.parse import urlparse
     from urllib.parse import urlencode
-    from urllib.error import HTTPError
 
 try:
     unicode
@@ -24,13 +23,19 @@ except NameError:
     basestring = unicode = str
 
 
+from .exceptions import HTTPError
+
+
 class HTTPSession(object):
+
     """Handles HTTP activity while keeping headers persisting across requests.
 
        :param headers: A dict with initial headers.
     """
+
     def __init__(self, headers=None):
         self.headers = headers or {}
+        self.connections = {}
 
     def request(self, method, url, data=None, headers=None):
         if data and not isinstance(data, basestring):
@@ -39,10 +44,19 @@ class HTTPSession(object):
         if data is not None:
             data = data.encode()
 
-        req = request.Request(url, data)
-
-        if method == 'put':
-            req.get_method = lambda: 'PUT'
+        # If we have data and Content-Type is not set, set it...
+        if data and not headers.get('Content-Type', None):
+            headers['Content-Type'] = 'application/x-www-form-urlencoded'
+        # If connection for this scheme+location is not established, establish
+        # it.
+        uri = urlparse(url)
+        if not self.connections.get(uri.scheme + uri.netloc):
+            if uri.scheme == 'https':
+                self.connections[
+                    uri.scheme + uri.netloc] = client.HTTPSConnection(uri.netloc)
+            else:
+                self.connections[
+                    uri.scheme + uri.netloc] = client.HTTPConnection(uri.netloc)
 
         request_headers = self.headers.copy()
 
@@ -53,22 +67,25 @@ class HTTPSession(object):
                 else:
                     request_headers[k] = v
 
-        for k, v in request_headers.items():
-            req.add_header(k, v)
+        self.connections[
+            uri.scheme + uri.netloc].request(method, url, data, headers=request_headers)
+        response = self.connections[uri.scheme + uri.netloc].getresponse()
 
-        try:
-            return request.urlopen(req)
-        except HTTPError as e:
-            raise e
+        if response.status > 399:
+            raise HTTPError("%s: %s" % (response.status, response.read()))
+        return response
 
     def get(self, url, **kwargs):
-        return self.request('get', url, **kwargs)
+        return self.request('GET', url, **kwargs)
 
-    def post(self, url, data=None, **kwargs):
-        return self.request('post', url, data=data, **kwargs)
+    def delete(self, url, **kwargs):
+        return self.request('DELETE', url, **kwargs)
+
+    def post(self, url, data=None, headers={}):
+        return self.request('POST', url, data=data, headers=headers)
 
     def put(self, url, data=None, **kwargs):
-        return self.request('put', url, data=data, **kwargs)
+        return self.request('PUT', url, data=data, **kwargs)
 
     def add_header(self, name, value):
         self.headers[name] = value
