@@ -150,7 +150,8 @@ def fetch_headers(soup):
         headers['Last Update']= current_time()
 #   headers['thead']=soup.find('thead')
     headers['Round']=datetime.datetime.today().weekday()-2
-    columns=soup.find('tr').findAll('th')
+    headers['Columns']=[]
+    columns=soup.find('tr',{'class':"colhead"}).findAll('th')
     colnum=0
     for col in columns:
         if col.string:
@@ -378,9 +379,7 @@ def post_results(week_id):
 
 def update_results(event_id):
     results=get_results(event_id)
-    gc = gspread.login(skip_user,skip_pass)
-    spreadsheet=gc.open('Majors')
-    worksheet=spreadsheet.worksheet('Results')
+    worksheet=open_worksheet('Majors','Results')
     #get date and week number from header
     results_update=str(results[0]['Last Update'])
     worksheet_update=str(worksheet.acell('I2').value)
