@@ -86,7 +86,7 @@ def get_rank(position):
 def get_points(rank):
     if rank < len(skip_points):
         return skip_points[rank]
-    elif rank <= 67:
+    elif rank <= 60:
         return 1
     else:
         return 0
