@@ -209,7 +209,7 @@ def fetch_results(row, columns):
         elif results.get('THRU')=='F':
             results['Today']+='('+results['TODAY']+')'
         elif results.get('THRU').isdigit():
-            results['Today']=results['TODAY']+' thru '+results['THRU']
+            results['Today']='('+results['TODAY']+') thru '+results['THRU']
         elif results['THRU'][-2:] in ('AM','PM'):
             results['Time']='@ '+results['THRU']
         elif results['THRU'] in ('MC','CUT'):
