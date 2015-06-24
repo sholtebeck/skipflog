@@ -29,7 +29,8 @@ skip_pickers=["Mark","Steve"]
 skip_points=[0, 100, 60, 40, 35, 30, 25, 20, 15, 10, 9, 9, 8, 8, 7, 7, 7, 6, 6, 5, 5, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2]
 
 # Misc urls
-espn_url="http://espn.go.com/golf/leaderboard"
+#espn_url="http://espn.go.com/golf/leaderboard"
+espn_url="http://espn.go.com/golf/leaderboard?tournamentId=2249"
 feed_url='https://spreadsheets.google.com/feeds'
 golfchannel_url="http://www.golfchannel.com/tours/usga/2014/us-open/"
 owg_url="http://www.owgr.com/en/Events/EventResult.aspx?eventid=5520"
