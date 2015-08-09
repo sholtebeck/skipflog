@@ -17,7 +17,7 @@ names={'sholtebeck':'Steve','mholtebeck':'Mark'}
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
 event_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=1&output=html&widget=true"
 events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AE21&output=csv"
-players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB150&output=csv"
+players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB155&output=csv"
 results_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
 ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
 rankings_url="http://knarflog.appspot.com/ranking"
@@ -152,7 +152,8 @@ def fetch_headers(soup):
 #   headers['thead']=soup.find('thead')
     headers['Round']=datetime.datetime.today().weekday()-2
     headers['Columns']=[]
-    columns=soup.find('tr',{'class':"colhead"}).findAll('th')
+#   columns=soup.find('tr',{'class':"colhead"}).findAll('th')
+    columns=soup.findAll('th')
     colnum=0
     for col in columns:
         if col.string:
@@ -217,7 +218,8 @@ def fetch_results(row, columns):
             results['Rank']=results['THRU']
             results['Today']=results['THRU']
         # Get Total
-        results['Total']=results['TOT']+'('+results['TO PAR']+')'
+        if results.get('TOT'):
+            results['Total']=results['TOT']+'('+results['TO PAR']+')'
     return results
 
 def fetch_scores(url):
@@ -248,7 +250,8 @@ def fetch_scores(url):
 
 # fetch all table rows
 def fetch_rows(page):
-    return page.find('table').findAll('tr')    
+#   return page.find('table').findAll('tr')    
+    return page.findAll('tr')    
 
 # Get the list of players
 def get_players(playlist):
@@ -273,7 +276,8 @@ def get_results(event_id):
             res['Picker']=picker
             picks[picker]['Points']+=res['Points']
         if res.get('Points')>10 or res.get('Picker'):
-            results.append(res)
+            if res.get('R1'):
+                results.append(res)
     results.append([picks[key] for key in picks.keys() if key in picks.values()])
     return results
 
