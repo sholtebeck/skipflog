@@ -398,7 +398,7 @@ class ResultsHandler(webapp2.RequestHandler):
 class UpdateHandler(webapp2.RequestHandler):
     def get(self):
         current=datetime.datetime.now()
-        if current.day in range(13,16):
+        if current.day in range(13,18):
             taskqueue.add(url='/update', params={'event_id': currentEvent()})
     def post(self):
         event_id = self.request.get('event_id')
