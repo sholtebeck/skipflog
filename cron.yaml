@@ -3,11 +3,3 @@ cron:
   url: /ranking
   schedule: every monday 12:00
   timezone: America/Los_Angeles
-- description: daily email
-  url: /mail
-  schedule: every day 18:00
-  timezone: America/Los_Angeles
-- description: hourly update
-  url: /update
-  schedule: every 20 minutes from 09:50 to 16:50
-  timezone: America/Los_Angeles
