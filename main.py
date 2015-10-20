@@ -350,7 +350,7 @@ class RankingHandler(webapp2.RequestHandler):
         event_name = event_year + " World Golf Rankings (Week "+str(event_week)+")"
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name)
         message.to = "skipflog@googlegroups.com"
-        result = urllib2.urlopen(ranking_url)
+        result = urllib2.urlopen(rankings_url)
         message.html=result.read()
         message.send()        
             
