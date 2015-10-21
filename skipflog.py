@@ -247,6 +247,14 @@ def fetch_scores(url):
     scores.append(scores[2]+scores[3])
     return scores       
 
+def fetch_tables(url):
+    page=soup_results(url)
+    tables=page.findAll('table')
+    results=''
+    for table in tables:
+        results=results+str(table)
+        results=results+"<p>"
+    return results[:-3]
 
 # fetch all table rows
 def fetch_rows(page):
@@ -337,8 +345,8 @@ def post_results(week_id):
     results=json_results(results_api+str(week_id))
     worksheet=open_worksheet('Majors','Results')
     #get date and week number from header
-    results_week=int(results['results'][0]['Week'])
-    worksheet_week=int(worksheet.acell('I2').value)
+    results_week=str(results['results'][0]['Week'])
+    worksheet_week=str(worksheet.acell('I2').value)
     # check if update required
     if (results_week==worksheet_week):
         return False
