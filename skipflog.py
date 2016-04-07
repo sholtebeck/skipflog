@@ -30,8 +30,7 @@ skip_pickers=["Mark","Steve"]
 skip_points=[0, 100, 60, 40, 35, 30, 25, 20, 15, 10, 9, 9, 8, 8, 7, 7, 7, 6, 6, 5, 5, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2]
 
 # Misc urls
-#espn_url="http://espn.go.com/golf/leaderboard"
-espn_url="http://espn.go.com/golf/leaderboard?tournamentId=2255"
+espn_url="http://espn.go.com/golf/leaderboard"
 feed_url='https://spreadsheets.google.com/feeds'
 golfchannel_url="http://www.golfchannel.com/tours/usga/2014/us-open/"
 owg_url="http://www.owgr.com/en/Events/EventResult.aspx?eventid=5520"
@@ -150,22 +149,18 @@ def fetch_headers(soup):
         headers['Last Update']= str(last_update.string[-13:])
     else:
         headers['Last Update']= current_time()
-#   headers['thead']=soup.find('thead')
+    thead=soup.find('thead')
     headers['Round']=datetime.datetime.today().weekday()-2
     headers['Columns']=[]
-#   columns=soup.find('tr',{'class':"colhead"}).findAll('th')
-    columns=soup.findAll('th')
+    columns=soup.find('tr',{'class':"colhead"}).findAll('th')
+#   columns=soup.findAll('th')
     colnum=0
     for col in columns:
         if col.string:
             header=str(col.string.replace('\n','').replace(u'\xd1','').replace(u'\xbb',''))
             debug_values(colnum, header)
-            if header=='POS': 
-                headers['Columns']=[header]
-                colnum=1
-            elif headers.get('Columns'):
-                headers['Columns'].append(header)
-                colnum+=1
+            headers['Columns'].append(header)
+            colnum+=1
     return headers
 
 def fetch_rankings(row):
@@ -194,7 +189,7 @@ def fetch_results(row, columns):
         for col,val in zip(columns,values):
             results[col]=val
         # Get Rank and Points
-        results['Rank']=get_rank(results['POS'])
+        results['Rank']=get_rank(results.get('POS','99'))
         results['Points']=get_points(results['Rank'])
         # Get Scores
         if results.get('R1'):
