@@ -362,9 +362,8 @@ class ResultsHandler(webapp2.RequestHandler):
         if event_id:
             event = getEvent(event_id)
         else:
-            event = Event(key_name='9999',event_id=9999)
-            event.picks=[]
-        page = soup_results(leaderboard_url)
+            event = getEvent(currentEvent())
+        page = soup_results(espn_url)
         headers = fetch_headers(page)
         if output_format=='csv':
             self.response.write('Pos,Player,Scores,Today,Total,Points'+br)
