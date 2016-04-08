@@ -91,11 +91,10 @@ def deleteEvent(event_id):
 def getResults(event_id):
     event = getEvent(event_id)
     if (event.event_url and int(event_id)<currentEvent()):
-        results = "<iframe width='1250' height='800' frameborder='0' src='"+event.event_url+"'&widget=true'></iframe>"
+        results = "<iframe width='1250' height='800' frameborder='0' src='"+result_url+"'&widget=true'></iframe>"
     else:
         results = "<iframe width='1250' height='800' frameborder='0' src='"+results_url+"'&widget=true'></iframe>"
     return results
-    Event.delete(event_key(event_id))
 
 def getEvent(event_id):
     event = Event.get(event_key(event_id))
@@ -180,15 +179,10 @@ class MailHandler(webapp2.RequestHandler):
         if event:
             event_day = int(current.day-event.start)
             event_name = event.event_name
-        else:
-            event_day=0
-            event_name=None
-        # Special Handler for weekly job
-        if (event_day >0 and event_day < 5):
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event_name+" results (round "+str(event_day)+")")
             message.to = "skipflog@googlegroups.com"
-            result = urllib2.urlopen(results_url)
+            result = urllib2.urlopen(result_url)
             message.html=result.read()
             message.send()
 
@@ -357,30 +351,20 @@ class ResultsHandler(webapp2.RequestHandler):
     def get(self):
         output_format = self.request.get('output')
         if not output_format:
-            output_format='json'
+            output_format='html'
         event_id = self.request.get('event_id')
-        if event_id:
-            event = getEvent(event_id)
-        else:
-            event = getEvent(currentEvent())
-        page = soup_results(espn_url)
-        headers = fetch_headers(page)
+        if not event_id:
+            event_id = currentEvent()
+        results = get_results(event_id)
         if output_format=='csv':
             self.response.write('Pos,Player,Scores,Today,Total,Points'+br)
         elif output_format=='json':
-            self.response.write(json.dumps(headers))
-        # Get header
-        head_columns=headers.get('Columns')
-        rows = fetch_rows(page)
-        for row in rows:
-            res=fetch_results(row, headers.get('Columns'))
-            if res.get('Rank') in range(1,20) or res.get('Name') in event.picks:
-                if output_format=='csv':
-                    self.response.write(str(res.get('Rank'))+','+res.get('Name')+','+res.get('Scores')+',')
-                    self.response.write(res.get('Time')+','+res.get('Total')+','+str(res.get('Points')))
-                    self.response.write(br)
-                elif output_format=='json':                 
-                    self.response.write(json.dumps(res))
+            self.response.write(json.dumps(results))
+        elif output_format=='html':
+            template_values = {'results': results }
+            template = jinja_environment.get_template('results.html')
+            self.response.out.write(template.render(template_values))
+                    
     def post(self):
         event_week = self.request.get('event_week')
         event_year = self.request.get('event_year')
