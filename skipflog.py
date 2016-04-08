@@ -87,7 +87,7 @@ def get_rank(position):
 def get_points(rank):
     if rank < len(skip_points):
         return skip_points[rank]
-    elif rank <= 70:
+    elif rank <= 60:
         return 1
     else:
         return 0
@@ -140,10 +140,11 @@ def fetch_headers(soup):
     if not soup:
         return None
     headers={}
+    headers['Year']=current_year()
 #   event_name = soup.find('h4',{'class': "yspTitleBar"})
     event_name = soup.find('h1',{'class': "tourney-name"})
     if event_name and event_name.string:
-        headers['Event Name']= str(event_name.string.replace(u'\xa0',u''))
+        headers['Name']= str(event_name.string.replace(u'\xa0',u''))
     last_update = soup.find('span',{'class': "ten"})
     if last_update:
         headers['Last Update']= str(last_update.string[-13:])
@@ -270,19 +271,24 @@ def get_players(playlist):
 def get_results(event_id):
     picks=get_picks(event_id)
     page=soup_results(espn_url)
-    headers=fetch_headers(page)
-    results=[headers]
+    results={}
+    results['event']=fetch_headers(page)
+    results['players']=[]
     rows=fetch_rows(page)
     for row in rows:
-        res=fetch_results(row, headers.get('Columns'))
+        res=fetch_results(row, results.get('event').get('Columns'))
         if res.get('Name') in picks.keys():
             picker=xstr(picks[res['Name']])
             res['Picker']=picker
             picks[picker]['Points']+=res['Points']
         if res.get('Points')>10 or res.get('Picker'):
             if res.get('R1'):
-                results.append(res)
-    results.append([picks[key] for key in picks.keys() if key in picks.values()])
+                results['players'].append(res)
+    results['pickers']=[picks[key] for key in picks.keys() if key in picks.values()]
+    if results['pickers'][1]['Points']>results['pickers'][0]['Points']:
+        results['pickers'].reverse()
+    results['pickers'][0]['Rank']=1
+    results['pickers'][1]['Rank']=2
     return results
 
 # Post the rankings to the "Rankings" tab
@@ -356,7 +362,7 @@ def post_results(week_id):
     current_row=2
     for event in results['results']:
         worksheet.update_cell(current_row, 1, 'Event:')
-        worksheet.update_cell(current_row, 2, event.get('Event Name'))
+        worksheet.update_cell(current_row, 2, event.get('Name'))
         worksheet.update_cell(current_row, 7, event.get('Year'))
         worksheet.update_cell(current_row, 8, 'Week:')
         worksheet.update_cell(current_row, 9, event.get('Week'))
@@ -390,13 +396,13 @@ def update_results(event_id):
     results=get_results(event_id)
     worksheet=open_worksheet('Majors','Results')
     #get date and week number from header
-    results_update=str(results[0]['Last Update'])
+    results_update=str(results['event']['Last Update'])
     worksheet_update=str(worksheet.acell('I2').value)
     # check if update required
     if (results_update==worksheet_update):
         return False
     # Update header information
-    worksheet.update_cell(2, 2, results[0].get('Event Name'))
+    worksheet.update_cell(2, 2, results['event'].get('Name'))
     worksheet.update_cell(2, 8, 'Update:')
     worksheet.update_cell(2, 9, results_update)
     worksheet.update_cell(1, 1, 'Pos')
@@ -417,7 +423,7 @@ def update_results(event_id):
         cell.value=''
     worksheet.update_cells(cell_list)
     current_row=3
-    for player in results[1:-1]:
+    for player in results['players']:
         worksheet.update_cell(current_row, 1, player['Rank'])
         worksheet.update_cell(current_row, 2, player['Name'])
         worksheet.update_cell(current_row, 3, player['R1'])
@@ -435,14 +441,12 @@ def update_results(event_id):
             points[player['Picker']]+=player['Points']
         current_row += 1
     # update points per picker
-    pickers=skip_pickers
-    if points[pickers[1]]>points[pickers[0]]:
-        pickers.reverse()
+    pickers=results['pickers']
     current_row+=1
     for picker in pickers:
         idx = pickers.index(picker)
         worksheet.update_cell(current_row, 1, idx+1)
-        worksheet.update_cell(current_row, 2, picker)
-        worksheet.update_cell(current_row, 9, points[picker])
+        worksheet.update_cell(current_row, 2, picker['Name'])
+        worksheet.update_cell(current_row, 9, picker['Points'])
         current_row+=1
     return True
