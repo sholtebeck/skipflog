@@ -93,7 +93,7 @@ def getResults(event_id):
     if (event.event_url and int(event_id)<currentEvent()):
         results = "<iframe width='1250' height='800' frameborder='0' src='"+result_url+"'&widget=true'></iframe>"
     else:
-        results = "<iframe width='1250' height='800' frameborder='0' src='"+results_url+"'&widget=true'></iframe>"
+        results = "<iframe width='1250' height='800' frameborder='0' src='"+results_tab+"'&widget=true'></iframe>"
     return results
 
 def getEvent(event_id):
@@ -182,7 +182,7 @@ class MailHandler(webapp2.RequestHandler):
             message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
                             subject=event_name+" results (round "+str(event_day)+")")
             message.to = "skipflog@googlegroups.com"
-            result = urllib2.urlopen(result_url)
+            result = urllib2.urlopen(results_url)
             message.html=result.read()
             message.send()
 
