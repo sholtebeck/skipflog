@@ -142,9 +142,11 @@ def fetch_headers(soup):
     headers={}
     headers['Year']=current_year()
 #   event_name = soup.find('h4',{'class': "yspTitleBar"})
-    event_name = soup.find('h1',{'class': "tourney-name"})
+#   event_name = soup.find('h1',{'class': "tourney-name"})
+    event_name = soup.find('title')
     if event_name and event_name.string:
-        headers['Name']= str(event_name.string.replace(u'\xa0',u''))
+        event_string=str(event_name.string.replace(u'\xa0',u''))
+        headers['Name']=event_string[:event_string.index(' Golf')]
     last_update = soup.find('span',{'class': "ten"})
     if last_update:
         headers['Last Update']= str(last_update.string[-13:])
@@ -153,8 +155,8 @@ def fetch_headers(soup):
     thead=soup.find('thead')
     headers['Round']=datetime.datetime.today().weekday()-2
     headers['Columns']=[]
-    columns=soup.find('tr',{'class':"colhead"}).findAll('th')
-#   columns=soup.findAll('th')
+#   columns=soup.find('tr',{'class':"colhead"}).findAll('th')
+    columns=soup.findAll('th')
     colnum=0
     for col in columns:
         if col.string:
