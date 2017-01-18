@@ -52,7 +52,7 @@ def current_month():
 
 def current_week():
     this_week=strftime("%U",gmtime())
-    return int(this_week) 
+    return int(this_week)-1 
 
 def current_year():
     this_year=strftime("%Y",gmtime())
@@ -364,7 +364,7 @@ def post_results(week_id):
     current_row=2
     for event in results['results']:
         worksheet.update_cell(current_row, 1, 'Event:')
-        worksheet.update_cell(current_row, 2, event.get('Name'))
+        worksheet.update_cell(current_row, 2, event.get('Event Name'))
         worksheet.update_cell(current_row, 7, event.get('Year'))
         worksheet.update_cell(current_row, 8, 'Week:')
         worksheet.update_cell(current_row, 9, event.get('Week'))
@@ -378,8 +378,9 @@ def post_results(week_id):
             worksheet.update_cell(current_row, 6, player['R4'])
             worksheet.update_cell(current_row, 8, player['Agg'])
             worksheet.update_cell(current_row, 9, player['Points'])
-            worksheet.update_cell(current_row, 10, player['Picker'])
-            points[player['Picker']]+=player['Points']
+            if player.get('Picker'):
+                worksheet.update_cell(current_row, 10, player['Picker'])
+                points[player['Picker']]+=player['Points']
             current_row += 1
     # update points per picker
     pickers=skip_pickers
