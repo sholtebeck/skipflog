@@ -272,7 +272,7 @@ class PickHandler(webapp2.RequestHandler):
         lastpick=pick.who+" picked "+pick.player
         memcache.delete('lastpick')
         memcache.add("lastpick",lastpick)
-        self.redirect('/pick?event_id=' + event_id)	
+        self.redirect('/pick?event_id=' + event_id) 
 
 class EventsHandler(webapp2.RequestHandler):   
     def get(self):
@@ -301,7 +301,7 @@ class PicksHandler(webapp2.RequestHandler):
         output_format = self.request.get('output','json')
         event_id = self.request.get('event_id')
         if not event_id:
-            self.redirect('/events')	
+            self.redirect('/events')    
         else:
             event = getEvent(event_id)
             if event:
@@ -345,8 +345,8 @@ class RankingHandler(webapp2.RequestHandler):
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name)
         message.to = "skipflog@googlegroups.com"
         message.html=fetch_tables(result_url)
-		message.html+="<p>"
-		message.html+=fetch_tables(rankings_url)
+        message.html+="<p>"
+        message.html+=fetch_tables(rankings_url)
         message.send()        
             
 class ResultsHandler(webapp2.RequestHandler):   
