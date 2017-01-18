@@ -341,12 +341,12 @@ class RankingHandler(webapp2.RequestHandler):
 #       event_update=post_rankings()
         event_week = self.request.get('event_week')
         event_year = self.request.get('event_year')
-        event_name = event_year + " World Golf Results and Rankings (Week "+str(event_week)+")"
+        event_name = event_year + " World Golf Rankings and Results (Week "+str(event_week)+")"
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name)
         message.to = "skipflog@googlegroups.com"
-        message.html=fetch_tables(result_url)
+        message.html=fetch_tables(rankings_url)
         message.html+="<p>"
-        message.html+=fetch_tables(rankings_url)
+        message.html+=fetch_tables(result_url)
         message.send()        
             
 class ResultsHandler(webapp2.RequestHandler):   
