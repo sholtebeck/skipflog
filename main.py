@@ -335,16 +335,18 @@ class PlayersHandler(webapp2.RequestHandler):
 class RankingHandler(webapp2.RequestHandler): 
     def get(self):
         taskqueue.add(url='/ranking', params={'event_week': current_week(),'event_year': current_year()})
-        taskqueue.add(url='/results', params={'event_week': current_week(),'event_year': current_year()})
+#       taskqueue.add(url='/results', params={'event_week': current_week(),'event_year': current_year()})
         
     def post(self):
-        event_update=post_rankings()
+#       event_update=post_rankings()
         event_week = self.request.get('event_week')
         event_year = self.request.get('event_year')
-        event_name = event_year + " World Golf Rankings (Week "+str(event_week)+")"
+        event_name = event_year + " World Golf Results and Rankings (Week "+str(event_week)+")"
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name)
         message.to = "skipflog@googlegroups.com"
-        message.html=fetch_tables(rankings_url)
+        message.html=fetch_tables(result_url)
+		message.html+="<p>"
+		message.html+=fetch_tables(rankings_url)
         message.send()        
             
 class ResultsHandler(webapp2.RequestHandler):   
