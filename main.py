@@ -137,6 +137,17 @@ def nextEvent():
 
 def updateEvents():
     return
+    
+def updateLastPick(picker,player):
+    lastpick=memcache.get("lastpick")
+    if (not lastpick or not lastpick.startswith(picker)):
+        lastpick=picker+" picked "+player
+        memcache.delete('lastpick')
+    else:
+        lastpick=lastpick+" and "+player
+	memcache.delete("lastpick")
+    memcache.add("lastpick",lastpick)    
+    return
 
 class MainPage(webapp2.RequestHandler):       
     def get(self):
@@ -215,7 +226,7 @@ class PickHandler(webapp2.RequestHandler):
         else:
             event = nextEvent()
             results = ""
-
+        lastpick=memcache.get("lastpick")
         players = {"Steve":[],"Mark":[]}
         picks = getPicks(event_id)
         for pick in picks:
@@ -227,6 +238,11 @@ class PickHandler(webapp2.RequestHandler):
         # get next player
         if picknum != "Done":
             event.next=event.pickers[0] if mypicks.count(pick_no)>0 else event.pickers[1]
+            if (lastpick and not lastpick.startswith(event.next)):
+                message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event.event_name)
+                message.to = numbers.get(event.next)
+                message.body=lastpick
+                message.send()        
         else:
             event.next="Done"
     
@@ -269,9 +285,7 @@ class PickHandler(webapp2.RequestHandler):
         event.picks.append(pick.player)
         event.put()
         # update last pick message
-        lastpick=pick.who+" picked "+pick.player
-        memcache.delete('lastpick')
-        memcache.add("lastpick",lastpick)
+        updateLastPick(pick.who,pick.player)
         self.redirect('/pick?event_id=' + event_id) 
 
 class EventsHandler(webapp2.RequestHandler):   

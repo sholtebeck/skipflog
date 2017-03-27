@@ -14,6 +14,7 @@ events={ 4:'Masters',6:'US Open', 7:'Open Championship', 8:'PGA Championship'}
 mypicks = [1,4,5,8,9,12,13,16,17,20,22]
 yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
 names={'sholtebeck':'Steve','mholtebeck':'Mark'}
+numbers={'Steve':'5103005644@vtext.com','Mark':'5106739570@vmobl.com'}
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
 event_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=1&output=html&widget=true"
 events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AE21&output=csv"
@@ -92,6 +93,20 @@ def get_points(rank):
     else:
         return 0
 
+# Get the rankings from the page
+def get_rankings(size):
+    ranking_url="http://www.owgr.com/ranking?pageSize="+str(size)
+    soup=soup_results(ranking_url)
+    rankings=[]
+    rank=1
+    for row in soup.findAll('tr'):
+        name = row.find('a')
+        if name:
+            points = float(row.findAll('td')[6].string)
+            player={"rank":rank, "name":str(name.string), "points":points }
+            rankings.append(player)
+            rank+=1
+    return rankings
 
 # Get the picks for an event
 def get_picks(event_id):
@@ -292,6 +307,35 @@ def get_results(event_id):
     results['pickers'][0]['Rank']=1
     results['pickers'][1]['Rank']=2
     return results
+	
+# Post the players to the Players tab in Majors spreadsheet
+def post_players():
+    current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=0&output=csv'
+    result = urllib2.urlopen(current_csv)
+    rows=[row for row in csv.reader(result)]
+    names=[name[1] for name in rows[3:]]
+    names.sort()
+    rankings=get_rankings(999)
+    rank_names=[rank['name'] for rank in rankings]
+    worksheet=open_worksheet('Majors','Players')
+    # Clear worksheet
+#    cell_list = worksheet.range('A3:F100')
+#    for cell in cell_list:
+#        cell.value=''
+#    worksheet.update_cells(cell_list)
+    current_row=2
+    for name in names:
+        if name in rank_names:
+            player=rankings[rank_names.index(name)]
+            worksheet.update_cell(current_row, 1, player['rank'])
+            worksheet.update_cell(current_row, 2, player['name'])
+            worksheet.update_cell(current_row, 3, player['points'])
+        else:
+            worksheet.update_cell(current_row, 1, 999)
+            worksheet.update_cell(current_row, 2, name)
+            worksheet.update_cell(current_row, 3, 0.0)
+        current_row += 1
+    return True
 
 # Post the rankings to the "Rankings" tab
 def post_rankings():
