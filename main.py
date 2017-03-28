@@ -213,6 +213,7 @@ class MailHandler(webapp2.RequestHandler):
                 if (pick_no>1 and pick_no<20):
                     message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event.event_name)
                     message.to = "skipflog@googlegroups.com"
+                    message.cc = numbers.get(event.next)
                     message.body=event.next+" is on the clock. http://skipflog.appspot.com"
                     message.send()   
 
