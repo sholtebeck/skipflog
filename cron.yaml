@@ -4,6 +4,6 @@ cron:
   schedule: every tuesday 12:00
   timezone: America/Los_Angeles
 - description: daily email
-  url: /mail
+  url: /mail?event_id=1704
   schedule: every day 17:00
   timezone: America/Los_Angeles
