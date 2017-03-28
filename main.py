@@ -137,31 +137,27 @@ def nextEvent():
 
 def updateEvents():
     return
-	
-def getLastPick(event_id):
-    lastpick=memcache.get("lastpick")
-    if not lastpick:
-        picks_query = Pick.all().ancestor(event_key(event_id)).order('-pick_no')
-        pick=picks_query.fetch(1)
-		lastpick=pick.who+" picked "+pick.player
-        memcache.add("lastpick",lastpick)
-    return lastpick
     
-def updateLastPick(event,pick):
-    lastpick=getLastPick(event.event_id)
+def getLastPick(pick):
+    lastpick=memcache.get("lastpick")
     if (not lastpick or not lastpick.startswith(pick.who)):
         lastpick=pick.who+" picked "+pick.player
     elif (not lastpick.endswith(pick.player)):
         lastpick=lastpick+" and "+pick.player
-        memcache.add("lastpick",lastpick) 
-	# send alert if needed
+    memcache.delete("lastpick")  
+    memcache.add("lastpick",lastpick)  
+    return lastpick
+    
+def updateLastPick(event,pick):
+    lastpick=getLastPick(pick)
+    # send alert if needed
     pick_no = len(event.picks)+1
     event.next=event.pickers[0] if mypicks.count(pick_no)>0 else event.pickers[1]
     if (pick_no<21 and not lastpick.startswith(event.next)):
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event.event_name)
         message.to = numbers.get(event.next)
         message.body=lastpick
-        message.send() 	 
+        message.send()   
     return
 
 class MainPage(webapp2.RequestHandler):       
