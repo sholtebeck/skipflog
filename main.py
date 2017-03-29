@@ -157,7 +157,8 @@ def updateLastPick(event,pick):
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event.event_name)
         message.to = numbers.get(event.next)
         message.body=lastpick
-        message.send()   
+        message.send()
+    	
     return
 
 class MainPage(webapp2.RequestHandler):       
@@ -199,7 +200,7 @@ class MailHandler(webapp2.RequestHandler):
             event = nextEvent()
         current=datetime.datetime.now()
         if event:
-            event_day = datetime.datetime.today().weekday()-2
+            event_day = datetime.datetime.today().day-event.start
             if event_day in range(5):
                 event_name = event.event_name
                 message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name+" results (round "+str(event_day)+")")
@@ -301,6 +302,7 @@ class PickHandler(webapp2.RequestHandler):
         event.put()
         # update last pick message
         updateLastPick(event,pick)
+        taskqueue.add(url='/picks', params={'picklist': event.picks})	
         self.redirect('/pick?event_id=' + event_id) 
 
 class EventsHandler(webapp2.RequestHandler):   
@@ -347,6 +349,10 @@ class PicksHandler(webapp2.RequestHandler):
                         self.response.write(pick.to_xml())
                 if output_format=='json':
                     self.response.write(json.dumps(pick_dict))
+					
+    def post(self):
+        picklist = self.request.get('picklist')
+        pick_players(picklist)     
 
 class PlayersHandler(webapp2.RequestHandler):   
     def get(self):

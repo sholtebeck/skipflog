@@ -24,6 +24,7 @@ ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU0
 rankings_url="http://knarflog.appspot.com/ranking"
 result_url="http://knarflog.appspot.com/results"
 results_url="http://skipflog.appspot.com/results"
+players_api="http://knarflog.appspot.com/api/players"
 leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"
 skip_user="skipfloguser"
 skip_picks={}
@@ -308,6 +309,17 @@ def get_results(event_id):
     results['pickers'][1]['Rank']=2
     return results
 	
+# Update the picks to the Players tab in Majors spreadsheet
+def pick_players(picklist):
+    try:
+        players=json_results(players_api)
+        worksheet=open_worksheet('Majors','Players')
+        for player in players['players']:
+            if str(player['name']) in picklist:
+                worksheet.update_cell(player["rownum"], 6, 1)
+    except:
+        pass
+	
 # Post the players to the Players tab in Majors spreadsheet
 def post_players():
     current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=0&output=csv'
@@ -318,11 +330,6 @@ def post_players():
     rankings=get_rankings(999)
     rank_names=[rank['name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
-    # Clear worksheet
-#    cell_list = worksheet.range('A3:F100')
-#    for cell in cell_list:
-#        cell.value=''
-#    worksheet.update_cells(cell_list)
     current_row=2
     for name in names:
         if name in rank_names:
