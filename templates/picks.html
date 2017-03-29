@@ -6,6 +6,8 @@
    Last Pick: {{lastpick}} <p>
    {% endif %}
     <table border=1>
+	<col width="225">
+	<col width="225">
     <tr><th>Steve</th><th>Mark</th><tr>
     <tr><td><ol>
     {% for player in splayers %}
@@ -24,9 +26,7 @@
   	 {% for player in event.field %}
      <option>{{player}}</option>
      {% endfor %}
-     </select>
-      
-      <input type="submit" value="Pick"></div>
+     </select><input type="submit" id="submit" name="submit" value="Pick"></div>
     <input type="hidden" name="who" value="{{event.next}}">
     <input type="hidden" name="event_id" value="{{event.event_id}}">
     <input type="hidden" name="pick_no" value="{{pick_no}}">
@@ -35,7 +35,7 @@
    {% if event.next=="Done" %}
    {% if user %}
    <p><form action="/mail" method="post">We're Done. <input type="hidden" name="event_id" value="{{event.event_id}}">
-      <input type="submit" value="Email Picks"></form>
+      <input type="submit" id="submit" value="Email Picks"></form>
    {% else %}
    <p>We're Done.
    {% endif %}
