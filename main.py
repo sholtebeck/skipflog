@@ -40,9 +40,11 @@ def event_key(event_id):
   """Constructs a Datastore key for an Event entity with event_id."""
   return db.Key.from_path('Event', event_id)
 
+
 def currentEvent():
     now=datetime.datetime.now()
-    event_current=100*(now.year-2000)+now.month
+    event_month=min(max(now.month,4),8)
+    event_current=100*(now.year-2000)+event_month
     return event_current
 
 def fetchEvents():
@@ -158,7 +160,7 @@ def updateLastPick(event,pick):
         message.to = numbers.get(event.next)
         message.body=lastpick
         message.send()
-    	
+        
     return
 
 class MainPage(webapp2.RequestHandler):       
@@ -214,8 +216,8 @@ class MailHandler(webapp2.RequestHandler):
                 if (pick_no>1 and pick_no<20):
                     message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event.event_name)
                     message.to = "skipflog@googlegroups.com"
-                    message.cc = numbers.get(event.next)
-                    message.body=event.next+" is on the clock. http://skipflog.appspot.com"
+                    message.bcc = numbers.get(event.next)
+                    message.body=event.next+" is on the clock. http://skipflog.appspot.com/pick?event_id="+str(event.event_id)
                     message.send()   
 
     def post(self):
@@ -302,7 +304,7 @@ class PickHandler(webapp2.RequestHandler):
         event.put()
         # update last pick message
         updateLastPick(event,pick)
-        taskqueue.add(url='/picks', params={'picklist': event.picks})	
+        taskqueue.add(url='/picks', params={'picklist': event.picks})   
         self.redirect('/pick?event_id=' + event_id) 
 
 class EventsHandler(webapp2.RequestHandler):   
@@ -310,10 +312,10 @@ class EventsHandler(webapp2.RequestHandler):
         event_id = self.request.get('event_id')
         output_format = self.request.get('output')
         if not output_format:
-            output_format='csv'
+            output_format='html'
         events=getEvents()
         if output_format=='html':
-            template_values = {'events': events }
+            template_values = {'events': getEvents()}
             template = jinja_environment.get_template('events.html')
             self.response.out.write(template.render(template_values))
         for event in events:
@@ -349,23 +351,28 @@ class PicksHandler(webapp2.RequestHandler):
                         self.response.write(pick.to_xml())
                 if output_format=='json':
                     self.response.write(json.dumps(pick_dict))
-					
+                    
     def post(self):
         picklist = self.request.get('picklist')
         pick_players(picklist)     
 
 class PlayersHandler(webapp2.RequestHandler):   
     def get(self):
+        event_id = self.request.get('event_id')
+        if not event_id:
+            event_id = currentEvent()
         output_format = self.request.get('output')
         if not output_format:
-            output_format='none'
+            output_format='html'
         players=getPlayers()
         if output_format=='csv':                   
             self.response.write(",".join(player for player in players)+'\n')
         elif output_format=='json':
             self.response.write(json.dumps(players)+'\n')  
         else:            
-            self.response.write(players)
+            template = jinja_environment.get_template('players.html')
+            template_values = { 'event': getEvent(event_id), "players": players }
+            self.response.out.write(template.render(template_values))
 
 class RankingHandler(webapp2.RequestHandler): 
     def get(self):
@@ -392,7 +399,10 @@ class ResultsHandler(webapp2.RequestHandler):
         event_id = self.request.get('event_id')
         if not event_id:
             event_id = currentEvent()
-        results = get_results(event_id)
+        results = memcache.get("results")
+        if not results:
+            results = get_results(event_id)
+            memcache.add("results",results)
         if output_format=='csv':
             self.response.write('Pos,Player,Scores,Today,Total,Points'+br)
         elif output_format=='json':
