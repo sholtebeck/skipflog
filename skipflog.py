@@ -170,8 +170,8 @@ def fetch_headers(soup):
         headers['Last Update']= current_time()
     thead=soup.find('thead')
     headers['Status']=soup.find("span",{"class":"tournament-status"}).string
-	if headers['Status'].startswith("Round "):
-	    headers['Round']=headers['Status'][6]
+    if headers['Status'].startswith("Round "):
+        headers['Round']=headers['Status'][6]
     headers['Round']=datetime.datetime.today().weekday()-2
     headers['Columns']=[str(th.string) for th in soup.findAll('th')]
     return headers
