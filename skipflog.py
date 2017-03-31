@@ -32,7 +32,7 @@ skip_pickers=["Mark","Steve"]
 skip_points=[0, 100, 60, 40, 35, 30, 25, 20, 15, 10, 9, 9, 8, 8, 7, 7, 7, 6, 6, 5, 5, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2]
 
 # Misc urls
-espn_url="http://espn.go.com/golf/leaderboard"
+espn_url="http://www.espn.com/golf/leaderboard"
 feed_url='https://spreadsheets.google.com/feeds'
 golfchannel_url="http://www.golfchannel.com/tours/usga/2014/us-open/"
 owg_url="http://www.owgr.com/en/Events/EventResult.aspx?eventid=5520"
@@ -169,17 +169,11 @@ def fetch_headers(soup):
     else:
         headers['Last Update']= current_time()
     thead=soup.find('thead')
+    headers['Status']=soup.find("span",{"class":"tournament-status"}).string
+	if headers['Status'].startswith("Round "):
+	    headers['Round']=headers['Status'][6]
     headers['Round']=datetime.datetime.today().weekday()-2
-    headers['Columns']=[]
-#   columns=soup.find('tr',{'class':"colhead"}).findAll('th')
-    columns=soup.findAll('th')
-    colnum=0
-    for col in columns:
-        if col.string:
-            header=str(col.string.replace('\n','').replace(u'\xd1','').replace(u'\xbb',''))
-            debug_values(colnum, header)
-            headers['Columns'].append(header)
-            colnum+=1
+    headers['Columns']=[str(th.string) for th in soup.findAll('th')]
     return headers
 
 def fetch_rankings(row):
@@ -204,22 +198,20 @@ def fetch_results(row, columns):
         debug_values('Name',results['Name'])
 #       results['Link']=yahoo_base_url+str(player.get('href'))
 #       debug_values('Link',results['Link'])
-        values=[str(val.string) for val in row.findAll('td')]
+        values=[val.string for val in row.findAll('td')]
         for col,val in zip(columns,values):
-            results[col]=val
+            if col not in ("None",None):
+                results[col]=str(val)
         # Get Rank and Points
         results['Rank']=get_rank(results.get('POS','99'))
         results['Points']=get_points(results['Rank'])
         # Get Scores
-        if results.get('R1'):
-            results['Scores']=results['R1']
-            results['Today']=results['R1']
-            scores=[results['R2'],results['R3'],results['R4']]
-            for score in scores:
-                if score.isdigit():
-                    results['Scores']+="-"+score
-                    results['Today']=score
-            results['Scores']+="="+results.get('TOT')
+        scores=[]
+        for round in ("R1","R2","R3","R4"):
+            if results.get(round) and results.get(round) not in ("--"):
+                scores.append(results.get(round))
+                results["Today"]=results[round]
+        results['Scores']="-".join(scores)
         # Get Today
         if not results.get('THRU'):
             results['THRU']='-'
@@ -227,13 +219,14 @@ def fetch_results(row, columns):
             results['Today']+='('+results['TODAY']+')'
         elif results.get('THRU').isdigit():
             results['Today']='('+results['TODAY']+') thru '+results['THRU']
+            results['Total']='('+results['TO PAR']+') thru '+results['THRU']
         elif results['THRU'][-2:] in ('AM','PM'):
             results['Time']='@ '+results['THRU']
         elif results['THRU'] in ('MC','CUT'):
             results['Rank']=results['THRU']
             results['Today']=results['THRU']
         # Get Total
-        if results.get('TOT'):
+        if results.get('TOT') not in (None,"--"):
             results['Total']=results['TOT']+'('+results['TO PAR']+')'
     return results
 
@@ -288,6 +281,8 @@ def get_players(playlist):
 
 def get_results(event_id):
     picks=get_picks(event_id)
+    for name in names.values():
+        picks[name]["Count"]=0
     page=soup_results(espn_url)
     results={}
     results['event']=fetch_headers(page)
@@ -298,6 +293,7 @@ def get_results(event_id):
         if res.get('Name') in picks.keys():
             picker=xstr(picks[res['Name']])
             res['Picker']=picker
+            picks[picker]['Count']+=1
             picks[picker]['Points']+=res['Points']
         if res.get('Points')>10 or res.get('Picker'):
             if res.get('R1'):
@@ -308,7 +304,7 @@ def get_results(event_id):
     results['pickers'][0]['Rank']=1
     results['pickers'][1]['Rank']=2
     return results
-	
+    
 # Update the picks to the Players tab in Majors spreadsheet
 def pick_players(picklist):
     try:
@@ -319,7 +315,7 @@ def pick_players(picklist):
                 worksheet.update_cell(player["rownum"], 6, 1)
     except:
         pass
-	
+    
 # Post the players to the Players tab in Majors spreadsheet
 def post_players():
     current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=0&output=csv'
