@@ -402,7 +402,10 @@ class ResultsHandler(webapp2.RequestHandler):
         results = memcache.get("results")
         if not results:
             results = get_results(event_id)
-            memcache.add("results",results)
+            try:
+                memcache.add("results",results)
+            except:
+                memcache.delete("results")
         if output_format=='csv':
             self.response.write('Pos,Player,Scores,Today,Total,Points'+br)
         elif output_format=='json':
