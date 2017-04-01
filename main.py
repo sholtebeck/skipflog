@@ -403,7 +403,7 @@ class ResultsHandler(webapp2.RequestHandler):
         if not results:
             results = get_results(event_id)
             try:
-                memcache.add("results",results)
+                memcache.set("results",results)
             except:
                 memcache.delete("results")
         if output_format=='csv':
