@@ -279,7 +279,7 @@ def get_players(playlist):
             current_rank+=1
     return players
 
-def get_results(event_id):
+def old_results(event_id):
     picks=get_picks(event_id)
     for name in names.values():
         picks[name]["Count"]=0
@@ -304,7 +304,44 @@ def get_results(event_id):
     results['pickers'][0]['Rank']=1
     results['pickers'][1]['Rank']=2
     return results
-    
+	
+def get_results(event_id):
+    picks=get_picks(event_id)
+    for name in skip_pickers:
+       picks[name]["Count"]=0
+       picks[name]["Points"]=0
+    page=soup_results(espn_url)
+    results={}
+    tie={"Points":100,"Players":[]}
+    results['event']=fetch_headers(page)
+    results['players']=[]
+    rows=fetch_rows(page)
+    for row in rows:
+        res=fetch_results(row, results.get('event').get('Columns'))
+        if res.get('Name') in picks.keys():
+            picker=xstr(picks[res['Name']])
+            res['Picker']=picker
+        if res.get('Points')>10:
+            if res["Points"]!=tie.get("Points"):
+                if len(tie["Players"])>1:
+                   tie["Points"]=float(sum([skip_points[p+1] for p in tie["Players"]]))/len(tie["Players"])
+                   for p in tie["Players"]:
+                        results["players"][p]["Points"]=tie["Points"]
+                tie={"Players": [len(results['players'])], "Points":res["Points"], "POS":res["POS"]}
+            else:
+                tie["Players"].append(len(results['players']))
+        if res.get('Picker') or res.get('Points')>10:
+            results['players'].append(res)
+    for picker in skip_pickers:
+        picks[picker]["Count"]=len([player for player in results.get("players") if player.get("Picker")==picker])
+        picks[picker]["Points"]=sum([player["Points"] for player in results.get("players") if player.get("Picker")==picker])
+    results['pickers']=[picks[key] for key in picks.keys() if key in skip_pickers]
+    if results['pickers'][1]['Points']>results['pickers'][0]['Points']:
+        results['pickers'].reverse()
+    results['pickers'][0]['Rank']=1
+    results['pickers'][1]['Rank']=2
+    return results
+        
 # Update the picks to the Players tab in Majors spreadsheet
 def pick_players(picklist):
     try:
