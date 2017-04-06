@@ -396,7 +396,7 @@ class ResultsHandler(webapp2.RequestHandler):
         if not results:
             results = get_results(event_id)
             try:
-                memcache.set("results",results)
+                memcache.add("results",results,180)
             except:
                 memcache.delete("results")
         if output_format=='csv':
