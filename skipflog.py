@@ -29,8 +29,8 @@ leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"
 skip_user="skipfloguser"
 skip_picks={}
 skip_pickers=["Mark","Steve"]
-skip_points=[0, 100, 60, 40, 35, 30, 25, 20, 15, 10, 9, 9, 8, 8, 7, 7, 7, 6, 6, 5, 5, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2]
-
+#skip_points=[0, 100, 60, 40, 35, 30, 25, 20, 15, 10, 9, 9, 8, 8, 7, 7, 7, 6, 6, 5, 5, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+skip_points=[0, 100, 60, 40, 30, 24, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9.5, 9, 8.5,8,7.5,7,6.5,6,5.5,5,4.5,4,4,3.5,3.5,3,3,2.5,2.5,2,2,2,1.5,1.5]
 # Misc urls
 espn_url="http://www.espn.com/golf/leaderboard"
 feed_url='https://spreadsheets.google.com/feeds'
@@ -345,7 +345,7 @@ def get_results(event_id):
         if res.get('Name') in picks.keys():
             picker=xstr(picks[res['Name']])
             res['Picker']=picker
-        if res.get('Points')>10:
+        if res.get('Points')>=9:
             if res["Points"]!=tie.get("Points"):
                 if len(tie["Players"])>1:
                    tie["Points"]=float(sum([skip_points[p+1] for p in tie["Players"]]))/len(tie["Players"])
@@ -354,8 +354,13 @@ def get_results(event_id):
                 tie={"Players": [len(results['players'])], "Points":res["Points"], "POS":res["POS"]}
             else:
                 tie["Players"].append(len(results['players']))
-        if res.get('Picker') or res.get('Points')>10:
+        if res.get('Picker') or res.get('Points')>=9:
             results['players'].append(res)
+	# get last tie
+    if len(tie["Players"])>1:
+        tie["Points"]=float(sum([skip_points[p+1] for p in tie["Players"]]))/len(tie["Players"])
+        for p in tie["Players"]:
+            results["players"][p]["Points"]=tie["Points"]
     for picker in skip_pickers:
         picks[picker]["Count"]=len([player for player in results.get("players") if player.get("Picker")==picker])
         picks[picker]["Points"]=sum([player["Points"] for player in results.get("players") if player.get("Picker")==picker])
