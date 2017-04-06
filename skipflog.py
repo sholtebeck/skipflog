@@ -109,27 +109,25 @@ def get_rankings(size):
             rank+=1
     return rankings
 
+# Get the value for a string
+def get_value(string):
+    string=string.replace(',','').replace('-','0')
+    try:
+        value=round(float(string),2)
+    except:
+        value=0.0
+    return value
+	
 # Get the picks for an event
 def get_picks(event_id):
     picks={}
-    for picker in skip_pickers:
-        picks[picker]={'Name':picker,'Count':0,'Picks':[],'Points':0}
-    try:
-        debug_values("fetching .. ", picks_csv)
-        result = open(picks_csv, "rb")
-    except IOError:
-        picks_url = "http://skipflog.appspot.com/picks?event_id="+str(event_id)+"&output=csv"
-        debug_values("fetching .. ", picks_url)
-        result = urllib2.urlopen(picks_url)
-    reader = csv.reader(result)
-    for row in reader:
-        debug_values(row[0],row)
-        if int(row[1])<=20 and row[0]==str(event_id):
-            picker=row[2]
-            player=row[3]
-            picks[player]=picker
-            picks[picker]['Count']+=1
-            picks[picker]['Picks'].append(player)
+    pickdict=json_results(picks_url+str(event_id))
+    if pickdict['picks']:
+        for picker in skip_pickers:
+            picklist=[str(pick) for pick in pickdict["picks"][picker][:10]]
+            picks[picker]={'Name':picker,'Count':len(picklist),'Picks':picklist,'Points':0}
+            for pick in picklist:
+                picks[str(pick)]=picker
     return picks
 
 def open_worksheet(spread,work):
@@ -277,6 +275,32 @@ def get_players(playlist):
         if player.get('Picker'):
             players.append([current_rank,player['Name'],player['Avg'],player['Week'],player['Rank'],player['Points'],player['Picker']])
             current_rank+=1
+    return players
+
+# Get the list of players from a spreadsheet (players tab)
+def get_players():
+    players=[]
+    players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=A2%3AF155&output=csv"
+    result = urllib2.urlopen(players_url)
+    reader = csv.reader(result)
+    rownum = 1
+    for row in reader:
+        if row:
+            rownum += 1
+            player={'rownum':rownum }
+            player['rank']=int(row[0])
+            player['name']=row[1]
+            player['lastname']=row[1].split(" ")[-1]
+            player['points']=get_value(row[2].replace(',','').replace('-','0'))
+            if len(row)>=5:           
+                player['country']=row[3]
+                player['odds']=get_value(row[4])
+                player['picked']=int(row[5])
+            else:
+                player['hotpoints']=0.0
+                player['odds']=999
+                player['picked']=0
+            players.append(player)
     return players
 
 def old_results(event_id):

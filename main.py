@@ -69,12 +69,7 @@ def getEvents():
 def getPlayers(event_id='0'):
     players = memcache.get('players')
     if not players:
-        players=[]
-        result = urllib2.urlopen(players_url)
-        reader = csv.reader(result)
-        for row in reader:
-            players.append(str(row[0]))
-        players.sort()
+        players=get_players()
         memcache.add('players', players)
     return players 
 
@@ -350,6 +345,7 @@ class PicksHandler(webapp2.RequestHandler):
                     elif output_format=='xml':
                         self.response.write(pick.to_xml())
                 if output_format=='json':
+                    self.response.headers['Content-Type'] = 'application/json'
                     self.response.write(json.dumps(pick_dict))
                     
     def post(self):
@@ -359,20 +355,17 @@ class PicksHandler(webapp2.RequestHandler):
 class PlayersHandler(webapp2.RequestHandler):   
     def get(self):
         event_id = self.request.get('event_id')
-        if not event_id:
-            event_id = currentEvent()
+        if event_id:
+            event = getEvent(event_id)
+        else:
+            event = nextEvent()
         output_format = self.request.get('output')
         if not output_format:
             output_format='html'
         players=getPlayers()
-        if output_format=='csv':                   
-            self.response.write(",".join(player for player in players)+'\n')
-        elif output_format=='json':
-            self.response.write(json.dumps(players)+'\n')  
-        else:            
-            template = jinja_environment.get_template('players.html')
-            template_values = { 'event': getEvent(event_id), "players": players }
-            self.response.out.write(template.render(template_values))
+        self.response.headers['Content-Type'] = 'application/json'
+        template_values = { 'event': {"name":event.event_name }, "players": players }
+        self.response.write(json.dumps(template_values))
 
 class RankingHandler(webapp2.RequestHandler): 
     def get(self):
