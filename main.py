@@ -402,7 +402,8 @@ class ResultsHandler(webapp2.RequestHandler):
         if output_format=='csv':
             self.response.write('Pos,Player,Scores,Today,Total,Points'+br)
         elif output_format=='json':
-            self.response.write(json.dumps(results))
+            self.response.headers['Content-Type'] = 'application/json'
+            self.response.write(json.dumps({"results":results}))
         elif output_format=='html':
             template_values = {'results': results }
             template = jinja_environment.get_template('results.html')

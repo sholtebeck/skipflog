@@ -15,9 +15,10 @@ skipflog.controller('playersController', ['$scope', '$http',
 
 skipflog.controller('resultsController', ['$scope', '$http',
   function($scope, $http) {
-    $http.get('/api/results').success(function(data) {
-      $scope.results= data.results;
-      $scope.pickers = data.pickers;
+    $http.get('/results?output=json').success(function(data) {
+      $scope.event= data.results.event;
+      $scope.players = data.results.players;
+      $scope.pickers = data.results.pickers;
     });
     
     $scope.orderProp = 'Rank';
