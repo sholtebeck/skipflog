@@ -69,7 +69,7 @@ def getEvents():
 def getPlayers(event_id='0'):
     players = memcache.get('players')
     if not players:
-        players=get_players()
+        players=[player["name"] for player in get_players()]
         memcache.add('players', players)
     return players 
 
