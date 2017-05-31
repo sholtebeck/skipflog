@@ -69,7 +69,7 @@ def getEvents():
 def getPlayers(event_id='0'):
     players = memcache.get('players')
     if not players:
-        players=[player["name"] for player in get_players()]
+        players=get_players()
         memcache.add('players', players)
     return players 
 
@@ -105,7 +105,7 @@ def getEvent(event_id):
                 event.first=row[3]
                 event.next=skip_pickers[1 - skip_pickers.index(row[3])]
                 event.pickers=[event.first,event.next]
-                event.field=getPlayers(event.event_id)
+                event.field=[player["name"] for player in getPlayers(event.event_id)]
                 event.picks=[]
                 event.start=int(row[4])
                 event.put()
