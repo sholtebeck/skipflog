@@ -173,6 +173,16 @@ def fetch_headers(soup):
     headers['Round']=datetime.datetime.today().weekday()-2
     headers['Columns']=[str(th.string) for th in soup.findAll("table")[-1].findAll('th')]
     return headers
+	
+def fetch_odds():
+    odds_url='http://golfodds.com/upcoming-major-odds.html'
+    soup=soup_results(odds_url)
+    odds={}
+    for tr in soup.findAll('tr'):
+        td =tr.findAll('td')
+        if len(td)==2 and td[0].string and '/' in td[1].string:
+            odds[td[0].string]=int(td[1].string.split('/')[0])
+    return odds        
 
 def fetch_rankings(row):
     name = row.find('a')
@@ -292,7 +302,7 @@ def get_players():
             player['name']=row[1]
             player['lastname']=row[1].split(" ")[-1]
             player['points']=get_value(row[2].replace(',','').replace('-','0'))
-            if len(row)>=5:           
+            if len(row)>5:           
                 player['country']=row[3]
                 player['odds']=get_value(row[4])
                 player['picked']=int(row[5])
@@ -387,9 +397,10 @@ def post_players():
     current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=0&output=csv'
     result = urllib2.urlopen(current_csv)
     rows=[row for row in csv.reader(result)]
-    names=[name[1] for name in rows[3:]]
+    names=[name[1] for name in rows[3:] if name[1]!='']
     names.sort()
     rankings=get_rankings(999)
+    odds=fetch_odds()
     rank_names=[rank['name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
     current_row=2
@@ -399,10 +410,15 @@ def post_players():
             worksheet.update_cell(current_row, 1, player['rank'])
             worksheet.update_cell(current_row, 2, player['name'])
             worksheet.update_cell(current_row, 3, player['points'])
+            worksheet.update_cell(current_row, 4, player['country'])
         else:
             worksheet.update_cell(current_row, 1, 999)
             worksheet.update_cell(current_row, 2, name)
             worksheet.update_cell(current_row, 3, 0.0)
+        if name in odds.keys():
+            worksheet.update_cell(current_row, 5, odds[name])
+        else:
+            worksheet.update_cell(current_row, 5, 999)
         current_row += 1
     return True
 
