@@ -86,11 +86,17 @@ def deleteEvent(event_id):
     Pick.delete(all().ancestor(event_key(event_id)))
 
 def getResults(event_id):
-    event = getEvent(event_id)
-    if (event.event_url and int(event_id)<currentEvent()):
-        results = "<iframe width='1250' height='800' frameborder='0' src='"+result_url+"'&widget=true'></iframe>"
-    else:
-        results = "<iframe width='1250' height='800' frameborder='0' src='"+results_tab+"'&widget=true'></iframe>"
+    results_key='results'+str(event_id)
+    resultstr = memcache.get(results_key)
+    if resultstr:
+        results=json.loads(resultstr)
+    else:		
+        try:
+            results=get_results(int(event_id))
+            resultstr=str(json.dumps(results))
+            memcache.add(results_key,resultstr,240)
+        except:
+            memcache.delete(results_key)    
     return results
 
 def getEvent(event_id):
@@ -195,12 +201,14 @@ class MailHandler(webapp2.RequestHandler):
             event = getEvent(event_id)
         else:
             event = nextEvent()
+            event_id = str(event.event_id)
         current=datetime.datetime.now()
         if event:
             event_day = datetime.datetime.today().day-event.start
             if event_day in range(5):
                 event_name = event.event_name
-                message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name+" results (round "+str(event_day)+")")
+                results=get_Results(event_id)
+                message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event["event_name"]+" ("+results["event"]["Status"]+")")
                 message.to = "skipflog@googlegroups.com"
                 result = urllib2.urlopen(results_url)
                 message.html=result.read()
@@ -240,10 +248,8 @@ class PickHandler(webapp2.RequestHandler):
         event_id = self.request.get('event_id')
         if (event_id):
             event = getEvent(event_id)
-            results = getResults(event_id)
         else:
             event = nextEvent()
-            results = ""
         lastpick=memcache.get("lastpick")
         players = {"Steve":[],"Mark":[]}
         picks = getPicks(event_id)
@@ -275,7 +281,6 @@ class PickHandler(webapp2.RequestHandler):
             'lastpick': memcache.get("lastpick"),
             'pick_no': pick_no,
             'picknum': picknum,
-            'results': results,
             'title': 'Picks',
             'url': url,
             'url_linktext': url_linktext,
@@ -392,13 +397,7 @@ class ResultsHandler(webapp2.RequestHandler):
         event_id = self.request.get('event_id')
         if not event_id:
             event_id = currentEvent()
-        results = memcache.get("results")
-        if not results:
-            results = get_results(event_id)
-            try:
-                memcache.add("results",results,180)
-            except:
-                memcache.delete("results")
+        results = getResults(event_id)
         if output_format=='csv':
             self.response.write('Pos,Player,Scores,Today,Total,Points'+br)
         elif output_format=='json':
