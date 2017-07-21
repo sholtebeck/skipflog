@@ -207,7 +207,7 @@ class MailHandler(webapp2.RequestHandler):
             event_day = datetime.datetime.today().day-event.start
             if event_day in range(5):
                 event_name = event.event_name
-                results=get_Results(event_id)
+                results=getResults(event_id)
                 message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event["event_name"]+" ("+results["event"]["Status"]+")")
                 message.to = "skipflog@googlegroups.com"
                 result = urllib2.urlopen(results_url)
