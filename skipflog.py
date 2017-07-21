@@ -64,6 +64,16 @@ def current_time():
     right_now=strftime("%H%M",gmtime())
     return str(right_now) 
 
+# determine the cut rank for the various majors
+def cut_rank():
+    this_month=current_month()
+    if this_month == 4:
+        return 50
+    elif this_month == 6:
+        return 60
+    else:
+        return 70
+        
 # debug values
 def debug_values(number, string):
     if debug:
@@ -89,7 +99,7 @@ def get_rank(position):
 def get_points(rank):
     if rank < len(skip_points):
         return skip_points[rank]
-    elif rank <= 60:
+    elif rank <= cut_rank():
         return 1
     else:
         return 0
@@ -117,7 +127,7 @@ def get_value(string):
     except:
         value=0.0
     return value
-	
+    
 # Get the picks for an event
 def get_picks(event_id):
     picks={}
@@ -173,7 +183,7 @@ def fetch_headers(soup):
     headers['Round']=datetime.datetime.today().weekday()-2
     headers['Columns']=[str(th.string) for th in soup.findAll("table")[-1].findAll('th')]
     return headers
-	
+    
 def fetch_odds():
     odds_url='http://golfodds.com/upcoming-major-odds.html'
     soup=soup_results(odds_url)
@@ -338,7 +348,7 @@ def old_results(event_id):
     results['pickers'][0]['Rank']=1
     results['pickers'][1]['Rank']=2
     return results
-	
+    
 def get_results(event_id):
     picks=get_picks(event_id)
     for name in skip_pickers:
@@ -366,7 +376,7 @@ def get_results(event_id):
                 tie["Players"].append(len(results['players']))
         if res.get('Picker') or res.get('Points')>=9:
             results['players'].append(res)
-	# get last tie
+    # get last tie
     if len(tie["Players"])>1:
         tie["Points"]=float(sum([skip_points[p+1] for p in tie["Players"]]))/len(tie["Players"])
         for p in tie["Players"]:
