@@ -48,6 +48,10 @@ yahoo_url=yahoo_base_url+"/golf/pga/leaderboard"
 debug=False
 
 # get current week and year
+def current_event():
+    this_event=strftime("%y%m",gmtime())
+    return int(this_event) 
+
 def current_month():
     this_month=strftime("%m",gmtime())
     return int(this_month) 
@@ -132,7 +136,7 @@ def get_value(string):
 def get_picks(event_id):
     picks={}
     pickdict=json_results(picks_url+str(event_id))
-    if pickdict['picks']:
+    if pickdict.get('picks'):
         for picker in skip_pickers:
             picklist=[str(pick) for pick in pickdict["picks"][picker][:10]]
             picks[picker]={'Name':picker,'Count':len(picklist),'Picks':picklist,'Points':0}
@@ -151,14 +155,32 @@ def open_worksheet(spread,work):
 
 # json_results -- get results for a url
 def json_results(url):
-    page=urllib2.urlopen(url)
-    results=json.load(page)
-    return results
+    try:
+        page=urllib2.urlopen(url)
+        results=json.load(page)
+        return results
+    except:
+        return {}
 
 def soup_results(url):
     page=urllib2.urlopen(url)
     soup = BeautifulSoup(page.read())
     return soup
+    
+def fetch_url(event_id):
+    url={
+	1604: 'http://www.espn.com/golf/leaderboard?tournamentId=2493', 
+	1606: 'http://www.espn.com/golf/leaderboard?tournamentId=2501', 
+	1607: 'http://www.espn.com/golf/leaderboard?tournamentId=2505', 
+	1608: 'http://www.espn.com/golf/leaderboard?tournamentId=2507',
+	1704: 'http://www.espn.com/golf/leaderboard?tournamentId=2700', 
+	1706: 'http://www.espn.com/golf/leaderboard?tournamentId=3066', 
+	1707: 'http://www.espn.com/golf/leaderboard?tournamentId=2710', 
+	1708: 'http://www.espn.com/golf/leaderboard'}
+    if url.get(event_id):
+        return url[event_id]
+    else:
+        return None
 
 def fetch_headers(soup):
     if not soup:
@@ -352,9 +374,9 @@ def old_results(event_id):
 def get_results(event_id):
     picks=get_picks(event_id)
     for name in skip_pickers:
-       picks[name]["Count"]=0
-       picks[name]["Points"]=0
-    page=soup_results(espn_url)
+       picks[name]={"Name":name, "Count":0, "Points":0}
+    results_url=fetch_url(event_id)
+    page=soup_results(results_url)
     results={}
     tie={"Points":100,"Players":[]}
     results['event']=fetch_headers(page)
