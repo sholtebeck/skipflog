@@ -48,21 +48,9 @@ def currentEvent():
     return event_current
 
 def fetchEvents():
-    result = urllib2.urlopen(events_url)
-    reader = csv.reader(result)
-    event_list=[]
-    for row in reader:
-        event_list.append(row)
-    return event_list
-
-def getEvents():
     events = memcache.get('events')
     if not events:
-        events=[]
-        rows=fetchEvents()
-        for row in rows:
-            event=Event(key_name=row[0], event_id=int(row[0]), event_name=row[1], event_url=row[2])
-            events.append(event)
+        events=fetch_events()
         memcache.add('events', events)
     return events
 
@@ -102,18 +90,14 @@ def getResults(event_id):
 def getEvent(event_id):
     event = Event.get(event_key(event_id))
     if (not event):
-        events=fetchEvents()
-        for row in events:
-            if (row[0]==event_id):
-                event=Event(key_name=row[0], event_id=int(row[0]))
-                event.event_name=row[1]
-                event.event_url=row[2]
-                event.first=row[3]
-                event.next=skip_pickers[1 - skip_pickers.index(row[3])]
+        for row in fetchEvents():
+            if str(row["ID"])==str(event_id):
+                event=Event(key_name=row["ID"], event_id=int(row["ID"]),event_name=row["Name"],event_url=row["URL"],first=row["First"])
+                event.next=skip_pickers[1 - skip_pickers.index(event.first)]
                 event.pickers=[event.first,event.next]
                 event.field=[player["name"] for player in getPlayers(event.event_id)]
                 event.picks=[]
-                event.start=int(row[4])
+                event.start=int(row["Start"])
                 event.put()
     return event
 
@@ -122,19 +106,13 @@ def nextEvent():
     query= Event.all().filter("event_id >=", event_current)
     event = query.get()
     if (not event):
-        event_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A2%3AD2&output=csv"
-        result = urllib2.urlopen(event_url)
-        reader=csv.reader(result)
-        row=reader.next()
-        event=Event(key_name=row[0],event_id=int(row[0]))
-        event.event_name=row[1]
-        event.event_url=row[2]
-        event.first=row[3]
-        event.next=pickers[1 - pickers.index(row[3])]
+        row=fetchEvents()[0]
+        event=Event(key_name=row["ID"], event_id=int(row["ID"]),event_name=row["Name"],event_url=row["URL"],first=row["First"])
+        event.next=skip_pickers[1 - skip_pickers.index(event.first)]
         event.pickers=[event.first,event.next]
         event.field=getPlayers()
         event.picks=[]
-        event.start=0
+        event.start=int(row["Start"])
         event.put()
     return event
 
@@ -169,10 +147,8 @@ class MainPage(webapp2.RequestHandler):
         event_list = []
         event_name = "None"
         event_id = self.request.get('event_id');
-        events=getEvents()
-        for event in events:
-             event_list.append(event)
-#            event_list+='<option value=' + event[0] + '>' + event[1] + "</option>"
+        if not event_id:
+            event_list=[{"event_id":event["ID"],"event_name":event["Name"]} for event in fetchEvents()]
     
         if users.get_current_user():
             user = names[users.get_current_user().nickname()]
@@ -313,22 +289,15 @@ class EventsHandler(webapp2.RequestHandler):
         event_id = self.request.get('event_id')
         output_format = self.request.get('output')
         if not output_format:
-            output_format='html'
-        events=getEvents()
+            output_format='json'
+        events=fetchEvents()
         if output_format=='html':
-            template_values = {'events': getEvents()}
+            template_values = {'events': events }
             template = jinja_environment.get_template('events.html')
             self.response.out.write(template.render(template_values))
-        for event in events:
-            if (event.event_id==event_id or not event_id):
-                if output_format=='csv':
-                    event_list=[event.event_id, event.event_name, event.start, event.picks]
-                    self.response.write(",".join(str(entry) for entry in event_list)+'\n')
-                elif output_format=='json':
-                    event_dict={'id':event.event_id,'name':event.event_name, 'start':event.start, 'picks':event.picks}
-                    self.response.write(json.dumps(event_dict)+'\n')
-                elif output_format=='xml':
-                    self.response.write(event.to_xml())
+        elif output_format=='json':
+            self.response.headers['Content-Type'] = 'application/json'
+            self.response.write(json.dumps({"events":events }))
 
 class PicksHandler(webapp2.RequestHandler):   
     def get(self):
