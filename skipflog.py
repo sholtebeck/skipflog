@@ -90,7 +90,7 @@ def xstr(string):
     elif string.isdigit():
         return int(string)
     else:
-        return str(string.encode('ascii','ignore').strip())
+        return str(''.join([i if ord(i) < 128 else ' ' for i in string]))
 
 # Function to get_points for a Position
 def get_rank(position):
@@ -118,7 +118,8 @@ def get_rankings(size):
         name = row.find('a')
         if name:
             points = float(row.findAll('td')[6].string)
-            player={"rank":rank, "name":str(name.string), "points":points }
+            country = row.find("td",{"class","ctry"}).img.get("title")
+            player={"rank":rank, "name":xstr(name.string), "country": xstr(country), "points":points }
             rankings.append(player)
             rank+=1
     return rankings
@@ -184,7 +185,7 @@ def fetch_url(event_id):
 	1704: 'http://www.espn.com/golf/leaderboard?tournamentId=2700', 
 	1706: 'http://www.espn.com/golf/leaderboard?tournamentId=3066', 
 	1707: 'http://www.espn.com/golf/leaderboard?tournamentId=2710', 
-	1708: 'http://www.espn.com/golf/leaderboard'}
+	1708: 'http://www.espn.com/golf/leaderboard?tournamentId=2712'}
     if url.get(event_id):
         return url[event_id]
     else:
@@ -195,8 +196,6 @@ def fetch_headers(soup):
         return None
     headers={}
     headers['Year']=current_year()
-#   event_name = soup.find('h4',{'class': "yspTitleBar"})
-#   event_name = soup.find('h1',{'class': "tourney-name"})
     event_name = soup.find('title')
     if event_name and event_name.string:
         event_string=str(event_name.string.replace(u'\xa0',u''))
@@ -206,12 +205,19 @@ def fetch_headers(soup):
         headers['Last Update']= str(last_update.string[-13:])
     else:
         headers['Last Update']= current_time()
+    dates=soup.find("div", { "class" : "date"})
+    if dates:
+        headers['Dates']=xstr(dates.string) 
+        headers['Year']=int(headers['Dates'][-4:])
     thead=soup.find('thead')
     headers['Status']=soup.find("span",{"class":"tournament-status"}).string
     if headers['Status'].startswith("Round "):
         headers['Round']=headers['Status'][6]
-    headers['Round']=datetime.datetime.today().weekday()-2
-    headers['Columns']=[str(th.string) for th in soup.findAll("table")[-1].findAll('th')]
+    else:
+        headers['Round']=0
+    tables=soup.findAll("table")
+    if tables:
+        headers['Columns']=[str(th.string) for th in soup.findAll("table")[-1].findAll('th')]
     return headers
     
 def fetch_odds():
@@ -221,7 +227,7 @@ def fetch_odds():
     for tr in soup.findAll('tr'):
         td =tr.findAll('td')
         if len(td)==2 and td[0].string and '/' in td[1].string:
-            odds[td[0].string]=int(td[1].string.split('/')[0])
+            odds[xstr(td[0].string)]=int(td[1].string.split('/')[0])
     return odds        
 
 def fetch_rankings(row):
@@ -318,7 +324,7 @@ def fetch_rows(page):
     return page.findAll('tr')    
 
 # Get the list of players
-def get_players(playlist):
+def get_playerpicks(playlist):
     current_rank=1
     players=[]
     for player in playlist:
@@ -383,8 +389,8 @@ def get_results(event_id):
     picks=get_picks(event_id)
     for name in skip_pickers:
        picks[name]={"Name":name, "Count":0, "Points":0}
-    results_url=fetch_url(event_id)
-    page=soup_results(results_url)
+    res_url=fetch_url(event_id)
+    page=soup_results(res_url)
     results={}
     tie={"Points":100,"Players":[]}
     results['event']=fetch_headers(page)
@@ -431,34 +437,48 @@ def pick_players(picklist):
                 worksheet.update_cell(player["rownum"], 6, 1)
     except:
         pass
-    
+# Get a matching name from a list of names
+def match_name(name, namelist):
+    if name in namelist:
+        new_name=name
+    else:
+        names=name.split()
+        listnames=[n for n in namelist if names[0] in n and names[-1] in n]
+        listnames.append(name)
+        new_name=listnames[0]
+    return new_name
+   
 # Post the players to the Players tab in Majors spreadsheet
 def post_players():
-    current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=0&output=csv'
-    result = urllib2.urlopen(current_csv)
-    rows=[row for row in csv.reader(result)]
-    names=[name[1] for name in rows[3:] if name[1]!='']
-    names.sort()
-    rankings=get_rankings(999)
+#    current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=0&output=csv'
+#    result = urllib2.urlopen(current_csv)
+#    rows=[row for row in csv.reader(result)]
+#    names=[name[1] for name in rows[3:] if name[1]!='']
     odds=fetch_odds()
+    odds_names=odds.keys()
+    odds_names.sort()
+    rankings=get_rankings(1500)
     rank_names=[rank['name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
     current_row=2
-    for name in names:
-        if name in rank_names:
-            player=rankings[rank_names.index(name)]
+    for name in odds_names:
+        matching_name=match_name(name,rank_names)
+        if matching_name in rank_names:
+            player=rankings[rank_names.index(matching_name)]
             worksheet.update_cell(current_row, 1, player['rank'])
             worksheet.update_cell(current_row, 2, player['name'])
             worksheet.update_cell(current_row, 3, player['points'])
             worksheet.update_cell(current_row, 4, player['country'])
         else:
-            worksheet.update_cell(current_row, 1, 999)
+            worksheet.update_cell(current_row, 1, 9999)
             worksheet.update_cell(current_row, 2, name)
             worksheet.update_cell(current_row, 3, 0.0)
+            worksheet.update_cell(current_row, 4, 'USA')
         if name in odds.keys():
             worksheet.update_cell(current_row, 5, odds[name])
         else:
-            worksheet.update_cell(current_row, 5, 999)
+            worksheet.update_cell(current_row, 5, 9999)
+        worksheet.update_cell(current_row, 6, 0)
         current_row += 1
     return True
 
@@ -478,7 +498,7 @@ def post_rankings():
         worksheet.update_cell(1, 4, results_week)
         worksheet.update_cell(1, 2, results_date)
     #get all table rows from the page
-    players=get_players(results['players'])
+    players=get_playerpicks(results['players'])
     players.sort(key=lambda player:player[5], reverse=True)
     current_row=3
     pickvals={}
