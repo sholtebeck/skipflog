@@ -175,6 +175,22 @@ def fetch_events():
     for row in reader:
         event_list.append(row)
     return event_list
+
+# Get a default event dictionary
+def default_event(event_id=current_event()):
+    edict=[e for e in fetch_events() if e['ID']==str(event_id)][0]
+    event={"event_id":event_id }
+    event["event_year"]=2000+(int(event_id)/100)
+    event["event_name"]=edict.get("Name",str(event["event_year"])+" "+events.get(int(event_id)%100))
+    event["pickers"]=skip_pickers
+    event["next"]=edict.get('First',skip_pickers[0])
+    event["picks"]={"Picked":[],"Available":[] }
+    for picker in skip_pickers:
+        event["picks"][picker]=[]
+    event["picks"]["Available"]=players=[player['name'] for player in get_players()]
+    event["pick_no"]=1 
+    event["start"]=edict.get("Start")	
+    return event
 	
 def fetch_url(event_id):
     url={
@@ -344,7 +360,7 @@ def get_players():
         if row:
             rownum += 1
             player={'rownum':rownum }
-            player['rank']=int(row[0])
+            player['rank']=get_value(row[0])
             player['name']=row[1]
             player['lastname']=row[1].split(" ")[-1]
             player['points']=get_value(row[2].replace(',','').replace('-','0'))
@@ -394,6 +410,7 @@ def get_results(event_id):
     results={}
     tie={"Points":100,"Players":[]}
     results['event']=fetch_headers(page)
+    results['event']['ID']=event_id
     results['players']=[]
     rows=fetch_rows(page)
     for row in rows:
@@ -450,10 +467,10 @@ def match_name(name, namelist):
    
 # Post the players to the Players tab in Majors spreadsheet
 def post_players():
-#    current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=0&output=csv'
-#    result = urllib2.urlopen(current_csv)
-#    rows=[row for row in csv.reader(result)]
-#    names=[name[1] for name in rows[3:] if name[1]!='']
+    current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=0&output=csv'
+    result = urllib2.urlopen(current_csv)
+    rows=[row for row in csv.reader(result)]
+    names=[name[1] for name in rows[3:] if name[1]!='']
     odds=fetch_odds()
     odds_names=odds.keys()
     odds_names.sort()

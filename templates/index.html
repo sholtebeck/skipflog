@@ -104,7 +104,7 @@ $(document).ready(function() {
 <p><div id="container">
 
   <ul class="tabs"> 
-        <li class="active" rel="tab1"> {{title}}</li>
+        <li class="active" rel="tab1"> Picks</li>
 {% if event %}
         <li rel="tab2"> Players </li>
         <li rel="tab3"> Results </li>
@@ -136,20 +136,18 @@ $(document).ready(function() {
 </div><!-- #tab1 -->
 <div id="tab2" class="tab_content"> 
 
-{% if event.picks %}
+{% if event.picks["Picked"]  %}
 <p><strong>Picked:</strong>
-{% for player in event.picks %}
+{% for player in event.picks["Picked"] %}
 <br>{{player}}
 {% endfor %}
 {% endif %}
-
 {% if event.next!="Done" %}
 <p><strong>Available:</strong>
-{% for player in event.field %}
+{% for player in event.picks["Available"]%}
 <br>{{player}}
 {% endfor %}
 {% endif %}
-
 {% endif %}
 
 </div><!-- #tab2 -->

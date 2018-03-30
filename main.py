@@ -5,8 +5,8 @@ import logging
 import urllib2
 import webapp2
 import os,sys
-
-from google.appengine.ext import db
+import models
+#from google.appengine.ext import db
 from google.appengine.api import mail
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
@@ -18,29 +18,6 @@ from skipflog import *
 jinja_environment = jinja2.Environment(autoescape=True,loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
      
    
-class Event(db.Model):
-    event_id = db.IntegerProperty(required=True)
-    event_name = db.StringProperty()
-    event_url = db.StringProperty()
-    first = db.StringProperty()
-    next = db.StringProperty()
-    field = db.StringListProperty()
-    pickers = db.StringListProperty()
-    picks = db.StringListProperty()
-    start = db.IntegerProperty()  
-
-class Pick(db.Model):
-    who = db.StringProperty()
-    player = db.StringProperty()
-    when = db.DateTimeProperty(auto_now_add=True)
-    pick_no = db.IntegerProperty()
-    points = db.IntegerProperty()
-
-def event_key(event_id):
-  """Constructs a Datastore key for an Event entity with event_id."""
-  return db.Key.from_path('Event', event_id)
-
-
 def currentEvent():
     now=datetime.datetime.now()
     event_month=min(max(now.month,4),8)
@@ -64,82 +41,68 @@ def getPlayers(event_id='0'):
 def getPicks(event_id):
     picks = memcache.get('picks'+event_id)
     if not picks:
-        picks_query = Pick.all().ancestor(event_key(event_id)).order('pick_no')
-        picks = picks_query.fetch(25)
-        memcache.add('picks'+event_id, picks)
+        event = getEvent(event_id)
+        memcache.add('picks'+event_id, event.get("picks"))
     return picks
-
-def deleteEvent(event_id):
-    Event.delete(event_key(event_id))
-    Pick.delete(all().ancestor(event_key(event_id)))
 
 def getResults(event_id):
     results_key='results'+str(event_id)
     resultstr = memcache.get(results_key)
     if resultstr:
         results=json.loads(resultstr)
-    else:		
-        try:
-            results=get_results(int(event_id))
-            resultstr=str(json.dumps(results))
-            memcache.add(results_key,resultstr,240)
-        except:
-            memcache.delete(results_key)    
+    else:
+        results=models.get_results(event_id)
+        if not results or results["event"]["Status"]!="Final":
+            try:
+                results=get_results(int(event_id))
+                models.update_results(results)
+                resultstr=str(json.dumps(results))
+                memcache.add(results_key,resultstr,240)
+            except:
+                memcache.delete(results_key)    
     return results
 
 def getEvent(event_id):
-    event = Event.get(event_key(event_id))
-    if (not event):
-        for row in fetchEvents():
-            if str(row["ID"])==str(event_id):
-                event=Event(key_name=row["ID"], event_id=int(row["ID"]),event_name=row["Name"],event_url=row["URL"],first=row["First"])
-                event.next=skip_pickers[1 - skip_pickers.index(event.first)]
-                event.pickers=[event.first,event.next]
-                event.field=[player["name"] for player in getPlayers(event.event_id)]
-                event.picks=[]
-                event.start=int(row["Start"])
-                event.put()
-    return event
+#    event = Event.get(event_key(event_id))
+    event = models.get_event(event_id)
+    if event:
+        event_data=event.event_json
+    else:
+        event_data=default_event(event_id)
+        models.update_event(event_data)
+    return event_data
 
 def nextEvent():
     event_current=currentEvent()
-    query= Event.all().filter("event_id >=", event_current)
-    event = query.get()
-    if (not event):
-        row=fetchEvents()[0]
-        event=Event(key_name=row["ID"], event_id=int(row["ID"]),event_name=row["Name"],event_url=row["URL"],first=row["First"])
-        event.next=skip_pickers[1 - skip_pickers.index(event.first)]
-        event.pickers=[event.first,event.next]
-        event.field=getPlayers()
-        event.picks=[]
-        event.start=int(row["Start"])
-        event.put()
+    event = models.get_event(event_current)
+    if not event:
+        event=default_event(event_current)
     return event
 
-def updateEvents():
-    return
+def updateEvent(event_data):
+    models.update_event(event_data)
     
-def getLastPick(pick):
+def getLastPick(thispick):
+    thisplayer=' '.join(thispick.split()[2:])
     lastpick=memcache.get("lastpick")
-    if (not lastpick or not lastpick.startswith(pick.who)):
-        lastpick=pick.who+" picked "+pick.player
-    elif (not lastpick.endswith(pick.player)):
-        lastpick=lastpick+" and "+pick.player
+    if (not lastpick or not lastpick.startswith(thispick.split()[0])):
+        lastpick=thispick
+    elif (not lastpick.endswith(thisplayer)):
+        lastpick=lastpick+" and "+thisplayer
     memcache.delete("lastpick")  
     memcache.add("lastpick",lastpick)  
     return lastpick
     
-def updateLastPick(event,pick):
-    lastpick=getLastPick(pick)
+def updateLastPick(event):
+    lastpick=getLastPick(event['lastpick'])
     # send alert if needed
-    pick_no = len(event.picks)+1
-    event.next=event.pickers[0] if mypicks.count(pick_no)>0 else event.pickers[1]
-    if (pick_no<21 and not lastpick.startswith(event.next)):
-        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event.event_name)
-        message.to = numbers.get(event.next)
+    pick_no = event['pick_no']
+    event["next"]=event['pickers'][0] if mypicks.count(pick_no)>0 else event["pickers"][1]
+    if (pick_no<21 and not lastpick.startswith(event["next"])):
+        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event["event_name"])
+        message.to = numbers.get(event["next"])
         message.body=lastpick
-        message.send()
-        
+        message.send()    
     return
 
 class MainPage(webapp2.RequestHandler):       
@@ -221,26 +184,19 @@ class MailHandler(webapp2.RequestHandler):
 
 class PickHandler(webapp2.RequestHandler):
     def get(self):     
-        event_id = self.request.get('event_id')
-        if (event_id):
-            event = getEvent(event_id)
-        else:
-            event = nextEvent()
-        lastpick=memcache.get("lastpick")
-        players = {"Steve":[],"Mark":[]}
-        picks = getPicks(event_id)
-        for pick in picks:
-            players[pick.who].append(pick.player)
-
-        pick_no = len(picks)+1
-
+        event_id = int(self.request.get('event_id',currentEvent()))
+        event = getEvent(event_id)
+        pick_no = event["pick_no"]
         picknum = pick_ord[pick_no]
         # get next player
         if picknum != "Done":
-            event.next=event.pickers[0] if mypicks.count(pick_no)>0 else event.pickers[1]
+            event["next"]=event["pickers"][0] if mypicks.count(pick_no)>0 else event["pickers"][1]
         else:
-            event.next="Done"
-    
+            event["next"]="Done"
+        # check results
+        if memcache.get("lastpick"):
+            event["lastpick"]=memcache.get("lastpick")
+        event["results"]=results_url+"?event_id="+str(event_id)
         if users.get_current_user():
             user = names[users.get_current_user().nickname()]
             url = users.create_logout_url(self.request.uri)
@@ -252,12 +208,8 @@ class PickHandler(webapp2.RequestHandler):
      
         template_values = {
             'event': event,
-            'mplayers': players['Mark'],
-            'splayers': players['Steve'],
-            'lastpick': memcache.get("lastpick"),
             'pick_no': pick_no,
             'picknum': picknum,
-            'title': 'Picks',
             'url': url,
             'url_linktext': url_linktext,
             'user': user
@@ -267,60 +219,58 @@ class PickHandler(webapp2.RequestHandler):
 
     def post(self):
         event_id = self.request.get('event_id')
-        pick = Pick(parent=event_key(event_id))     
-        pick.who= self.request.get('who')
-        pick.pick_no = int(self.request.get('pick_no'))
-        pick.player = self.request.get('player')
-        pick.put()
+        picker = self.request.get('who')
+        player = self.request.get('player')
         memcache.delete('picks'+event_id)
         # update event (add to picks, remove from field)
-        event = Event.get(event_key(event_id))
-        event.field.remove(pick.player)
-        event.picks.append(pick.player)
-        event.put()
+        event = getEvent(event_id)
+        if player in event["picks"]["Available"]:
+            event["picks"]["Available"].remove(player)
+            event["picks"]["Picked"].append(player)
+            event["picks"][picker].append(player)
+            event["lastpick"]=picker+" picked "+player
+            event["pick_no"]+=1
+            updateEvent(event)
         # update last pick message
-        updateLastPick(event,pick)
-        taskqueue.add(url='/picks', params={'picklist': event.picks})   
+        updateLastPick(event)
         self.redirect('/pick?event_id=' + event_id) 
 
-class EventsHandler(webapp2.RequestHandler):   
-    def get(self):
-        event_id = self.request.get('event_id')
-        output_format = self.request.get('output')
-        if not output_format:
-            output_format='json'
-        events=fetchEvents()
-        if output_format=='html':
-            template_values = {'events': events }
-            template = jinja_environment.get_template('events.html')
+class EventHandler(webapp2.RequestHandler):
+    def get(self):     
+        event_id = int(self.request.get('event_id',currentEvent()))
+        output=self.request.get('output')
+        if "results" in self.request.url:
+            template_values = { 'results': getResults(event_id) }
+            template = jinja_environment.get_template('results.html')
             self.response.out.write(template.render(template_values))
-        elif output_format=='json':
+        else:
+            event = getEvent(event_id)
             self.response.headers['Content-Type'] = 'application/json'
-            self.response.write(json.dumps({"events":events }))
+            self.response.write(json.dumps(event))
+            
+    def post(self):     
+        event_data = self.request.get('event_data')
+        event_json = json.loads(event_data)
+        updateEvent(event_json)
+        event_id = str(event_json["event_id"])
+        self.redirect('/event?event_id=' +event_id) 
 
 class PicksHandler(webapp2.RequestHandler):   
     def get(self):
         output_format = self.request.get('output','json')
-        event_id = self.request.get('event_id')
+        event_id = self.request.get('event_id',currentEvent())
         if not event_id:
-            self.redirect('/events')    
-        else:
-            event = getEvent(event_id)
-            if event:
-                pick_dict={'event_id':event_id,'event_name': event.event_name,'picks':{} }
-                for picker in skip_pickers:
-                    pick_dict['picks'][picker]=[]
-                for pick in getPicks(event_id):
-                    if output_format=='csv':                   
-                        pick_list=[event_id, pick.pick_no, pick.who, pick.player]
-                        self.response.write(",".join(str(entry) for entry in pick_list)+'\n')
-                    elif output_format=='json' and pick.pick_no<=20:
-                        pick_dict['picks'][pick.who].append(pick.player)
-                    elif output_format=='xml':
-                        self.response.write(pick.to_xml())
-                if output_format=='json':
-                    self.response.headers['Content-Type'] = 'application/json'
-                    self.response.write(json.dumps(pick_dict))
+            event_id=currentEvent()    
+        event = getEvent(event_id)
+        if event:
+            pick_dict={}
+            for picker in skip_pickers:
+                pick_dict[picker]=event["picks"][picker]
+                for player in pick_dict[picker]:
+                     pick_dict[player]=picker
+            if output_format=='json':
+                self.response.headers['Content-Type'] = 'application/json'
+                self.response.write(json.dumps(pick_dict))
                     
     def post(self):
         picklist = self.request.get('picklist')
@@ -367,9 +317,7 @@ class ResultsHandler(webapp2.RequestHandler):
         if not event_id:
             event_id = currentEvent()
         results = getResults(event_id)
-        if output_format=='csv':
-            self.response.write('Pos,Player,Scores,Today,Total,Points'+br)
-        elif output_format=='json':
+        if output_format=='json':
             self.response.headers['Content-Type'] = 'application/json'
             self.response.write(json.dumps({"results":results}))
         elif output_format=='html':
@@ -399,7 +347,7 @@ class UpdateHandler(webapp2.RequestHandler):
 
 app = webapp2.WSGIApplication([
   ('/', MainPage),
-  ('/events', EventsHandler),
+  ('/event', EventHandler),
   ('/mail', MailHandler),
   ('/pick', PickHandler),
   ('/picks', PicksHandler),
