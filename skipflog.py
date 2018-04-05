@@ -143,6 +143,12 @@ def get_picks(event_id):
             picks[picker]={'Name':picker,'Count':len(picklist),'Picks':picklist,'Points':0}
             for pick in picklist:
                 picks[str(pick)]=picker
+    else:
+        for picker in skip_pickers:
+            picklist=[str(pick) for pick in pickdict[picker][:10]]
+            picks[picker]={'Name':picker,'Count':len(picklist),'Picks':picklist,'Points':0}
+            for pick in picklist:
+                picks[str(pick)]=picker
     return picks
 
 def open_worksheet(spread,work):

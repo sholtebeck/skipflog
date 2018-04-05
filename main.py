@@ -270,7 +270,7 @@ class PicksHandler(webapp2.RequestHandler):
                      pick_dict[player]=picker
             if output_format=='json':
                 self.response.headers['Content-Type'] = 'application/json'
-                self.response.write(json.dumps(pick_dict))
+                self.response.write(json.dumps({"picks":pick_dict}))
                     
     def post(self):
         picklist = self.request.get('picklist')
