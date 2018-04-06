@@ -143,8 +143,8 @@ class MailHandler(webapp2.RequestHandler):
             event_id = str(event.event_id)
         current=datetime.datetime.now()
         if event:
-            event_day = datetime.datetime.today().day-event.start
-            if event_day in range(5):
+            event_day = datetime.datetime.today()
+            if event_day in range(10):
                 results=getResults(event_id)
                 eventdict=results.get("event")
                 message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event.event_name+" ("+eventdict["Status"]+")")
