@@ -138,29 +138,14 @@ class MailHandler(webapp2.RequestHandler):
         event_id = self.request.get('event_id')
         if event_id:
             event = getEvent(event_id)
-        else:
-            event = nextEvent()
-            event_id = str(event.event_id)
-        current=datetime.datetime.now()
-        if event:
-            event_day = datetime.datetime.today()
-            if event_day in range(10):
-                results=getResults(event_id)
-                eventdict=results.get("event")
-                message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event.event_name+" ("+eventdict["Status"]+")")
-                message.to = "skipflog@googlegroups.com"
-                result = urllib2.urlopen(results_url)
-                message.html=result.read()
-                message.send()
-            else:
-                pick_no = len(event.picks)+1
-                event.next=event.pickers[0] if mypicks.count(pick_no)>0 else event.pickers[1]
-                if (pick_no>1 and pick_no<20):
-                    message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event.event_name)
-                    message.to = "skipflog@googlegroups.com"
-                    message.bcc = numbers.get(event.next)
-                    message.body=event.next+" is on the clock. http://skipflog.appspot.com/pick?event_id="+str(event.event_id)
-                    message.send()   
+            results=getResults(event_id)
+            eventdict=results.get("event")
+            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=eventdict["Name"]+" ("+eventdict["Status"]+")")
+            message.to = "skipflog@googlegroups.com"
+            result = urllib2.urlopen(results_url)
+            message.html=result.read()
+            message.send()
+ 
 
     def post(self):
         event_id = self.request.get('event_id')
