@@ -28,7 +28,7 @@ players_api="http://knarflog.appspot.com/api/players"
 leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"
 skip_user="skipfloguser"
 skip_picks={}
-skip_pickers=["Mark","Steve"]
+skip_pickers=["Steve","Mark"]
 #skip_points=[0, 100, 60, 40, 35, 30, 25, 20, 15, 10, 9, 9, 8, 8, 7, 7, 7, 6, 6, 5, 5, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2]
 skip_points=[0, 100, 60, 40, 30, 24, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9.5, 9, 8.5,8,7.5,7,6.5,6,5.5,5,4.5,4,4,3.5,3.5,3,3,2.5,2.5,2,2,2,1.5,1.5]
 # Misc urls
@@ -208,7 +208,9 @@ def fetch_url(event_id):
 	1706: 'http://www.espn.com/golf/leaderboard?tournamentId=3066', 
 	1707: 'http://www.espn.com/golf/leaderboard?tournamentId=2710', 
 	1708: 'http://www.espn.com/golf/leaderboard?tournamentId=2712',
-	1804: 'http://www.espn.com/golf/leaderboard?tournamentId=401025221'}
+	1804: 'http://www.espn.com/golf/leaderboard?tournamentId=401025221',
+	1806: 'http://www.espn.com/golf/leaderboard'
+	}
     if url.get(event_id):
         return url[event_id]
     else:
