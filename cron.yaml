@@ -3,3 +3,4 @@ cron:
   url: /ranking
   schedule: every tuesday 12:00
   timezone: America/Los_Angeles
+

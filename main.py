@@ -140,7 +140,7 @@ class MailHandler(webapp2.RequestHandler):
             event = getEvent(event_id)
             results=getResults(event_id)
             eventdict=results.get("event")
-            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=eventdict["Name"]+" ("+eventdict["Status"]+")")
+            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=eventdict["Year"]+" "+eventdict["Name"]+" ("+eventdict["Status"]+")")
             message.to = "skipflog@googlegroups.com"
             result = urllib2.urlopen(results_url)
             message.html=result.read()
@@ -152,9 +152,9 @@ class MailHandler(webapp2.RequestHandler):
         event = getEvent(event_id)
         user = users.get_current_user()
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
-                            subject=event.event_name+" picks")
+                            subject=event.get('event_name')+" picks")
         message.to = "skipflog@googlegroups.com"
-        message.html=event.event_name+"<br>"
+        message.html=event.get('event_name')+"<br>"
         players = {"Steve":[],"Mark":[]}
         picks = getPicks(event_id)
         for pick in picks:
