@@ -140,7 +140,7 @@ class MailHandler(webapp2.RequestHandler):
             event = getEvent(event_id)
             results=getResults(event_id)
             eventdict=results.get("event")
-            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=eventdict["Year"]+" "+eventdict["Name"]+" ("+eventdict["Status"]+")")
+            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=str(eventdict["Year"])+" "+eventdict["Name"]+" ("+eventdict["Status"]+")")
             message.to = "skipflog@googlegroups.com"
             result = urllib2.urlopen(results_url)
             message.html=result.read()
