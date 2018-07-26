@@ -215,7 +215,7 @@ def fetch_url(event_id):
     if url.get(event_id):
         return url[event_id]
     else:
-        return None
+        return espn_url
 
 def fetch_headers(soup):
     if not soup:
@@ -487,26 +487,29 @@ def post_players():
     rankings=get_rankings(1500)
     rank_names=[rank['name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
-    current_row=2
+    current_cell=0
+    cell_list = worksheet.range('A2:F'+str(len(names)+1))
     for name in odds_names:
+        debug_values(odds.get(name), name)
         matching_name=match_name(name,rank_names)
         if matching_name in rank_names:
             player=rankings[rank_names.index(matching_name)]
-            worksheet.update_cell(current_row, 1, player['rank'])
-            worksheet.update_cell(current_row, 2, player['name'])
-            worksheet.update_cell(current_row, 3, player['points'])
-            worksheet.update_cell(current_row, 4, player['country'])
+            cell_list[current_cell].value=player['rank']
+            cell_list[current_cell+1].value=player['name']
+            cell_list[current_cell+2].value=player['points']
+            cell_list[current_cell+3].value=player['country']
         else:
-            worksheet.update_cell(current_row, 1, 9999)
-            worksheet.update_cell(current_row, 2, name)
-            worksheet.update_cell(current_row, 3, 0.0)
-            worksheet.update_cell(current_row, 4, 'USA')
+            cell_list[current_cell].value=9999
+            cell_list[current_cell+1].value=name
+            cell_list[current_cell+2].value=0.0
+            cell_list[current_cell+3].value='USA'
         if name in odds.keys():
-            worksheet.update_cell(current_row, 5, odds[name])
+            cell_list[current_cell+4].value=odds[name]
         else:
-            worksheet.update_cell(current_row, 5, 9999)
-        worksheet.update_cell(current_row, 6, 0)
-        current_row += 1
+            cell_list[current_cell+4]=9999
+        cell_list[current_cell+5].value=0
+        current_cell += 6
+    worksheet.update_cells(cell_list)
     return True
 
 # Post the rankings to the "Rankings" tab
