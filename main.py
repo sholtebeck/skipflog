@@ -98,7 +98,7 @@ def updateLastPick(event):
     # send alert if needed
     pick_no = event['pick_no']
     event["next"]=event['pickers'][0] if mypicks.count(pick_no)>0 else event["pickers"][1]
-    if (pick_no<21 and not lastpick.startswith(event["next"])):
+    if (pick_no<23 and not lastpick.startswith(event["next"])):
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event["event_name"])
         message.to = numbers.get(event["next"])
         message.body=lastpick
