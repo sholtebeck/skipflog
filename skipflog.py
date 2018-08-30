@@ -145,10 +145,11 @@ def get_picks(event_id):
                 picks[str(pick)]=picker
     else:
         for picker in skip_pickers:
-            picklist=[str(pick) for pick in pickdict[picker][:10]]
-            picks[picker]={'Name':picker,'Count':len(picklist),'Picks':picklist,'Points':0}
-            for pick in picklist:
-                picks[str(pick)]=picker
+            if pickdict.get(picker):
+                picklist=[str(pick) for pick in pickdict[picker][:10]]
+                picks[picker]={'Name':picker,'Count':len(picklist),'Picks':picklist,'Points':0}
+                for pick in picklist:
+                    picks[str(pick)]=picker
     return picks
 
 def open_worksheet(spread,work):
@@ -362,6 +363,7 @@ def get_playerpicks(playlist):
 
 # Get the list of players from a spreadsheet (players tab)
 def get_players():
+    picks=get_picks(current_event()).keys()
     players=[]
     players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=A2%3AF155&output=csv"
     result = urllib2.urlopen(players_url)
@@ -378,7 +380,7 @@ def get_players():
             if len(row)>5:           
                 player['country']=row[3]
                 player['odds']=get_value(row[4])
-                player['picked']=int(row[5])
+                player['picked']=picks.count(row[1])
             else:
                 player['hotpoints']=0.0
                 player['odds']=999
