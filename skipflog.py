@@ -346,6 +346,9 @@ def fetch_tables(url):
         results=results+"<p>"
     return results[:-3]
 
+def fetch_header(html):
+    return str(BeautifulSoup(html).find('th').string)
+	
 # fetch all table rows
 def fetch_rows(page):
 #   return page.find('table').findAll('tr')    
