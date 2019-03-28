@@ -11,7 +11,7 @@ from google.appengine.api import mail
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
 from google.appengine.api import users
-from skipflog import *
+from skipflog2 import *
 
 #Load templates from 'templates' folder
 #jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
