@@ -108,6 +108,14 @@ def get_points(rank):
     else:
         return 0
 
+def get_picker(event_id):
+    picker=0
+    if  (int(event_id)/100) %2 ==1: 
+        picker = 1-picker
+    if int(event_id) % 2 ==1 :
+        picker = 1 - picker
+    return picker
+
 # Get the rankings from the page
 def get_rankings(size):
     ranking_url="http://www.owgr.com/ranking?pageSize="+str(size)
@@ -190,7 +198,7 @@ def default_event(event_id=current_event()):
     event["event_year"]=2000+(int(event_id)/100)
     event["event_name"]=edict.get("Name",str(event["event_year"])+" "+events.get(int(event_id)%100))
     event["pickers"]=skip_pickers
-    event["next"]=edict.get('First',skip_pickers[0])
+    event["next"]=edict.get('First',skip_pickers[get_picker(event_id)])
     event["picks"]={"Picked":[],"Available":[] }
     for picker in skip_pickers:
         event["picks"][picker]=[]

@@ -1,4 +1,4 @@
-# skipflog functions
+# skipflog2 functions
 import csv,datetime,json,sys,urllib2
 from time import gmtime, strftime
 # External modules (gspread, bs4)
@@ -23,7 +23,7 @@ results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU0
 ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
 rankings_url="http://knarflog.appspot.com/ranking"
 result_url="http://knarflog.appspot.com/results"
-results_url="http://2.skipflog.appspot.com/results"
+results_url="http://skipflog2.appspot.com/results"
 players_api="http://knarflog.appspot.com/api/players"
 leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"
 skip_user="skipfloguser"
@@ -39,7 +39,7 @@ owg_url="http://www.owgr.com/en/Events/EventResult.aspx?eventid=5520"
 pga_url="http://www.pga.com/news/golf-leaderboard/pga-tour-leaderboard"
 pgatour_url="http://www.pgatour.com/leaderboard.html"
 picks_csv = "picks.csv"
-picks_url = "http://skipflog.appspot.com/picks?event_id="
+picks_url = "http://skipflog2.appspot.com/picks?event_id="
 rankings_api = "http://knarflog.appspot.com/api/rankings/"
 results_api = "http://knarflog.appspot.com/api/results/"
 owg_ranking_url="http://www.owgr.com/ranking"
@@ -108,6 +108,14 @@ def get_points(rank):
     else:
         return 0
 
+def get_picker(event_id):
+    picker=1
+    if  (int(event_id)/100) %2 ==1: 
+        picker = 1-picker
+    if int(event_id) % 2 ==1 :
+        picker = 1 - picker
+    return picker
+		
 # Get the rankings from the page
 def get_rankings(size):
     ranking_url="http://www.owgr.com/ranking?pageSize="+str(size)
@@ -190,7 +198,7 @@ def default_event(event_id=current_event()):
     event["event_year"]=2000+(int(event_id)/100)
     event["event_name"]=edict.get("Name",str(event["event_year"])+" "+events.get(int(event_id)%100))
     event["pickers"]=skip_pickers
-    event["next"]=edict.get('First',skip_pickers[0])
+    event["next"]=skip_pickers[get_picker(event_id)]
     event["picks"]={"Picked":[],"Available":[] }
     for picker in skip_pickers:
         event["picks"][picker]=[]
