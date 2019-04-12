@@ -99,7 +99,7 @@ def updateLastPick(event):
     pick_no = event['pick_no']
     event["next"]=event['pickers'][0] if mypicks.count(pick_no)>0 else event["pickers"][1]
     if (pick_no<23 and not lastpick.startswith(event["next"])):
-        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event["event_name"])
+        message = mail.EmailMessage(sender='admin@skipflog2.appspotmail.com',subject=event["event_name"])
         message.to = numbers.get(event["next"])
         message.body=lastpick
         message.send()    
@@ -140,8 +140,9 @@ class MailHandler(webapp2.RequestHandler):
             event = getEvent(event_id)
             results=getResults(event_id)
             eventdict=results.get("event")
-            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=str(eventdict["Year"])+" "+eventdict["Name"]+" ("+eventdict["Status"]+")")
-            message.to = "skipflog@googlegroups.com"
+            message = mail.EmailMessage(sender='admin@skipflog2.appspotmail.com',subject=str(eventdict["Year"])+" "+eventdict["Name"]+" ("+eventdict["Status"]+")")
+            message.to = "john7145e@gmail.com,mholtebeck@gmail.com"
+            message.bcc = "stevearez@gmail.com"			
             result = urllib2.urlopen(results_url)
             message.html=result.read()
             message.send()
