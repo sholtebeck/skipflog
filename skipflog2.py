@@ -246,14 +246,14 @@ def fetch_headers(soup):
         headers['Dates']=xstr(dates.string) 
         headers['Year']=int(headers['Dates'][-4:])
     thead=soup.find('thead')
-    headers['Status']=soup.find("span",{"class":"tournament-status"}).string
+    headers['Status']=soup.find("div",{"class":"status"}).find('span').string
     if headers['Status'].startswith("Round "):
         headers['Round']=headers['Status'][6]
     else:
         headers['Round']=0
     tables=soup.findAll("table")
     if tables:
-        headers['Columns']=[str(th.string) for th in soup.findAll("table")[-1].findAll('th')]
+        headers['Columns']=[str(th.find('a').string) for th in soup.findAll("table")[-1].findAll('th')]
     return headers
     
 def fetch_odds():
