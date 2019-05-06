@@ -130,7 +130,7 @@ class MainPage(webapp2.RequestHandler):
             'url_linktext': url_linktext,
             'user': user,
         }
-        template = jinja_environment.get_template('index.html')
+        template = jinja_environment.get_template('index2.html')
         self.response.out.write(template.render(template_values))
 
 class MailHandler(webapp2.RequestHandler):       
@@ -140,7 +140,7 @@ class MailHandler(webapp2.RequestHandler):
             event = getEvent(event_id)
             results=getResults(event_id)
             eventdict=results.get("event")
-            message = mail.EmailMessage(sender='admin@skipflog2.appspotmail.com',subject=str(eventdict["Year"])+" "+eventdict["Name"]+" ("+eventdict["Status"]+")")
+            message = mail.EmailMessage(sender='admin@skipflog2.appspotmail.com',subject=eventdict["Name"]+" ("+eventdict["Status"]+")")
             message.to = "john7145e@gmail.com,mholtebeck@gmail.com"
             message.bcc = "stevearez@gmail.com"			
             result = urllib2.urlopen(results_url)
@@ -200,7 +200,7 @@ class PickHandler(webapp2.RequestHandler):
             'url_linktext': url_linktext,
             'user': user
         }
-        template = jinja_environment.get_template('picks.html')
+        template = jinja_environment.get_template('picks2.html')
         self.response.out.write(template.render(template_values))
 
     def post(self):

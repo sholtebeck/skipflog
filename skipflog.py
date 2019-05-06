@@ -10,7 +10,7 @@ from oauth2client.client import SignedJwtAssertionCredentials
 
 # Misc properties
 br="</br>"
-events={ 4:'Masters',6:'US Open', 7:'Open Championship', 8:'PGA Championship'}
+events={ 4:'Masters',5:'PGA Championship',6:'US Open', 7:'Open Championship', 8:'PGA Championship'}
 mypicks = [1,4,5,8,9,12,13,16,17,20,22]
 yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
 names={'sholtebeck':'Steve','mholtebeck':'Mark'}
@@ -91,6 +91,13 @@ def xstr(string):
         return int(string)
     else:
         return str(''.join([i if ord(i) < 128 else ' ' for i in string]))
+
+# Function to get the pickers for an Event
+def get_pickers(event_id):
+    pickers=skip_pickers
+    if ((event_id/100)%2 + event_id%2)%2:
+        pickers.reverse()
+    return pickers
 
 # Function to get_points for a Position
 def get_rank(position):
@@ -199,8 +206,10 @@ def default_event(event_id=current_event()):
     event["event_name"]=edict.get("Name",str(event["event_year"])+" "+events.get(int(event_id)%100))
     event["pickers"]=skip_pickers
     event["next"]=edict.get('First',skip_pickers[get_picker(event_id)])
+    if event["next"]!=event["pickers"][0]:
+        event["pickers"].reverse()   
     event["picks"]={"Picked":[],"Available":[] }
-    for picker in skip_pickers:
+    for picker in event["pickers"]:
         event["picks"][picker]=[]
     event["picks"]["Available"]=players=[player['name'] for player in get_players()]
     event["pick_no"]=1 
@@ -220,7 +229,9 @@ def fetch_url(event_id):
 	1804: 'http://www.espn.com/golf/leaderboard?tournamentId=401025221',
 	1806: 'http://www.espn.com/golf/leaderboard?tournamentId=401025255',
     1807: 'http://www.espn.com/golf/leaderboard?tournamentId=401025259',
-    1808: 'http://www.espn.com/golf/leaderboard?tournamentId=401025263'
+    1808: 'http://www.espn.com/golf/leaderboard?tournamentId=401025263',
+	1904: 'http://www.espn.com/golf/leaderboard?tournamentId=401056527',
+	1905: 'http://www.espn.com/golf/leaderboard'
 	}
     if url.get(event_id):
         return url[event_id]
@@ -503,12 +514,12 @@ def post_players():
     worksheet=open_worksheet('Majors','Players')
     current_cell=0
     cell_list = worksheet.range('A2:F'+str(len(names)+1))
-    for name in odds_names:
+    for name in names:
         debug_values(odds.get(name), name)
         matching_name=match_name(name,rank_names)
         if matching_name in rank_names:
-            player=rankings[rank_names.index(matching_name)]
-            cell_list[current_cell].value=player['rank']
+            print(player, current_cell)
+            cell_list[current_cell].value=player.get('rank')
             cell_list[current_cell+1].value=player['name']
             cell_list[current_cell+2].value=player['points']
             cell_list[current_cell+3].value=player['country']
@@ -520,7 +531,7 @@ def post_players():
         if name in odds.keys():
             cell_list[current_cell+4].value=odds[name]
         else:
-            cell_list[current_cell+4]=9999
+            cell_list[current_cell+4].value=9999
         cell_list[current_cell+5].value=0
         current_cell += 6
     worksheet.update_cells(cell_list)
