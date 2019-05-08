@@ -157,10 +157,8 @@ class MailHandler(webapp2.RequestHandler):
                             subject=event.get('event_name')+" picks")
         message.to = "skipflog@googlegroups.com"
         message.html=event.get('event_name')+"<br>"
-        players = {"Steve":[],"Mark":[]}
-        picks = getPicks(event_id)
-        for pick in picks:
-            players[pick.who].append(pick.player)
+        picks = get_picks(event_id)
+        players = {picker : picks[picker].get('Picks') for picker in skip_pickers }
         for picker in skip_pickers:
             message.html += picker+"'s Picks:<ol>"
             for player in players[picker]:
