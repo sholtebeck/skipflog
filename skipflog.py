@@ -231,7 +231,7 @@ def fetch_url(event_id):
     1807: 'http://www.espn.com/golf/leaderboard?tournamentId=401025259',
     1808: 'http://www.espn.com/golf/leaderboard?tournamentId=401025263',
 	1904: 'http://www.espn.com/golf/leaderboard?tournamentId=401056527',
-	1905: 'http://www.espn.com/golf/leaderboard'
+	1905: 'http://www.espn.com/golf/leaderboard?tournamentId=401056552'
 	}
     if url.get(event_id):
         return url[event_id]
