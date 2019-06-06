@@ -213,26 +213,26 @@ def default_event(event_id=current_event()):
         event["picks"][picker]=[]
     event["picks"]["Available"]=players=[player['name'] for player in get_players()]
     event["pick_no"]=1 
-    event["start"]=edict.get("Start")	
+    event["start"]=edict.get("Start")   
     return event
-	
+    
 def fetch_url(event_id):
     url={
-	1604: 'http://www.espn.com/golf/leaderboard?tournamentId=2493', 
-	1606: 'http://www.espn.com/golf/leaderboard?tournamentId=2501', 
-	1607: 'http://www.espn.com/golf/leaderboard?tournamentId=2505', 
-	1608: 'http://www.espn.com/golf/leaderboard?tournamentId=2507',
-	1704: 'http://www.espn.com/golf/leaderboard?tournamentId=2700', 
-	1706: 'http://www.espn.com/golf/leaderboard?tournamentId=3066', 
-	1707: 'http://www.espn.com/golf/leaderboard?tournamentId=2710', 
-	1708: 'http://www.espn.com/golf/leaderboard?tournamentId=2712',
-	1804: 'http://www.espn.com/golf/leaderboard?tournamentId=401025221',
-	1806: 'http://www.espn.com/golf/leaderboard?tournamentId=401025255',
+    1604: 'http://www.espn.com/golf/leaderboard?tournamentId=2493', 
+    1606: 'http://www.espn.com/golf/leaderboard?tournamentId=2501', 
+    1607: 'http://www.espn.com/golf/leaderboard?tournamentId=2505', 
+    1608: 'http://www.espn.com/golf/leaderboard?tournamentId=2507',
+    1704: 'http://www.espn.com/golf/leaderboard?tournamentId=2700', 
+    1706: 'http://www.espn.com/golf/leaderboard?tournamentId=3066', 
+    1707: 'http://www.espn.com/golf/leaderboard?tournamentId=2710', 
+    1708: 'http://www.espn.com/golf/leaderboard?tournamentId=2712',
+    1804: 'http://www.espn.com/golf/leaderboard?tournamentId=401025221',
+    1806: 'http://www.espn.com/golf/leaderboard?tournamentId=401025255',
     1807: 'http://www.espn.com/golf/leaderboard?tournamentId=401025259',
     1808: 'http://www.espn.com/golf/leaderboard?tournamentId=401025263',
-	1904: 'http://www.espn.com/golf/leaderboard?tournamentId=401056527',
-	1905: 'http://www.espn.com/golf/leaderboard?tournamentId=401056552'
-	}
+    1904: 'http://www.espn.com/golf/leaderboard?tournamentId=401056527',
+    1905: 'http://www.espn.com/golf/leaderboard?tournamentId=401056552'
+    }
     if url.get(event_id):
         return url[event_id]
     else:
@@ -367,7 +367,7 @@ def fetch_tables(url):
 
 def fetch_header(html):
     return str(BeautifulSoup(html).find('th').string)
-	
+    
 # fetch all table rows
 def fetch_rows(page):
 #   return page.find('table').findAll('tr')    
@@ -489,16 +489,25 @@ def pick_players(picklist):
                 worksheet.update_cell(player["rownum"], 6, 1)
     except:
         pass
+
+# Get a player key (last_name+first_initial) for a name
+def lastfirst(name):
+    names=name.split()
+    if len(names)>1:
+        return ''.join(names[1:])+names[0][0]
+    else:
+        return name
+
 # Get a matching name from a list of names
 def match_name(name, namelist):
     if name in namelist:
         new_name=name
     else:
-        names=name.split()
-        listnames=[n for n in namelist if names[0] in n and names[-1] in n]
+        listnames=[n for n in namelist if lastfirst(n)==lastfirst(name)]
         listnames.append(name)
         new_name=listnames[0]
     return new_name
+
    
 # Post the players to the Players tab in Majors spreadsheet
 def post_players():
@@ -506,9 +515,10 @@ def post_players():
     result = urllib2.urlopen(current_csv)
     rows=[row for row in csv.reader(result)]
     names=[name[1] for name in rows[2:150] if name[1]!='']
+    names.sort(key=lastfirst)
     odds=fetch_odds()
     odds_names=odds.keys()
-    odds_names.sort()
+    odds_names.sort(key=lastfirst)
     rankings=get_rankings(1500)
     rank_names=[rank['name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
@@ -529,8 +539,9 @@ def post_players():
             cell_list[current_cell+1].value=name
             cell_list[current_cell+2].value=0.0
             cell_list[current_cell+3].value='USA'
-        if name in odds.keys():
-            cell_list[current_cell+4].value=odds[name]
+        matching_name=match_name(name,odds)
+        if matching_name in odds.keys():
+            cell_list[current_cell+4].value=odds[matching_name]
         else:
             cell_list[current_cell+4].value=9999
         cell_list[current_cell+5].value=0
