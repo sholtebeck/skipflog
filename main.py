@@ -59,14 +59,16 @@ def getResults(event_id):
                 resultstr=str(json.dumps(results))
                 memcache.add(results_key,resultstr,240)
             except:
-                memcache.delete(results_key)    
+                memcache.delete(results_key)			
     return results
 
 def getEvent(event_id):
 #    event = Event.get(event_key(event_id))
     event = models.get_event(event_id)
-    if event:
+    if event and event.event_json:
         event_data=event.event_json
+    elif event and event.event_name:
+        event_data={"event_id":event.event_id, "event_name":event.event_name, "picks": event.picks, "field":event_field }
     else:
         event_data=default_event(event_id)
         models.update_event(event_data)
@@ -140,15 +142,17 @@ class MailHandler(webapp2.RequestHandler):
             event = getEvent(event_id)
             results=getResults(event_id)
             eventdict=results.get("event")
-            mailsubj=str(eventdict["Year"])+" "+eventdict["Name"]+" ("+eventdict["Status"]+")"
-            if eventdict["Year"] == eventdict["Name"][:4]:
-                mailsubj=str(eventdict["Name"]+" ("+eventdict["Status"]+")")
-            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=mailsubj)	
-            message.to = "skipflog@googlegroups.com"
-            result = urllib2.urlopen(results_url)
-            message.html=result.read()
-            message.send()
-
+            if eventdict and ( eventdict['Status'].endswith('Final') or eventdict['Status'].endswith('Complete') ):
+                models.update_results(results)
+                mailsubj=str(eventdict["Year"])+" "+eventdict["Name"]+" ("+eventdict["Status"]+")"
+                if eventdict["Year"] == eventdict["Name"][:4]:
+                    mailsubj=str(eventdict["Name"]+" ("+eventdict["Status"]+")")
+                message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=mailsubj)	
+                message.to = "skipflog@googlegroups.com"
+                result = urllib2.urlopen(results_url)
+                message.html=result.read()
+                message.send()
+				
     def post(self):
         event_id = self.request.get('event_id')
         event = getEvent(event_id)
@@ -216,6 +220,7 @@ class PickHandler(webapp2.RequestHandler):
             event["lastpick"]=picker+" picked "+player
             event["pick_no"]+=1
             updateEvent(event)
+            models.add_pick({"event_id":event_id,"picker":picker,"player":player,"pickno":event['pick_no']-1 })
         # update last pick message
         updateLastPick(event)
         self.redirect('/pick?event_id=' + event_id) 
@@ -248,6 +253,8 @@ class PicksHandler(webapp2.RequestHandler):
             event_id=currentEvent()    
         event = getEvent(event_id)
         if event:
+            if not event.get('picks'):
+                event['picks']=models.get_picks(event_id)
             pick_dict={}
             for picker in skip_pickers:
                 pick_dict[picker]=event["picks"][picker]
@@ -256,7 +263,7 @@ class PicksHandler(webapp2.RequestHandler):
             if output_format=='json':
                 self.response.headers['Content-Type'] = 'application/json'
                 self.response.write(json.dumps({"picks":pick_dict}))
-                    
+                   
     def post(self):
         picklist = self.request.get('picklist')
         pick_players(picklist)     
