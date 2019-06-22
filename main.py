@@ -65,10 +65,24 @@ def getResults(event_id):
 def getEvent(event_id):
 #    event = Event.get(event_key(event_id))
     event = models.get_event(event_id)
-    if event and event.event_json:
+    if event and event.event_json and event.event_json.get('pick_no'):
         event_data=event.event_json
     elif event and event.event_name:
-        event_data={"event_id":event.event_id, "event_name":event.event_name, "picks": event.picks, "field":event_field }
+        event_data={"event_id":event.event_id, "event_name":event.event_name, "picks": models.get_picks(event), "field":event.field }
+        event_data["picks"]["Picked"]=event.picks
+    else:
+        event_data=default_event(event_id)
+        models.update_event(event_data)
+    return event_data
+
+def getEvent(event_id):
+#    event = Event.get(event_key(event_id))
+    event = models.get_event(event_id)
+    if event and event.event_json and event.event_json.get('pick_no'):
+        event_data=event.event_json
+    elif event and event.event_name:
+        event_data={"event_id":event.event_id, "event_name":event.event_name, "picks": models.get_picks(event), "field":event.field }
+        event_data["picks"]["Picked"]=event.picks
     else:
         event_data=default_event(event_id)
         models.update_event(event_data)
@@ -242,6 +256,10 @@ class EventHandler(webapp2.RequestHandler):
         event_data = self.request.get('event_data')
         event_json = json.loads(event_data)
         updateEvent(event_json)
+        results_data = self.request.get('results_data')
+        if results_data:
+            results_json = json.loads(results_data)
+            models.update_results(results_json)
         event_id = str(event_json["event_id"])
         self.redirect('/event?event_id=' +event_id) 
 

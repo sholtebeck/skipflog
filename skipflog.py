@@ -16,8 +16,8 @@ yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
 names={'sholtebeck':'Steve','mholtebeck':'Mark'}
 numbers={'Steve':'5103005644@vtext.com','Mark':'5106739570@vmobl.com'}
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
-event_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=1&output=html&widget=true"
-events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AE31&output=csv"
+event_url = "http://skipflog.appspot.com/event"
+events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AE40&output=csv"
 players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB155&output=csv"
 results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
 ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
@@ -81,7 +81,7 @@ def cut_rank():
 # debug values
 def debug_values(number, string):
     if debug:
-        print number, string
+        print (number, string)
 
 # Handler for string values to ASCII or integer
 def xstr(string):
@@ -147,6 +147,18 @@ def get_value(string):
     except:
         value=0.0
     return value
+
+# Get the event information for an event (converted to asc)
+def get_event(event_id):
+    event=default_event(event_id)
+    evt=json_results(event_url+"?event_id="+str(event_id))
+#    if evt.get('field'):
+#        event['picks']['Available']=[ xstr(p) for p in evt.get('field') ]
+#    event['picks']['Picked']=[xstr(p) for p in evt['picks']['Picked']]
+#    event['pick_no']=len(event['picks']['Picked'])+1
+    for picker in skip_pickers:
+        event['picks'][picker]=[xstr(p) for p in evt['picks'][picker]]  
+    return event        
     
 # Get the picks for an event
 def get_picks(event_id):
@@ -218,20 +230,45 @@ def default_event(event_id=current_event()):
     
 def fetch_url(event_id):
     url={
-    1604: 'http://www.espn.com/golf/leaderboard?tournamentId=2493', 
-    1606: 'http://www.espn.com/golf/leaderboard?tournamentId=2501', 
-    1607: 'http://www.espn.com/golf/leaderboard?tournamentId=2505', 
-    1608: 'http://www.espn.com/golf/leaderboard?tournamentId=2507',
-    1704: 'http://www.espn.com/golf/leaderboard?tournamentId=2700', 
-    1706: 'http://www.espn.com/golf/leaderboard?tournamentId=3066', 
-    1707: 'http://www.espn.com/golf/leaderboard?tournamentId=2710', 
-    1708: 'http://www.espn.com/golf/leaderboard?tournamentId=2712',
-    1804: 'http://www.espn.com/golf/leaderboard?tournamentId=401025221',
-    1806: 'http://www.espn.com/golf/leaderboard?tournamentId=401025255',
-    1807: 'http://www.espn.com/golf/leaderboard?tournamentId=401025259',
-    1808: 'http://www.espn.com/golf/leaderboard?tournamentId=401025263',
-    1904: 'http://www.espn.com/golf/leaderboard?tournamentId=401056527',
-    1905: 'http://www.espn.com/golf/leaderboard?tournamentId=401056552'
+	1004: 'http://www.espn.com/golf/leaderboard?tournamentId=774', 
+    1006: 'http://www.espn.com/golf/leaderboard?tournamentId=797', 
+    1007: 'http://www.espn.com/golf/leaderboard?tournamentId=798', 
+    1008: 'http://www.espn.com/golf/leaderboard?tournamentId=799', 
+    1104: 'http://www.espn.com/golf/leaderboard?tournamentId=980', 
+    1106: 'http://www.espn.com/golf/leaderboard?tournamentId=981', 
+    1107: 'http://www.espn.com/golf/leaderboard?tournamentId=982', 
+    1108: 'http://www.espn.com/golf/leaderboard?tournamentId=983', 
+    1204: 'http://www.espn.com/golf/leaderboard?tournamentId=1005',
+    1206: 'http://www.espn.com/golf/leaderboard?tournamentId=1013', 
+    1207: 'http://www.espn.com/golf/leaderboard?tournamentId=1017', 
+    1208: 'http://www.espn.com/golf/leaderboard?tournamentId=1018', 
+    1304 :'http://www.espn.com/golf/leaderboard?tournamentId=1192',
+    1306 :'http://www.espn.com/golf/leaderboard?tournamentId=1200',
+    1307 :'http://www.espn.com/golf/leaderboard?tournamentId=1204',
+    1308 :'http://www.espn.com/golf/leaderboard?tournamentId=1206',
+    1404 :'http://www.espn.com/golf/leaderboard?tournamentId=1317',
+    1406 :'http://www.espn.com/golf/leaderboard?tournamentId=1325',
+    1407 :'http://www.espn.com/golf/leaderboard?tournamentId=1329',
+    1408 :'http://www.espn.com/golf/leaderboard?tournamentId=1330',
+    1504 :'http://www.espn.com/golf/leaderboard?tournamentId=2241',
+    1506 :'http://www.espn.com/golf/leaderboard?tournamentId=2249',
+    1507 :'http://www.espn.com/golf/leaderboard?tournamentId=2253',
+    1508 :'http://www.espn.com/golf/leaderboard?tournamentId=2255',
+    1604 :'http://www.espn.com/golf/leaderboard?tournamentId=2493',
+    1606 :'http://www.espn.com/golf/leaderboard?tournamentId=2501',
+    1607 :'http://www.espn.com/golf/leaderboard?tournamentId=2505',
+    1608 :'http://www.espn.com/golf/leaderboard?tournamentId=2507',
+    1704 :'http://www.espn.com/golf/leaderboard?tournamentId=2700',
+    1706 :'http://www.espn.com/golf/leaderboard?tournamentId=3066',
+    1707 :'http://www.espn.com/golf/leaderboard?tournamentId=2710',
+    1708 :'http://www.espn.com/golf/leaderboard?tournamentId=2712',
+    1804 :'http://www.espn.com/golf/leaderboard?tournamentId=3756',
+    1806 :'http://www.espn.com/golf/leaderboard?tournamentId=401025255',
+    1807 :'http://www.espn.com/golf/leaderboard?tournamentId=401025259',
+    1808 :'http://www.espn.com/golf/leaderboard?tournamentId=401025263',
+    1904 :'http://www.espn.com/golf/leaderboard?tournamentId=401056527',
+    1905 :'http://www.espn.com/golf/leaderboard?tournamentId=401056552',
+    1906 :'http://www.espn.com/golf/leaderboard?tournamentId=401056556'
     }
     if url.get(event_id):
         return url[event_id]
@@ -446,6 +483,8 @@ def get_results(event_id):
     tie={"Points":100,"Players":[]}
     results['event']=fetch_headers(page)
     results['event']['ID']=event_id
+    results['event']['Year']=2000 + int(event_id/100)
+    results['event']['Name']=str(results["event"]["Year"])+" "+events.get(int(event_id)%100)
     results['players']=[]
     rows=fetch_rows(page)
     for row in rows:

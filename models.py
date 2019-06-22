@@ -30,11 +30,11 @@ def event_key(event_id):
 def get_event(event_id):
     event=Event.get_by_id(int(event_id))
     if not event:
-        event=Event.query().filter(Event.event_id == event_id).fetch(1)
+        event=Event.query().filter(Event.event_id == int(event_id)).fetch(1)[0]
     return event
 
-def get_picks(event_id):
-    event_key=ndb.Key('Event',event_id) 
+def get_picks(event):
+    event_key=ndb.Key( 'Event', str(event.event_id) )
     picks={}
     for pick in Pick.query(ancestor=event_key).fetch(25):
         picker=str(pick.who)
