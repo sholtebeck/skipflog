@@ -494,7 +494,7 @@ def post_players():
     current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=0&output=csv'
     result = urllib2.urlopen(current_csv)
     rows=[row for row in csv.reader(result)]
-    names=[name[1] for name in rows[3:] if name[1]!='']
+    names=[name[1] for name in rows[2:] if name[1]!='']
     odds=fetch_odds()
     odds_names=odds.keys()
     odds_names.sort()
