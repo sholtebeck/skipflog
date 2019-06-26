@@ -29,8 +29,8 @@ def event_key(event_id):
 
 def get_event(event_id):
     event=Event.get_by_id(int(event_id))
-    if not event:
-        event=Event.query().filter(Event.event_id == int(event_id)).fetch(1)[0]
+#    if not event:
+#        event=Event.query().filter(Event.event_id == int(event_id)).fetch(1)[0]
     return event
 
 def get_picks(event):

@@ -1,23 +1,23 @@
-# skipflog2 functions
-import csv,datetime,json,sys,urllib2
+# skipflog functions
+import csv,datetime,json,sys,urllib
 from time import gmtime, strftime
 # External modules (gspread, bs4)
-import sys
-sys.path[0:0] = ['libs']
+#import sys
+#sys.path[0:0] = ['libs']
 import gspread
 from bs4 import BeautifulSoup
-from oauth2client.client import SignedJwtAssertionCredentials
+from oauth2client.service_account import ServiceAccountCredentials
 
 # Misc properties
 br="</br>"
-events={ 4:'Masters',5:'PGA Championship', 6:'US Open', 7:'Open Championship', 8:'PGA Championship'}
+events={ 4:'Masters',5:'PGA Championship',6:'US Open', 7:'Open Championship', 8:'PGA Championship'}
 mypicks = [1,4,5,8,9,12,13,16,17,20,22]
 yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
 names={'john7145e':'John','mholtebeck':'Mark'}
 numbers={'John':'5104323379@vtext.com','Mark':'5106739570@vmobl.com'}
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
-event_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=1&output=html&widget=true"
-events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AE21&output=csv"
+event_url = "http://skipflog2.appspot.com/event"
+events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AE40&output=csv"
 players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB155&output=csv"
 results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
 ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
@@ -28,7 +28,7 @@ players_api="http://knarflog.appspot.com/api/players"
 leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"
 skip_user="skipfloguser"
 skip_picks={}
-skip_pickers=["John","Mark"]
+skip_pickers=["Steve","Mark"]
 #skip_points=[0, 100, 60, 40, 35, 30, 25, 20, 15, 10, 9, 9, 8, 8, 7, 7, 7, 6, 6, 5, 5, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2]
 skip_points=[0, 100, 60, 40, 30, 24, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9.5, 9, 8.5,8,7.5,7,6.5,6,5.5,5,4.5,4,4,3.5,3.5,3,3,2.5,2.5,2,2,2,1.5,1.5]
 # Misc urls
@@ -81,7 +81,7 @@ def cut_rank():
 # debug values
 def debug_values(number, string):
     if debug:
-        print number, string
+        print (number, string)
 
 # Handler for string values to ASCII or integer
 def xstr(string):
@@ -91,6 +91,13 @@ def xstr(string):
         return int(string)
     else:
         return str(''.join([i if ord(i) < 128 else ' ' for i in string]))
+
+# Function to get the pickers for an Event
+def get_pickers(event_id):
+    pickers=skip_pickers
+    if ((event_id/100)%2 + event_id%2)%2:
+        pickers.reverse()
+    return pickers
 
 # Function to get_points for a Position
 def get_rank(position):
@@ -109,13 +116,13 @@ def get_points(rank):
         return 0
 
 def get_picker(event_id):
-    picker=1
+    picker=0
     if  (int(event_id)/100) %2 ==1: 
         picker = 1-picker
     if int(event_id) % 2 ==1 :
         picker = 1 - picker
     return picker
-		
+
 # Get the rankings from the page
 def get_rankings(size):
     ranking_url="http://www.owgr.com/ranking?pageSize="+str(size)
@@ -140,6 +147,18 @@ def get_value(string):
     except:
         value=0.0
     return value
+
+# Get the event information for an event (converted to asc)
+def get_event(event_id):
+    event=default_event(event_id)
+    evt=json_results(event_url+"?event_id="+str(event_id))
+#    if evt.get('field'):
+#        event['picks']['Available']=[ xstr(p) for p in evt.get('field') ]
+#    event['picks']['Picked']=[xstr(p) for p in evt['picks']['Picked']]
+#    event['pick_no']=len(event['picks']['Picked'])+1
+    for picker in skip_pickers:
+        event['picks'][picker]=[xstr(p) for p in evt['picks'][picker]]  
+    return event        
     
 # Get the picks for an event
 def get_picks(event_id):
@@ -172,19 +191,19 @@ def open_worksheet(spread,work):
 # json_results -- get results for a url
 def json_results(url):
     try:
-        page=urllib2.urlopen(url)
+        page=urllib.request.urlopen(url)
         results=json.load(page)
         return results
     except:
         return {}
 
 def soup_results(url):
-    page=urllib2.urlopen(url)
+    page=urllib.request.urlopen(url)
     soup = BeautifulSoup(page.read())
     return soup
 
 def fetch_events():
-    result = urllib2.urlopen(events_url)
+    result = urllib.request.urlopen(events_url)
     reader = csv.DictReader(result)
     event_list=[]
     for row in reader:
@@ -198,30 +217,59 @@ def default_event(event_id=current_event()):
     event["event_year"]=2000+(int(event_id)/100)
     event["event_name"]=edict.get("Name",str(event["event_year"])+" "+events.get(int(event_id)%100))
     event["pickers"]=skip_pickers
-    event["next"]=skip_pickers[get_picker(event_id)]
+    event["next"]=edict.get('First',skip_pickers[get_picker(event_id)])
+    if event["next"]!=event["pickers"][0]:
+        event["pickers"].reverse()   
     event["picks"]={"Picked":[],"Available":[] }
-    for picker in skip_pickers:
+    for picker in event["pickers"]:
         event["picks"][picker]=[]
     event["picks"]["Available"]=players=[player['name'] for player in get_players()]
     event["pick_no"]=1 
-    event["start"]=edict.get("Start")	
+    event["start"]=edict.get("Start")   
     return event
-	
+    
 def fetch_url(event_id):
     url={
-	1604: 'http://www.espn.com/golf/leaderboard?tournamentId=2493', 
-	1606: 'http://www.espn.com/golf/leaderboard?tournamentId=2501', 
-	1607: 'http://www.espn.com/golf/leaderboard?tournamentId=2505', 
-	1608: 'http://www.espn.com/golf/leaderboard?tournamentId=2507',
-	1704: 'http://www.espn.com/golf/leaderboard?tournamentId=2700', 
-	1706: 'http://www.espn.com/golf/leaderboard?tournamentId=3066', 
-	1707: 'http://www.espn.com/golf/leaderboard?tournamentId=2710', 
-	1708: 'http://www.espn.com/golf/leaderboard?tournamentId=2712',
-	1804: 'http://www.espn.com/golf/leaderboard?tournamentId=401025221',
-	1806: 'http://www.espn.com/golf/leaderboard?tournamentId=401025255',
-    1807: 'http://www.espn.com/golf/leaderboard?tournamentId=401025259',
-    1808: 'http://www.espn.com/golf/leaderboard?tournamentId=401025263'
-	}
+	1004: 'http://www.espn.com/golf/leaderboard?tournamentId=774', 
+    1006: 'http://www.espn.com/golf/leaderboard?tournamentId=797', 
+    1007: 'http://www.espn.com/golf/leaderboard?tournamentId=798', 
+    1008: 'http://www.espn.com/golf/leaderboard?tournamentId=799', 
+    1104: 'http://www.espn.com/golf/leaderboard?tournamentId=980', 
+    1106: 'http://www.espn.com/golf/leaderboard?tournamentId=981', 
+    1107: 'http://www.espn.com/golf/leaderboard?tournamentId=982', 
+    1108: 'http://www.espn.com/golf/leaderboard?tournamentId=983', 
+    1204: 'http://www.espn.com/golf/leaderboard?tournamentId=1005',
+    1206: 'http://www.espn.com/golf/leaderboard?tournamentId=1013', 
+    1207: 'http://www.espn.com/golf/leaderboard?tournamentId=1017', 
+    1208: 'http://www.espn.com/golf/leaderboard?tournamentId=1018', 
+    1304 :'http://www.espn.com/golf/leaderboard?tournamentId=1192',
+    1306 :'http://www.espn.com/golf/leaderboard?tournamentId=1200',
+    1307 :'http://www.espn.com/golf/leaderboard?tournamentId=1204',
+    1308 :'http://www.espn.com/golf/leaderboard?tournamentId=1206',
+    1404 :'http://www.espn.com/golf/leaderboard?tournamentId=1317',
+    1406 :'http://www.espn.com/golf/leaderboard?tournamentId=1325',
+    1407 :'http://www.espn.com/golf/leaderboard?tournamentId=1329',
+    1408 :'http://www.espn.com/golf/leaderboard?tournamentId=1330',
+    1504 :'http://www.espn.com/golf/leaderboard?tournamentId=2241',
+    1506 :'http://www.espn.com/golf/leaderboard?tournamentId=2249',
+    1507 :'http://www.espn.com/golf/leaderboard?tournamentId=2253',
+    1508 :'http://www.espn.com/golf/leaderboard?tournamentId=2255',
+    1604 :'http://www.espn.com/golf/leaderboard?tournamentId=2493',
+    1606 :'http://www.espn.com/golf/leaderboard?tournamentId=2501',
+    1607 :'http://www.espn.com/golf/leaderboard?tournamentId=2505',
+    1608 :'http://www.espn.com/golf/leaderboard?tournamentId=2507',
+    1704 :'http://www.espn.com/golf/leaderboard?tournamentId=2700',
+    1706 :'http://www.espn.com/golf/leaderboard?tournamentId=3066',
+    1707 :'http://www.espn.com/golf/leaderboard?tournamentId=2710',
+    1708 :'http://www.espn.com/golf/leaderboard?tournamentId=2712',
+    1804 :'http://www.espn.com/golf/leaderboard?tournamentId=3756',
+    1806 :'http://www.espn.com/golf/leaderboard?tournamentId=401025255',
+    1807 :'http://www.espn.com/golf/leaderboard?tournamentId=401025259',
+    1808 :'http://www.espn.com/golf/leaderboard?tournamentId=401025263',
+    1904 :'http://www.espn.com/golf/leaderboard?tournamentId=401056527',
+    1905 :'http://www.espn.com/golf/leaderboard?tournamentId=401056552',
+    1906 :'http://www.espn.com/golf/leaderboard?tournamentId=401056556'
+    }
     if url.get(event_id):
         return url[event_id]
     else:
@@ -356,7 +404,7 @@ def fetch_tables(url):
 
 def fetch_header(html):
     return str(BeautifulSoup(html).find('th').string)
-	
+    
 # fetch all table rows
 def fetch_rows(page):
 #   return page.find('table').findAll('tr')    
@@ -377,7 +425,7 @@ def get_players():
     picks=get_picks(current_event()).keys()
     players=[]
     players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=A2%3AF155&output=csv"
-    result = urllib2.urlopen(players_url)
+    result = urllib.request.urlopen(players_url)
     reader = csv.reader(result)
     rownum = 1
     for row in reader:
@@ -435,6 +483,8 @@ def get_results(event_id):
     tie={"Points":100,"Players":[]}
     results['event']=fetch_headers(page)
     results['event']['ID']=event_id
+    results['event']['Year']=2000 + int(event_id/100)
+    results['event']['Name']=str(results["event"]["Year"])+" "+events.get(int(event_id)%100)
     results['players']=[]
     rows=fetch_rows(page)
     for row in rows:
@@ -478,37 +528,48 @@ def pick_players(picklist):
                 worksheet.update_cell(player["rownum"], 6, 1)
     except:
         pass
+
+# Get a player key (last_name+first_initial) for a name
+def lastfirst(name):
+    names=name.split()
+    if len(names)>1:
+        return ''.join(names[1:])+names[0][0]
+    else:
+        return name
+
 # Get a matching name from a list of names
 def match_name(name, namelist):
     if name in namelist:
         new_name=name
     else:
-        names=name.split()
-        listnames=[n for n in namelist if names[0] in n and names[-1] in n]
+        listnames=[n for n in namelist if lastfirst(n)==lastfirst(name)]
         listnames.append(name)
         new_name=listnames[0]
     return new_name
+
    
 # Post the players to the Players tab in Majors spreadsheet
 def post_players():
     current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=0&output=csv'
-    result = urllib2.urlopen(current_csv)
+    result = urllib.request.urlopen(current_csv)
     rows=[row for row in csv.reader(result)]
-    names=[name[1] for name in rows[2:] if name[1]!='']
+    names=[name[1] for name in rows[2:150] if name[1]!='']
+    names.sort(key=lastfirst)
     odds=fetch_odds()
     odds_names=odds.keys()
-    odds_names.sort()
+    odds_names.sort(key=lastfirst)
     rankings=get_rankings(1500)
     rank_names=[rank['name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
     current_cell=0
     cell_list = worksheet.range('A2:F'+str(len(names)+1))
-    for name in odds_names:
+    for name in names:
         debug_values(odds.get(name), name)
         matching_name=match_name(name,rank_names)
         if matching_name in rank_names:
             player=rankings[rank_names.index(matching_name)]
-            cell_list[current_cell].value=player['rank']
+            debug_values(player, current_cell)
+            cell_list[current_cell].value=player.get('rank')
             cell_list[current_cell+1].value=player['name']
             cell_list[current_cell+2].value=player['points']
             cell_list[current_cell+3].value=player['country']
@@ -517,10 +578,11 @@ def post_players():
             cell_list[current_cell+1].value=name
             cell_list[current_cell+2].value=0.0
             cell_list[current_cell+3].value='USA'
-        if name in odds.keys():
-            cell_list[current_cell+4].value=odds[name]
+        matching_name=match_name(name,odds)
+        if matching_name in odds.keys():
+            cell_list[current_cell+4].value=odds[matching_name]
         else:
-            cell_list[current_cell+4]=9999
+            cell_list[current_cell+4].value=9999
         cell_list[current_cell+5].value=0
         current_cell += 6
     worksheet.update_cells(cell_list)
