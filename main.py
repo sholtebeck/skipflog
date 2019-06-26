@@ -89,10 +89,10 @@ def getEvent(event_id):
     return event_data
 
 def nextEvent():
-    event_current=currentEvent()
-    event = models.get_event(event_current)
+    event_next=int(fetch_events()[0]['ID'])
+    event = models.get_event(event_next)
     if not event:
-        event=default_event(event_current)
+        event=default_event(event_next)
     return event
 
 def updateEvent(event_data):
