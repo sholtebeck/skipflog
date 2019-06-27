@@ -531,7 +531,7 @@ def pick_players(picklist):
 
 # Get a player key (last_name+first_initial) for a name
 def lastfirst(name):
-    names=name.split()
+    names=name.lower().split()
     if len(names)>1:
         return ''.join(names[1:])+names[0][0]
     else:
@@ -547,44 +547,54 @@ def match_name(name, namelist):
         new_name=listnames[0]
     return new_name
 
-   
 # Post the players to the Players tab in Majors spreadsheet
 def post_players():
-    current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=0&output=csv'
+    current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=1&output=csv'
+    players={}
+    odds=fetch_odds()
+    onames=odds.keys()
+    rankings=get_rankings(1500)
+    rnames=[rank['name'] for rank in rankings]
     result = urllib2.urlopen(current_csv)
     rows=[row for row in csv.reader(result)]
-    names=[name[1] for name in rows[2:150] if name[1]!='']
-    names.sort(key=lastfirst)
-    odds=fetch_odds()
-    odds_names=odds.keys()
-    odds_names.sort(key=lastfirst)
-    rankings=get_rankings(1500)
-    rank_names=[rank['name'] for rank in rankings]
+    years=rows[0][11:21]
+    headers=rows[1][:11]+years
+    for row in rows[2:150]:
+        pdict={ pk:pv for (pk,pv) in zip(headers,row) if pv!='' }
+        if pdict.get('Name'):
+            pname=pdict['Name']
+            pdict['Odds']=odds.get(match_name(pname,onames),5000)
+            rname=match_name(pname,rnames)
+            if rname in rnames:
+                ranking=rankings[rnames.index(rname)]
+                pdict['Cntry']=ranking['country']
+                pdict['Points']=ranking['points']
+                pdict['Rank']=ranking['rank']
+            else:
+                pdict['Cntry']='NA'
+                pdict['Points']=0.0
+                pdict['Rank']=9999
+            players[pname]=pdict
+    pnames=players.keys()
+    pnames.sort(key=lastfirst)  
     worksheet=open_worksheet('Majors','Players')
+    cell_list = worksheet.range('L1:U1')
+    for y in range(len(years)): 
+        cell_list[y].value=years[y]
+    worksheet.update_cells(cell_list)
     current_cell=0
-    cell_list = worksheet.range('A2:F'+str(len(names)+1))
-    for name in names:
-        debug_values(odds.get(name), name)
-        matching_name=match_name(name,rank_names)
-        if matching_name in rank_names:
-            player=rankings[rank_names.index(matching_name)]
-            debug_values(player, current_cell)
-            cell_list[current_cell].value=player.get('rank')
-            cell_list[current_cell+1].value=player['name']
-            cell_list[current_cell+2].value=player['points']
-            cell_list[current_cell+3].value=player['country']
-        else:
-            cell_list[current_cell].value=9999
-            cell_list[current_cell+1].value=name
-            cell_list[current_cell+2].value=0.0
-            cell_list[current_cell+3].value='USA'
-        matching_name=match_name(name,odds)
-        if matching_name in odds.keys():
-            cell_list[current_cell+4].value=odds[matching_name]
-        else:
-            cell_list[current_cell+4].value=9999
+    cell_list = worksheet.range('A2:U'+str(len(pnames)+1))
+    for name in pnames:
+        player=players[name]
+        cell_list[current_cell].value=player['Rank']
+        cell_list[current_cell+1].value=player['Name']
+        cell_list[current_cell+2].value=player['Points']
+        cell_list[current_cell+3].value=player['Cntry']
+        cell_list[current_cell+4].value=player['Odds']
         cell_list[current_cell+5].value=0
-        current_cell += 6
+        for h in range(6,21):
+            cell_list[current_cell+h].value=player.get(headers[h],None)
+        current_cell += 21
     worksheet.update_cells(cell_list)
     return True
 
