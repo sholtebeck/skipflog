@@ -227,6 +227,9 @@ def default_event(event_id=current_event()):
     event["pick_no"]=1 
     event["start"]=edict.get("Start")   
     return event
+
+def next_event():
+    return int(fetch_events()[0]['ID'])
     
 def fetch_url(event_id):
     url={
@@ -268,7 +271,8 @@ def fetch_url(event_id):
     1808 :'http://www.espn.com/golf/leaderboard?tournamentId=401025263',
     1904 :'http://www.espn.com/golf/leaderboard?tournamentId=401056527',
     1905 :'http://www.espn.com/golf/leaderboard?tournamentId=401056552',
-    1906 :'http://www.espn.com/golf/leaderboard?tournamentId=401056556'
+    1906 :'http://www.espn.com/golf/leaderboard?tournamentId=401056556',
+	1907 :'http://www.espn.com/golf/leaderboard?tournamentId=401056547'
     }
     if url.get(event_id):
         return url[event_id]
@@ -422,7 +426,7 @@ def get_playerpicks(playlist):
 
 # Get the list of players from a spreadsheet (players tab)
 def get_players():
-    picks=get_picks(current_event()).keys()
+    picks=get_picks(next_event()).keys()
     players=[]
     players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=A2%3AF155&output=csv"
     result = urllib2.urlopen(players_url)
@@ -593,7 +597,7 @@ def post_players():
         cell_list[current_cell+4].value=player['Odds']
         cell_list[current_cell+5].value=0
         for h in range(6,21):
-            cell_list[current_cell+h].value=player.get(headers[h],None)
+            cell_list[current_cell+h].value=player.get(headers[h],'')
         current_cell += 21
     worksheet.update_cells(cell_list)
     return True
