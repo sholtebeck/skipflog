@@ -158,7 +158,7 @@ class MailHandler(webapp2.RequestHandler):
             eventdict=results.get("event")
             if eventdict and ( eventdict['Status'].endswith('Final') or eventdict['Status'].endswith('Complete') ):
                 models.update_results(results)
-                mailsubj=str(eventdict["Year"])+" "+eventdict["Name"]+" ("+eventdict["Status"]+")"
+                mailsubj=eventdict["Name"]+" ("+eventdict["Status"]+")"
                 if eventdict["Year"] == eventdict["Name"][:4]:
                     mailsubj=str(eventdict["Name"]+" ("+eventdict["Status"]+")")
                 message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=mailsubj)	
