@@ -60,5 +60,8 @@
     </tbody>
   </table>
 </div>
+<div ng-if="event.Done">
+<form action="/mail?event_id={{event.ID}}" method="get"><input type="submit" class="submit" value="Email Results"></form>
+</div>
 </body>
 </html>
