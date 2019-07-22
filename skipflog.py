@@ -303,6 +303,10 @@ def fetch_headers(soup):
         headers['Round']=headers['Status'][6]
     else:
         headers['Round']=0
+    if headers['Status']=='Final' or headers['Status'].endswith('Complete'):
+        headers['Done']=True
+    else:
+        headers['Done']=False
     tables=soup.findAll("table")
     if tables:
         headers['Columns']=[str(th.find('a').string) for th in soup.findAll("table")[-1].findAll('th')]
