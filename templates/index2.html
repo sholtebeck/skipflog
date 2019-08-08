@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
   <head>
-    <title>skipflog2 -- major golf picks</title>
+    <title>skipflog -- major golf picks</title>
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script> 
 <script type="text/javascript">
 $(document).ready(function() {
@@ -109,8 +109,7 @@ $(document).ready(function() {
         <li rel="tab2"> Players </li>
         <li rel="tab3"> Results </li>
         <li rel="tab4"> {{ event.event_name[4:] }} </li>
-        <li rel="tab5"> Major Years</li>
-        <li rel="tab6"> PGA Rank</li>
+        <li rel="tab5"> PGA Rank</li>
 {% endif %}
     </ul>
 
@@ -154,7 +153,7 @@ $(document).ready(function() {
 
 <div id="tab3" class="tab_content"> 
 {% if event %}
-<iframe width='1250' height='800' frameborder='0' src='http://skipflog2.appspot.com/results?event_id={{event.event_id}}'></iframe>
+<iframe width='1250' height='800' frameborder='0' src='http://skipflog.appspot.com/app/results.html?event_id={{event.event_id}}'></iframe>
 {% endif %}
 </div><!-- #tab3 -->
 
@@ -165,12 +164,7 @@ $(document).ready(function() {
 
 <div id="tab5" class="tab_content"> 
 
-<iframe width='1250' height='800' frameborder='0' src='https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=0&output=html&widget=true'></iframe>
-
-</div><!-- #tab5 -->
-<div id="tab6" class="tab_content"> 
-
-<iframe width='1250' height='800' frameborder='0' src='http://skipflog2.appspot.com/app/players.html'></iframe>
+<iframe width='1250' height='800' frameborder='0' src='http://skipflog.appspot.com/app/players.html'></iframe>
 
 </div><!-- #tab6 -->
 </div> <!-- .tab_container --> 
