@@ -150,14 +150,7 @@ def get_value(string):
 
 # Get the event information for an event (converted to asc)
 def get_event(event_id):
-    event=default_event(event_id)
-    evt=json_results(event_url+"?event_id="+str(event_id))
-#    if evt.get('field'):
-#        event['picks']['Available']=[ xstr(p) for p in evt.get('field') ]
-#    event['picks']['Picked']=[xstr(p) for p in evt['picks']['Picked']]
-#    event['pick_no']=len(event['picks']['Picked'])+1
-    for picker in skip_pickers:
-        event['picks'][picker]=[xstr(p) for p in evt['picks'][picker]]  
+    event=json_results(event_url+"?event_id="+str(event_id))
     return event        
     
 # Get the picks for an event
@@ -166,14 +159,14 @@ def get_picks(event_id):
     pickdict=json_results(picks_url+str(event_id))
     if pickdict.get('picks'):
         for picker in skip_pickers:
-            picklist=[str(pick) for pick in pickdict["picks"][picker][:10]]
+            picklist=[str(pick) for pick in pickdict["picks"][picker]]
             picks[picker]={'Name':picker,'Count':len(picklist),'Picks':picklist,'Points':0}
             for pick in picklist:
                 picks[str(pick)]=picker
     else:
         for picker in skip_pickers:
             if pickdict.get(picker):
-                picklist=[str(pick) for pick in pickdict[picker][:10]]
+                picklist=[str(pick) for pick in pickdict[picker]]
                 picks[picker]={'Name':picker,'Count':len(picklist),'Picks':picklist,'Points':0}
                 for pick in picklist:
                     picks[str(pick)]=picker
@@ -223,7 +216,9 @@ def default_event(event_id=current_event()):
     event["picks"]={"Picked":[],"Available":[] }
     for picker in event["pickers"]:
         event["picks"][picker]=[]
-    event["picks"]["Available"]=players=[player['name'] for player in get_players()]
+    players=[player['name'] for player in get_players()]
+    players.sort(key=lastfirst)
+    event["picks"]["Available"]=players
     event["pick_no"]=1 
     event["start"]=edict.get("Start")   
     return event
@@ -233,7 +228,7 @@ def next_event():
     
 def fetch_url(event_id):
     url={
-	1004: 'http://www.espn.com/golf/leaderboard?tournamentId=774', 
+    1004: 'http://www.espn.com/golf/leaderboard?tournamentId=774', 
     1006: 'http://www.espn.com/golf/leaderboard?tournamentId=797', 
     1007: 'http://www.espn.com/golf/leaderboard?tournamentId=798', 
     1008: 'http://www.espn.com/golf/leaderboard?tournamentId=799', 
@@ -272,7 +267,7 @@ def fetch_url(event_id):
     1904 :'http://www.espn.com/golf/leaderboard?tournamentId=401056527',
     1905 :'http://www.espn.com/golf/leaderboard?tournamentId=401056552',
     1906 :'http://www.espn.com/golf/leaderboard?tournamentId=401056556',
-	1907 :'http://www.espn.com/golf/leaderboard?tournamentId=401056547'
+    1907 :'http://www.espn.com/golf/leaderboard?tournamentId=401056547'
     }
     if url.get(event_id):
         return url[event_id]
@@ -455,7 +450,7 @@ def get_players():
             players.append(player)
     return players
 
-def old_results(event_id):
+def fed_results(event_id):
     picks=get_picks(event_id)
     for name in names.values():
         picks[name]["Count"]=0
@@ -467,11 +462,14 @@ def old_results(event_id):
     for row in rows:
         res=fetch_results(row, results.get('event').get('Columns'))
         if res.get('Name') in picks.keys():
+            if res.get("FEDEX PTS"):
+                res["Points"]=int(res.get("FEDEX PTS"))
             picker=xstr(picks[res['Name']])
-            res['Picker']=picker
-            picks[picker]['Count']+=1
-            picks[picker]['Points']+=res['Points']
-        if res.get('Points')>10 or res.get('Picker'):
+            if picks[picker]['Count']<10:
+                res['Picker']=picker
+                picks[picker]['Count']+=1
+                picks[picker]['Points']+=res['Points']
+        if res.get('Points')>90 or res.get('Picker'):
             if res.get('R1'):
                 results['players'].append(res)
     results['pickers']=[picks[key] for key in picks.keys() if key in picks.values()]

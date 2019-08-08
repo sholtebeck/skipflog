@@ -54,7 +54,7 @@ def getResults(event_id):
         results=models.get_results(event_id)
         if not results or results["event"]["Status"]!="Final":
             try:
-                results=get_results(int(event_id))
+                results=fed_results(int(event_id))
                 models.update_results(results)
                 resultstr=str(json.dumps(results))
                 memcache.add(results_key,resultstr,240)
@@ -75,18 +75,12 @@ def getEvent(event_id):
         models.update_event(event_data)
     return event_data
 
-def getEvent(event_id):
-#    event = Event.get(event_key(event_id))
-    event = models.get_event(event_id)
-    if event and event.event_json and event.event_json.get('pick_no'):
-        event_data=event.event_json
-    elif event and event.event_name:
-        event_data={"event_id":event.event_id, "event_name":event.event_name, "picks": models.get_picks(event), "field":event.field }
-        event_data["picks"]["Picked"]=event.picks
-    else:
-        event_data=default_event(event_id)
-        models.update_event(event_data)
-    return event_data
+def getEvents():
+    events = memcache.get("events")
+    if not events:
+        events=fetchEvents()
+        memcache.add("events",events)
+    return events
 
 def nextEvent():
     event_next=int(fetch_events()[0]['ID'])
@@ -123,12 +117,6 @@ def updateLastPick(event):
 
 class MainPage(webapp2.RequestHandler):       
     def get(self):
-        event_list = []
-        event_name = "None"
-        event_id = self.request.get('event_id');
-        if not event_id:
-            event_list=[{"event_id":event["ID"],"event_name":event["Name"]} for event in fetchEvents()]
-    
         if users.get_current_user():
             user = names[users.get_current_user().nickname()]
             url = users.create_logout_url(self.request.uri)
@@ -138,13 +126,30 @@ class MainPage(webapp2.RequestHandler):
             url = users.create_login_url(self.request.uri)
             url_linktext = 'Login'
 
+        event_id = int(self.request.get('event_id',currentEvent()))
+        event = getEvent(event_id)
+        events = getEvents()
+        pick_no = event["pick_no"]
+        picknum = pick_ord[pick_no]
+        # get next player
+        if picknum != "Done":
+            event["next"]=event["pickers"][0] if mypicks.count(pick_no)>0 else event["pickers"][1]
+        else:
+            event["next"]="Done"
+        # check results
+        if memcache.get("lastpick"):
+            event["lastpick"]=memcache.get("lastpick")
+        event["results"]=results_url+"?event_id="+str(event_id)
+     
         template_values = {
-            'event_list': event_list,
-            'event_name': event_name,
-            'title': "Events",
+            'event': event,
+			'events': events,
+            'pick_no': pick_no,
+            'picknum': picknum,
+			'uri': self.request.uri,
             'url': url,
             'url_linktext': url_linktext,
-            'user': user,
+            'user': user
         }
         template = jinja_environment.get_template('index.html')
         self.response.out.write(template.render(template_values))
@@ -211,6 +216,7 @@ class PickHandler(webapp2.RequestHandler):
      
         template_values = {
             'event': event,
+			'events': getEvents(),
             'pick_no': pick_no,
             'picknum': picknum,
             'url': url,
@@ -237,7 +243,8 @@ class PickHandler(webapp2.RequestHandler):
             models.add_pick({"event_id":event_id,"picker":picker,"player":player,"pickno":event['pick_no']-1 })
         # update last pick message
         updateLastPick(event)
-        self.redirect('/pick?event_id=' + event_id) 
+        self.redirect('/')
+#        self.redirect('/pick?event_id=' + event_id) 
 
 class EventHandler(webapp2.RequestHandler):
     def get(self):     
@@ -261,7 +268,8 @@ class EventHandler(webapp2.RequestHandler):
             results_json = json.loads(results_data)
             models.update_results(results_json)
         event_id = str(event_json["event_id"])
-        self.redirect('/event?event_id=' +event_id) 
+        self.redirect('/')
+#        self.redirect('/event?event_id=' +event_id) 
 
 class PicksHandler(webapp2.RequestHandler):   
     def get(self):
@@ -298,7 +306,7 @@ class PlayersHandler(webapp2.RequestHandler):
             output_format='html'
         players=getPlayers()
         self.response.headers['Content-Type'] = 'application/json'
-        template_values = { 'event': {"name":event.event_name }, "players": players }
+        template_values = { 'event': {"name":event['event_name'] }, "players": players }
         self.response.write(json.dumps(template_values))
 
 class RankingHandler(webapp2.RequestHandler): 

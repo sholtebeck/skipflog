@@ -25,6 +25,7 @@ rankings_url="http://knarflog.appspot.com/ranking"
 result_url="http://knarflog.appspot.com/results"
 results_url="http://skipflog2.appspot.com/results"
 players_api="http://knarflog.appspot.com/api/players"
+stats_url="http://www.espn.com/golf/statistics"
 leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"
 skip_user="skipfloguser"
 skip_picks={}
