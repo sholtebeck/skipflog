@@ -52,7 +52,7 @@ def getResults(event_id):
         results=json.loads(resultstr)
     else:
         results=models.get_results(event_id)
-        if not results or results["event"]["Status"]!="Final":
+        if not results or results["event"]["Status"]!="Final" or event_id == 1908:
             try:
                 results=fed_results(int(event_id))
                 models.update_results(results)
@@ -261,13 +261,13 @@ class EventHandler(webapp2.RequestHandler):
             
     def post(self):     
         event_data = self.request.get('event_data')
-        event_json = json.loads(event_data)
-        updateEvent(event_json)
+        if event_data:		
+            event_json = json.loads(event_data)
+            updateEvent(event_json)
         results_data = self.request.get('results_data')
         if results_data:
             results_json = json.loads(results_data)
             models.update_results(results_json)
-        event_id = str(event_json["event_id"])
         self.redirect('/')
 #        self.redirect('/event?event_id=' +event_id) 
 

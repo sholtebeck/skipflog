@@ -457,6 +457,7 @@ def fed_results(event_id):
     page=soup_results(espn_url)
     results={}
     results['event']=fetch_headers(page)
+    results['event']['ID']=event_id
     results['players']=[]
     rows=fetch_rows(page)
     for row in rows:
