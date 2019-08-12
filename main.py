@@ -52,7 +52,7 @@ def getResults(event_id):
         results=json.loads(resultstr)
     else:
         results=models.get_results(event_id)
-        if not results or results["event"]["Status"]!="Final" or event_id == 1908:
+        if not results or results["event"]["Status"]!="Final":
             try:
                 results=fed_results(int(event_id))
                 models.update_results(results)
@@ -338,7 +338,7 @@ class ResultsHandler(webapp2.RequestHandler):
             self.response.write(json.dumps({"results":results}))
         elif output_format=='html':
             template_values = {'results': results }
-            template = jinja_environment.get_template('results.html')
+            template = jinja_environment.get_template('results2.html')
             self.response.out.write(template.render(template_values))
                     
     def post(self):
