@@ -152,6 +152,23 @@ def get_value(string):
 def get_event(event_id):
     event=json_results(event_url+"?event_id="+str(event_id))
     return event        
+
+# Get the picks for an event (with points)
+def fed_picks(event_id):
+    picks={}
+    eventdict=get_event(event_id)
+    pickdict=eventdict.get("picks")
+    for picker in eventdict.get('pickers'):
+        if isinstance(picker,dict):
+            name=picker["Name"]
+            picks[name] = picker       
+        elif picker in skip_pickers:
+            name=picker
+            picklist=[str(pick) for pick in pickdict["picks"][picker]]
+            picks[picker]={'Name':picker,'Count':len(picklist),'Picks':picklist,'Points':0}
+        for pick in picks[name]["Picks"]:
+            picks[pick]=name
+    return picks
     
 # Get the picks for an event
 def get_picks(event_id):
@@ -451,9 +468,11 @@ def get_players():
     return players
 
 def fed_results(event_id):
-    picks=get_picks(event_id)
-    for name in names.values():
+    picks=fed_picks(event_id)
+    for name in skip_pickers:
         picks[name]["Count"]=0
+        picks[name]["Total"]=picks[name]["Points"]
+        picks[name]["Points"]=0
     page=soup_results(espn_url)
     results={}
     results['event']=fetch_headers(page)
@@ -470,11 +489,12 @@ def fed_results(event_id):
                 res['Picker']=picker
                 picks[picker]['Count']+=1
                 picks[picker]['Points']+=res['Points']
+                picks[picker]['Total']+=res['Points']
         if res.get('Points')>90 or res.get('Picker'):
             if res.get('R1'):
                 results['players'].append(res)
     results['pickers']=[picks[key] for key in picks.keys() if key in picks.values()]
-    if results['pickers'][1]['Points']>results['pickers'][0]['Points']:
+    if results['pickers'][1]['Total']>results['pickers'][0]['Total']:
         results['pickers'].reverse()
     results['pickers'][0]['Rank']=1
     results['pickers'][1]['Rank']=2
