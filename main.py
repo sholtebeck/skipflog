@@ -151,7 +151,7 @@ class MainPage(webapp2.RequestHandler):
             'url_linktext': url_linktext,
             'user': user
         }
-        template = jinja_environment.get_template('index.html')
+        template = jinja_environment.get_template('index2.html')
         self.response.out.write(template.render(template_values))
 
 class MailHandler(webapp2.RequestHandler):       
