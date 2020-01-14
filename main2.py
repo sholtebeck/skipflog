@@ -145,7 +145,7 @@ class MailHandler(webapp2.RequestHandler):
             message.bcc = "stevearez@gmail.com"			
             result = urllib2.urlopen(results_url)
             message.html=result.read()
-            message.send()
+#           message.send()
  
 
     def post(self):
@@ -290,7 +290,7 @@ class RankingHandler(webapp2.RequestHandler):
         message.to = "skipflog@googlegroups.com"
         message.html=rankings_html+"<p>"
         message.html+=fetch_tables(result_url)
-        message.send()        
+#       message.send()        
             
 class ResultsHandler(webapp2.RequestHandler):   
     def get(self):
@@ -318,7 +318,7 @@ class ResultsHandler(webapp2.RequestHandler):
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name)
         message.to = "skipflog@googlegroups.com"
         message.html=fetch_tables(result_url)
-        message.send()        
+#       message.send()        
 
 class UpdateHandler(webapp2.RequestHandler):
     def get(self):
