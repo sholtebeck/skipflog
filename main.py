@@ -54,39 +54,29 @@ def getResults(event_id):
         results=models.get_results(event_id)
         if not results or results["event"]["Status"]!="Final":
             try:
-                results=fed_results(int(event_id))
+                results=get_results(int(event_id))
                 models.update_results(results)
                 resultstr=str(json.dumps(results))
                 memcache.add(results_key,resultstr,240)
             except:
-                memcache.delete(results_key)			
+                memcache.delete(results_key)    
     return results
 
 def getEvent(event_id):
 #    event = Event.get(event_key(event_id))
     event = models.get_event(event_id)
-    if event and event.event_json and event.event_json.get('pick_no'):
+    if event:
         event_data=event.event_json
-    elif event and event.event_name:
-        event_data={"event_id":event.event_id, "event_name":event.event_name, "picks": models.get_picks(event), "field":event.field }
-        event_data["picks"]["Picked"]=event.picks
     else:
         event_data=default_event(event_id)
         models.update_event(event_data)
     return event_data
 
-def getEvents():
-    events = memcache.get("events")
-    if not events:
-        events=fetchEvents()
-        memcache.add("events",events)
-    return events
-
 def nextEvent():
-    event_next=int(fetch_events()[0]['ID'])
-    event = models.get_event(event_next)
+    event_current=currentEvent()
+    event = models.get_event(event_current)
     if not event:
-        event=default_event(event_next)
+        event=default_event(event_current)
     return event
 
 def updateEvent(event_data):
@@ -117,6 +107,12 @@ def updateLastPick(event):
 
 class MainPage(webapp2.RequestHandler):       
     def get(self):
+        event_list = []
+        event_name = "None"
+        event_id = self.request.get('event_id');
+        if not event_id:
+            event_list=[{"event_id":event["ID"],"event_name":event["Name"]} for event in fetchEvents()]
+    
         if users.get_current_user():
             user = names[users.get_current_user().nickname()]
             url = users.create_logout_url(self.request.uri)
@@ -126,32 +122,15 @@ class MainPage(webapp2.RequestHandler):
             url = users.create_login_url(self.request.uri)
             url_linktext = 'Login'
 
-        event_id = int(self.request.get('event_id',currentEvent()))
-        event = getEvent(event_id)
-        events = getEvents()
-        pick_no = event["pick_no"]
-        picknum = pick_ord[pick_no]
-        # get next player
-        if picknum != "Done":
-            event["next"]=event["pickers"][0] if mypicks.count(pick_no)>0 else event["pickers"][1]
-        else:
-            event["next"]="Done"
-        # check results
-        if memcache.get("lastpick"):
-            event["lastpick"]=memcache.get("lastpick")
-        event["results"]=results_url+"?event_id="+str(event_id)
-     
         template_values = {
-            'event': event,
-			'events': events,
-            'pick_no': pick_no,
-            'picknum': picknum,
-			'uri': self.request.uri,
+            'event_list': event_list,
+            'event_name': event_name,
+            'title': "Events",
             'url': url,
             'url_linktext': url_linktext,
-            'user': user
+            'user': user,
         }
-        template = jinja_environment.get_template('index2.html')
+        template = jinja_environment.get_template('index.html')
         self.response.out.write(template.render(template_values))
 
 class MailHandler(webapp2.RequestHandler):       
@@ -161,17 +140,13 @@ class MailHandler(webapp2.RequestHandler):
             event = getEvent(event_id)
             results=getResults(event_id)
             eventdict=results.get("event")
-            if eventdict and ( eventdict['Status'].endswith('Final') or eventdict['Status'].endswith('Complete') ):
-                models.update_results(results)
-                mailsubj=eventdict["Name"]+" ("+eventdict["Status"]+")"
-                if eventdict["Year"] == eventdict["Name"][:4]:
-                    mailsubj=str(eventdict["Name"]+" ("+eventdict["Status"]+")")
-                message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=mailsubj)	
-                message.to = "skipflog@googlegroups.com"
-                result = urllib2.urlopen(results_url)
-                message.html=result.read()
-                message.send()
-				
+            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=str(eventdict["Year"])+" "+eventdict["Name"]+" ("+eventdict["Status"]+")")
+            message.to = "skipflog@googlegroups.com"
+            result = urllib2.urlopen(results_url)
+            message.html=result.read()
+            message.send()
+ 
+
     def post(self):
         event_id = self.request.get('event_id')
         event = getEvent(event_id)
@@ -180,8 +155,10 @@ class MailHandler(webapp2.RequestHandler):
                             subject=event.get('event_name')+" picks")
         message.to = "skipflog@googlegroups.com"
         message.html=event.get('event_name')+"<br>"
-        picks = get_picks(event_id)
-        players = {picker : picks[picker].get('Picks') for picker in skip_pickers }
+        players = {"Steve":[],"Mark":[]}
+        picks = getPicks(event_id)
+        for pick in picks:
+            players[pick.who].append(pick.player)
         for picker in skip_pickers:
             message.html += picker+"'s Picks:<ol>"
             for player in players[picker]:
@@ -216,7 +193,6 @@ class PickHandler(webapp2.RequestHandler):
      
         template_values = {
             'event': event,
-			'events': getEvents(),
             'pick_no': pick_no,
             'picknum': picknum,
             'url': url,
@@ -240,11 +216,9 @@ class PickHandler(webapp2.RequestHandler):
             event["lastpick"]=picker+" picked "+player
             event["pick_no"]+=1
             updateEvent(event)
-            models.add_pick({"event_id":event_id,"picker":picker,"player":player,"pickno":event['pick_no']-1 })
         # update last pick message
         updateLastPick(event)
-        self.redirect('/')
-#        self.redirect('/pick?event_id=' + event_id) 
+        self.redirect('/pick?event_id=' + event_id) 
 
 class EventHandler(webapp2.RequestHandler):
     def get(self):     
@@ -261,15 +235,10 @@ class EventHandler(webapp2.RequestHandler):
             
     def post(self):     
         event_data = self.request.get('event_data')
-        if event_data:		
-            event_json = json.loads(event_data)
-            updateEvent(event_json)
-        results_data = self.request.get('results_data')
-        if results_data:
-            results_json = json.loads(results_data)
-            models.update_results(results_json)
-        self.redirect('/')
-#        self.redirect('/event?event_id=' +event_id) 
+        event_json = json.loads(event_data)
+        updateEvent(event_json)
+        event_id = str(event_json["event_id"])
+        self.redirect('/event?event_id=' +event_id) 
 
 class PicksHandler(webapp2.RequestHandler):   
     def get(self):
@@ -279,8 +248,6 @@ class PicksHandler(webapp2.RequestHandler):
             event_id=currentEvent()    
         event = getEvent(event_id)
         if event:
-            if not event.get('picks'):
-                event['picks']=models.get_picks(event_id)
             pick_dict={}
             for picker in skip_pickers:
                 pick_dict[picker]=event["picks"][picker]
@@ -289,7 +256,7 @@ class PicksHandler(webapp2.RequestHandler):
             if output_format=='json':
                 self.response.headers['Content-Type'] = 'application/json'
                 self.response.write(json.dumps({"picks":pick_dict}))
-                   
+                    
     def post(self):
         picklist = self.request.get('picklist')
         pick_players(picklist)     
@@ -306,7 +273,7 @@ class PlayersHandler(webapp2.RequestHandler):
             output_format='html'
         players=getPlayers()
         self.response.headers['Content-Type'] = 'application/json'
-        template_values = { 'event': {"name":event['event_name'] }, "players": players }
+        template_values = { 'event': {"name":event.event_name }, "players": players }
         self.response.write(json.dumps(template_values))
 
 class RankingHandler(webapp2.RequestHandler): 
@@ -338,7 +305,7 @@ class ResultsHandler(webapp2.RequestHandler):
             self.response.write(json.dumps({"results":results}))
         elif output_format=='html':
             template_values = {'results': results }
-            template = jinja_environment.get_template('results2.html')
+            template = jinja_environment.get_template('results.html')
             self.response.out.write(template.render(template_values))
                     
     def post(self):

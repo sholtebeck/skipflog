@@ -76,7 +76,7 @@ $(document).ready(function() {
         }
 	#container {
 		width: 1300px;
-		margin: 0;	
+		margin: 0 auto;	
 	}
 	table { 
 	color: #333; /* Lighten up font color */
@@ -95,26 +95,22 @@ $(document).ready(function() {
   </head>
   <body>
 {% if user %}
-<form action="/" method="get" onchange="this.form.submit()">
-     &nbsp;Event: <select name="event_id">
-      {% for e in events %}
-    <option value="{{e.ID}}" {% if e.Name==event.event_name %} selected {% endif %} >{{e.Name}}</option>
-   {% endfor %}
-   </select><input type="submit" id="submit" value="Get">   &nbsp;Logged in as <b>{{ user }}</b>.<a href="{{ url }}">{{ url_linktext }}</a>
-</form>
-{% else %}
-  <a href="{{ url }}">{{ url_linktext }}</a>  &nbsp;Event: <b>{{ event.event_name }}</b>
+    &nbsp;Logged in as <b>{{ user }}</b>:
 {% endif %}
-
+  <a href="{{ url }}">{{ url_linktext }}</a>
+{% if event %}
+     &nbsp;Event: <b>{{ event.event_name }}</b> <a href="/">Clear</a>
+{% endif %}
 <p><div id="container">
 
   <ul class="tabs"> 
-        <li class="active" rel="tab1"> Picks </li>
+        <li class="active" rel="tab1"> Picks</li>
 {% if event %}
         <li rel="tab2"> Players </li>
         <li rel="tab3"> Results </li>
         <li rel="tab4"> {{ event.event_name[4:] }} </li>
-        <li rel="tab5"> Ranking </li>
+        <li rel="tab5"> Major Years</li>
+        <li rel="tab6"> PGA Rank</li>
 {% endif %}
     </ul>
 
@@ -123,49 +119,19 @@ $(document).ready(function() {
      <div id="tab1" class="tab_content"> 
 
 {% if event %}
-   {% if event.lastpick %}
-   Last Pick: {{event.lastpick}} <p>
-    <table border=1>
-	<col width="250">
-	<col width="250">
-    <tr>
-   {% for picker in event.pickers %}
-	<th>{{picker}}</th>
+   {% block content %}
+   {% endblock %}
+{% else %}
+   <form action="/pick" method="get" onchange="this.form.submit()">
+   Select Event: <select name="event_id">
+   {% for event in event_list %}
+    <option value="{{event.event_id}}">{{event.event_name}}</option>
    {% endfor %}
-    <tr>
-   {% for picker in event.pickers %}
-	<td><ol>
-        {% for player in event.picks[picker] %}
-        <li>{{ player }}
-        {% endfor %}
-     </ol></td>
-    {% endfor %}
-   </tr></table>
-  {% endif %}
-   {% if user==event.next %}
-    <p><form action="/pick" method="post">
-    <div>{{user}}'s {{picknum}} Pick: <select name="player"> 
-  	 {% for player in event.picks["Available"] %}
-     <option>{{player}}</option>
-     {% endfor %}
-     </select><input type="submit" id="submit" name="submit" value="Pick"></div>
-    <input type="hidden" name="who" value="{{user}}">
-    <input type="hidden" name="event_id" value="{{event.event_id}}">
-    <input type="hidden" name="pick_no" value="{{pick_no}}">
-    </form>
-   {% else %}
-   {% if event.next=="Done" %}
-   {% if user %}
-   <p><form action="/mail" method="post">We're Done. <input type="hidden" name="event_id" value="{{event.event_id}}">
-      <input type="submit" id="submit" value="Email Picks"></form>
-   {% else %}
-   <p>We're Done.
+   </select><input type="submit" id="submit" value="Get">
+</form>
    {% endif %}
-   {% else %}
-   <br>It's <b>{{event.next}}'s</b> turn.
-   {% endif %}
-{% endif %}
 
+{% if event %}
 
 </div><!-- #tab1 -->
 <div id="tab2" class="tab_content"> 
@@ -176,7 +142,6 @@ $(document).ready(function() {
 <br>{{player}}
 {% endfor %}
 {% endif %}
-
 {% if event.next!="Done" %}
 <p><strong>Available:</strong>
 {% for player in event.picks["Available"]%}
@@ -184,26 +149,30 @@ $(document).ready(function() {
 {% endfor %}
 {% endif %}
 {% endif %}
+
 </div><!-- #tab2 -->
 
-
-<div id="tab3" class="tab_content">
-{% if event.results %}
-<iframe width='1250' height='800' frameborder='0' src='/results?event_id={{event.event_id}}'></iframe>
-{% else %}
-No results yet.
+<div id="tab3" class="tab_content"> 
+{% if event %}
+<iframe width='1250' height='800' frameborder='0' src='http://skipflog.appspot.com/results?event_id={{event.event_id}}'></iframe>
 {% endif %}
 </div><!-- #tab3 -->
 
-<div id="tab4" class="tab_content">
+<div id="tab4" class="tab_content"> 
 <iframe width='1250' height='800' frameborder='0' src='https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=1&output=html&widget=true'></iframe>
+
 </div><!-- #tab4 -->
 
 <div id="tab5" class="tab_content"> 
 
-<iframe width='1250' height='800' frameborder='0' src='../app/players.html'></iframe>
+<iframe width='1250' height='800' frameborder='0' src='https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=0&output=html&widget=true'></iframe>
 
 </div><!-- #tab5 -->
+<div id="tab6" class="tab_content"> 
+
+<iframe width='1250' height='800' frameborder='0' src='http://skipflog.appspot.com/app/players.html'></iframe>
+
+</div><!-- #tab6 -->
 </div> <!-- .tab_container --> 
 </div> <!-- #container -->
 </body>

@@ -99,7 +99,7 @@ def updateLastPick(event):
     pick_no = event['pick_no']
     event["next"]=event['pickers'][0] if mypicks.count(pick_no)>0 else event["pickers"][1]
     if (pick_no<23 and not lastpick.startswith(event["next"])):
-        message = mail.EmailMessage(sender='admin@skipflog2.appspotmail.com',subject=event["event_name"])
+        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event["event_name"])
         message.to = numbers.get(event["next"])
         message.body=lastpick
         message.send()    
@@ -130,7 +130,7 @@ class MainPage(webapp2.RequestHandler):
             'url_linktext': url_linktext,
             'user': user,
         }
-        template = jinja_environment.get_template('index2.html')
+        template = jinja_environment.get_template('index.html')
         self.response.out.write(template.render(template_values))
 
 class MailHandler(webapp2.RequestHandler):       
@@ -140,12 +140,11 @@ class MailHandler(webapp2.RequestHandler):
             event = getEvent(event_id)
             results=getResults(event_id)
             eventdict=results.get("event")
-            message = mail.EmailMessage(sender='admin@skipflog2.appspotmail.com',subject=eventdict["Name"]+" ("+eventdict["Status"]+")")
-            message.to = "john7145e@gmail.com,mholtebeck@gmail.com"
-            message.bcc = "stevearez@gmail.com"			
+            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=str(eventdict["Year"])+" "+eventdict["Name"]+" ("+eventdict["Status"]+")")
+            message.to = "skipflog@googlegroups.com"
             result = urllib2.urlopen(results_url)
             message.html=result.read()
-#           message.send()
+            message.send()
  
 
     def post(self):
@@ -200,7 +199,7 @@ class PickHandler(webapp2.RequestHandler):
             'url_linktext': url_linktext,
             'user': user
         }
-        template = jinja_environment.get_template('picks2.html')
+        template = jinja_environment.get_template('picks.html')
         self.response.out.write(template.render(template_values))
 
     def post(self):
@@ -290,7 +289,7 @@ class RankingHandler(webapp2.RequestHandler):
         message.to = "skipflog@googlegroups.com"
         message.html=rankings_html+"<p>"
         message.html+=fetch_tables(result_url)
-#       message.send()        
+        message.send()        
             
 class ResultsHandler(webapp2.RequestHandler):   
     def get(self):
@@ -318,7 +317,7 @@ class ResultsHandler(webapp2.RequestHandler):
         message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name)
         message.to = "skipflog@googlegroups.com"
         message.html=fetch_tables(result_url)
-#       message.send()        
+        message.send()        
 
 class UpdateHandler(webapp2.RequestHandler):
     def get(self):

@@ -46,7 +46,7 @@ ul.tabs li.active{
 }
 	body {
 	  font-family: Verdana, Arial, sans-serif;	
-      font-size: 18px;
+      font-size: 1.1em;
 	  background-color: #DDDDDD;
 	}
 	select {
@@ -128,11 +128,6 @@ background: #FAFAFA; /* Lighter grey background */
 
 select {
   font-family: inherit;
-}
-
-#submit {
-  font-family: Helvetica, Arial, sans-serif;
-  font-size: 1.0em;
 }
 
 
