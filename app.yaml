@@ -10,11 +10,11 @@ handlers:
   static_dir: app
 
 - url: /ranking
-  script: main2.app
+  script: main.app
   login: admin
   
 - url: /.*
-  script: main2.app
+  script: main.app
 
 
 libraries:
