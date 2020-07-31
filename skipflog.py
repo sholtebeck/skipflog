@@ -50,7 +50,8 @@ debug=False
 # get current week and year
 def current_event():
     this_event=strftime("%y%m",gmtime())
-    return int(this_event) 
+    return 2008
+#    return int(this_event) 
 
 def current_month():
     this_month=strftime("%m",gmtime())
@@ -185,35 +186,34 @@ def fetch_events():
 
 # Get a default event dictionary
 def default_event(event_id=current_event()):
-    edict=[e for e in fetch_events() if e['ID']==str(event_id)][0]
-    event={"event_id":event_id }
-    event["event_year"]=2000+(int(event_id)/100)
-    event["event_name"]=edict.get("Name",str(event["event_year"])+" "+events.get(int(event_id)%100))
+    event=[e for e in fetch_events()][0]
+    event["event_id"]=int(event['ID'])
+    event["event_year"]=int(event['Name'][:4])
+    event["event_name"]=event['Name']
     event["pickers"]=skip_pickers
-    event["next"]=edict.get('First',skip_pickers[0])
+    event["next"]=event.get('First',skip_pickers[0])
     event["picks"]={"Picked":[],"Available":[] }
     for picker in skip_pickers:
         event["picks"][picker]=[]
     event["picks"]["Available"]=players=[player['name'] for player in get_players()]
     event["pick_no"]=1 
-    event["start"]=edict.get("Start")	
     return event
-	
+    
 def fetch_url(event_id):
     url={
-	1604: 'http://www.espn.com/golf/leaderboard?tournamentId=2493', 
-	1606: 'http://www.espn.com/golf/leaderboard?tournamentId=2501', 
-	1607: 'http://www.espn.com/golf/leaderboard?tournamentId=2505', 
-	1608: 'http://www.espn.com/golf/leaderboard?tournamentId=2507',
-	1704: 'http://www.espn.com/golf/leaderboard?tournamentId=2700', 
-	1706: 'http://www.espn.com/golf/leaderboard?tournamentId=3066', 
-	1707: 'http://www.espn.com/golf/leaderboard?tournamentId=2710', 
-	1708: 'http://www.espn.com/golf/leaderboard?tournamentId=2712',
-	1804: 'http://www.espn.com/golf/leaderboard?tournamentId=401025221',
-	1806: 'http://www.espn.com/golf/leaderboard?tournamentId=401025255',
+    1604: 'http://www.espn.com/golf/leaderboard?tournamentId=2493', 
+    1606: 'http://www.espn.com/golf/leaderboard?tournamentId=2501', 
+    1607: 'http://www.espn.com/golf/leaderboard?tournamentId=2505', 
+    1608: 'http://www.espn.com/golf/leaderboard?tournamentId=2507',
+    1704: 'http://www.espn.com/golf/leaderboard?tournamentId=2700', 
+    1706: 'http://www.espn.com/golf/leaderboard?tournamentId=3066', 
+    1707: 'http://www.espn.com/golf/leaderboard?tournamentId=2710', 
+    1708: 'http://www.espn.com/golf/leaderboard?tournamentId=2712',
+    1804: 'http://www.espn.com/golf/leaderboard?tournamentId=401025221',
+    1806: 'http://www.espn.com/golf/leaderboard?tournamentId=401025255',
     1807: 'http://www.espn.com/golf/leaderboard?tournamentId=401025259',
     1808: 'http://www.espn.com/golf/leaderboard?tournamentId=401025263'
-	}
+    }
     if url.get(event_id):
         return url[event_id]
     else:
@@ -238,15 +238,20 @@ def fetch_headers(soup):
         headers['Dates']=xstr(dates.string) 
         headers['Year']=int(headers['Dates'][-4:])
     thead=soup.find('thead')
-    if soup.find("span",{"class":"tournament-status"}):
-        headers['Status']=soup.find("span",{"class":"tournament-status"}).string
+    if soup.find("div",{"class":"status"}):
+        headers['Status']=str(soup.find("div",{"class":"status"}).find("span").string)
         if headers['Status'].startswith("Round "):
             headers['Round']=headers['Status'][6]
     else:
         headers['Round']=0
     tables=soup.findAll("table")
     if tables:
-        headers['Columns']=[str(th.string) for th in soup.findAll("table")[-1].findAll('th')]
+        headers['Columns']=[]
+        for th in tables[-1].findAll('th'):
+            if th.a:
+                headers['Columns'].append(str(th.a.string))
+            elif th.string:
+                headers['Columns'].append(str(th.string))
     return headers
     
 def fetch_odds():
@@ -256,7 +261,7 @@ def fetch_odds():
     for tr in soup.findAll('tr'):
         td =tr.findAll('td')
         if len(td)==2 and td[0].string and '/' in td[1].string:
-            odds[xstr(td[0].string)]=int(td[1].string.split('/')[0])
+            odds[xstr(td[0].string)]=xstr(td[1].string.split('/')[0])
     return odds        
 
 def fetch_rankings(row):
@@ -302,7 +307,7 @@ def fetch_results(row, columns):
             results['Today']+='('+results['TODAY']+')'
         elif results.get('THRU').isdigit():
             results['Today']='('+results['TODAY']+') thru '+results['THRU']
-            results['Total']='('+results['TO PAR']+') thru '+results['THRU']
+            results['Total']='('+results.get('TO PAR')+') thru '+results['THRU']
         elif results['THRU'][-2:] in ('AM','PM'):
             results['Time']='@ '+results['THRU']
         elif results['THRU'] in ('MC','CUT'):
@@ -349,7 +354,7 @@ def fetch_tables(url):
 
 def fetch_header(html):
     return str(BeautifulSoup(html).find('th').string)
-	
+    
 # fetch all table rows
 def fetch_rows(page):
 #   return page.find('table').findAll('tr')    
@@ -484,18 +489,19 @@ def match_name(name, namelist):
    
 # Post the players to the Players tab in Majors spreadsheet
 def post_players():
-    current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=0&output=csv'
-    result = urllib2.urlopen(current_csv)
-    rows=[row for row in csv.reader(result)]
-    names=[name[1] for name in rows[3:] if name[1]!='']
-    odds=fetch_odds()
-    odds_names=odds.keys()
+#    current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=0&output=csv'
+#    result = urllib2.urlopen(current_csv)
+#    rows=[row for row in csv.reader(result)]
+#    names=[name[1] for name in rows[3:] if name[1]!='']
+    odds_names=[n.strip() for n in open("app\players.txt").readlines()]
+#    odds=fetch_odds()
+#    odds_names=odds.keys()
     odds_names.sort()
     rankings=get_rankings(1500)
     rank_names=[rank['name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
     current_cell=0
-    cell_list = worksheet.range('A2:F'+str(len(names)+1))
+    cell_list = worksheet.range('A2:F'+str(len(odds_names)+1))
     for name in odds_names:
         debug_values(odds.get(name), name)
         matching_name=match_name(name,rank_names)
@@ -515,6 +521,7 @@ def post_players():
         else:
             cell_list[current_cell+4]=9999
         cell_list[current_cell+5].value=0
+        print(matching_name)
         current_cell += 6
     worksheet.update_cells(cell_list)
     return True

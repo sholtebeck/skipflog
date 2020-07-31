@@ -273,7 +273,7 @@ class PlayersHandler(webapp2.RequestHandler):
             output_format='html'
         players=getPlayers()
         self.response.headers['Content-Type'] = 'application/json'
-        template_values = { 'event': {"name":event.event_name }, "players": players }
+        template_values = { 'event': {"name":event['event_name'] }, "players": players }
         self.response.write(json.dumps(template_values))
 
 class RankingHandler(webapp2.RequestHandler): 
