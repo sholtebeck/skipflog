@@ -1,5 +1,5 @@
-application: skipflog
-version: 1
+application: skipflog2
+version: 2
 runtime: python27
 api_version: 1
 threadsafe: yes
@@ -12,11 +12,11 @@ handlers:
   static_dir: app
 
 - url: /ranking
-  script: main.app
+  script: main2.app
   login: admin
   
 - url: /.*
-  script: main.app
+  script: main2.app
 
 
 libraries:
