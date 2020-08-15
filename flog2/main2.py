@@ -1,4 +1,4 @@
-# Main program for golfpicks app (skipflog.appspot.com)
+# Main program for golfpicks app (skipflog2.appspot.com)
 import cgi,csv,json,datetime
 import jinja2
 import logging
@@ -99,7 +99,7 @@ def updateLastPick(event):
     pick_no = event['pick_no']
     event["next"]=event['pickers'][0] if mypicks.count(pick_no)>0 else event["pickers"][1]
     if (pick_no<23 and not lastpick.startswith(event["next"])):
-        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event["event_name"])
+        message = mail.EmailMessage(sender='admin@skipflog2.appspotmail.com',subject=event["event_name"])
         message.to = numbers.get(event["next"])
         message.body=lastpick
         message.send()    
@@ -130,20 +130,18 @@ class MainPage(webapp2.RequestHandler):
             'url_linktext': url_linktext,
             'user': user,
         }
-        template = jinja_environment.get_template('index.html')
+        template = jinja_environment.get_template('index2.html')
         self.response.out.write(template.render(template_values))
 
 class MailHandler(webapp2.RequestHandler):       
     def get(self):
         event_id = self.request.get('event_id')
         if event_id:
-            event = getEvent(event_id)
-            results=getResults(event_id)
-            eventdict=results.get("event")
-            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=str(eventdict["Year"])+" "+eventdict["Name"]+" ("+eventdict["Status"]+")")
+            results_html=fetch_tables(results_url)
+            event_name = fetch_header(results_html)
+            message = mail.EmailMessage(sender='admin@skipflog2.appspotmail.com',subject=event_name)
             message.to = "skipflog@googlegroups.com"
-            result = urllib2.urlopen(results_url)
-            message.html=result.read()
+            message.html=results_html
             message.send()
  
 
@@ -151,17 +149,13 @@ class MailHandler(webapp2.RequestHandler):
         event_id = self.request.get('event_id')
         event = getEvent(event_id)
         user = users.get_current_user()
-        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
+        message = mail.EmailMessage(sender='admin@skipflog2.appspotmail.com',
                             subject=event.get('event_name')+" picks")
         message.to = "skipflog@googlegroups.com"
         message.html=event.get('event_name')+"<br>"
-        players = {picker:[] for picker in skip_pickers }
-        picks = getPicks(event_id)
-        for pick in picks:
-            players[pick.who].append(pick.player)
         for picker in skip_pickers:
             message.html += picker+"'s Picks:<ol>"
-            for player in players[picker]:
+            for player in event.get('picks').get(picker):
                 message.html+="<li>"+player
             message.html+="</ol>"
         message.send()
@@ -199,7 +193,7 @@ class PickHandler(webapp2.RequestHandler):
             'url_linktext': url_linktext,
             'user': user
         }
-        template = jinja_environment.get_template('picks.html')
+        template = jinja_environment.get_template('picks2.html')
         self.response.out.write(template.render(template_values))
 
     def post(self):
@@ -226,7 +220,7 @@ class EventHandler(webapp2.RequestHandler):
         output=self.request.get('output')
         if "results" in self.request.url:
             template_values = { 'results': getResults(event_id) }
-            template = jinja_environment.get_template('results.html')
+            template = jinja_environment.get_template('results2.html')
             self.response.out.write(template.render(template_values))
         else:
             event = getEvent(event_id)
@@ -273,7 +267,7 @@ class PlayersHandler(webapp2.RequestHandler):
             output_format='html'
         players=getPlayers()
         self.response.headers['Content-Type'] = 'application/json'
-        template_values = { 'event': {"name":event.event_name }, "players": players }
+        template_values = { 'event': event.event_json, "players": players }
         self.response.write(json.dumps(template_values))
 
 class RankingHandler(webapp2.RequestHandler): 
@@ -285,7 +279,7 @@ class RankingHandler(webapp2.RequestHandler):
 #       event_update=post_rankings()
         rankings_html=fetch_tables(rankings_url)
         event_name = fetch_header(rankings_html)
-        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name)
+        message = mail.EmailMessage(sender='admin@skipflog2.appspotmail.com',subject=event_name)
         message.to = "skipflog@googlegroups.com"
         message.html=rankings_html+"<p>"
         message.html+=fetch_tables(result_url)
@@ -305,7 +299,7 @@ class ResultsHandler(webapp2.RequestHandler):
             self.response.write(json.dumps({"results":results}))
         elif output_format=='html':
             template_values = {'results': results }
-            template = jinja_environment.get_template('results.html')
+            template = jinja_environment.get_template('results2.html')
             self.response.out.write(template.render(template_values))
                     
     def post(self):
@@ -314,7 +308,7 @@ class ResultsHandler(webapp2.RequestHandler):
         this_week = str((int(event_year)-2000)*100+int(event_week))
         event_update=post_results(this_week)
         event_name = event_year + " World Golf Results (Week "+str(event_week)+")"
-        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name)
+        message = mail.EmailMessage(sender='admin@skipflog2.appspotmail.com',subject=event_name)
         message.to = "skipflog@googlegroups.com"
         message.html=fetch_tables(result_url)
         message.send()        
