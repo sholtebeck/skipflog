@@ -263,17 +263,10 @@ class PicksHandler(webapp2.RequestHandler):
 
 class PlayersHandler(webapp2.RequestHandler):   
     def get(self):
-        event_id = self.request.get('event_id')
-        if event_id:
-            event = getEvent(event_id)
-        else:
-            event = nextEvent()
-        output_format = self.request.get('output')
-        if not output_format:
-            output_format='html'
+        event_name=default_event().get("Name")
         players=getPlayers()
         self.response.headers['Content-Type'] = 'application/json'
-        template_values = { 'event': {"name":event['event_name'] }, "players": players }
+        template_values = { 'event': {"name": event_name }, "players": players }
         self.response.write(json.dumps(template_values))
 
 class RankingHandler(webapp2.RequestHandler): 
