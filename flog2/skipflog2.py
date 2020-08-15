@@ -7,45 +7,8 @@ sys.path[0:0] = ['libs']
 #import gspread
 from bs4 import BeautifulSoup
 #from oauth2client.client import SignedJwtAssertionCredentials
+from skipconfig import *
 
-# Misc properties
-br="</br>"
-events={ 4:'Masters',6:'US Open', 7:'Open Championship', 8:'PGA Championship'}
-mypicks = [1,4,5,8,9,12,13,16,17,20,22]
-yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
-names={'sholtebeck':'Steve','mholtebeck':'Mark'}
-numbers={'Steve':'5103005644@vtext.com','Mark':'5106739570@vmobl.com'}
-pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
-event_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=1&output=html&widget=true"
-events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AE21&output=csv"
-players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB155&output=csv"
-results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
-ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
-rankings_url="http://knarflog.appspot.com/ranking"
-result_url="http://knarflog.appspot.com/results"
-results_url="http://skipflog2.appspot.com/results"
-players_api="http://knarflog.appspot.com/api/players"
-leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"
-skip_user="skipfloguser"
-skip_picks={}
-skip_pickers=["Steve","Mark"]
-#skip_points=[0, 100, 60, 40, 35, 30, 25, 20, 15, 10, 9, 9, 8, 8, 7, 7, 7, 6, 6, 5, 5, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2]
-skip_points=[0, 100, 60, 40, 30, 24, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9.5, 9, 8.5,8,7.5,7,6.5,6,5.5,5,4.5,4,4,3.5,3.5,3,3,2.5,2.5,2,2,2,1.5,1.5]
-# Misc urls
-espn_url="http://www.espn.com/golf/leaderboard"
-feed_url='https://spreadsheets.google.com/feeds'
-golfchannel_url="http://www.golfchannel.com/tours/usga/2014/us-open/"
-owg_url="http://www.owgr.com/en/Events/EventResult.aspx?eventid=5520"
-pga_url="http://www.pga.com/news/golf-leaderboard/pga-tour-leaderboard"
-pgatour_url="http://www.pgatour.com/leaderboard.html"
-picks_csv = "picks.csv"
-picks_url = "http://skipflog2.appspot.com/picks?event_id="
-rankings_api = "http://knarflog.appspot.com/api/rankings/"
-results_api = "http://knarflog.appspot.com/api/results/"
-owg_ranking_url="http://www.owgr.com/ranking"
-yahoo_base_url="http://sports.yahoo.com"
-yahoo_url=yahoo_base_url+"/golf/pga/leaderboard"
-debug=False
 
 # get current week and year
 def current_event():
