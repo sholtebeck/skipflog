@@ -1,5 +1,5 @@
 *pyc
-flog1\.config\*
+skipconfig.py
 flog1\libs\*
 flog2\libs\*
 
