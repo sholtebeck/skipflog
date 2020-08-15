@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>skipflog - major golf picks {{title}}</title>   
+    <strong><link rel="stylesheet" href="/stylesheets/main.css"></strong>
+	<script src="/app/css/bootstrap.min.js"></script>
+  </head>
+  <body>
+   
+    <header>
+      <div class="container">
+        <h1 class="logo">skipflog</h1>
+    	<strong><nav>
+{% if user %}
+    &nbsp;Logged in as <b>{{ user }}</b>:
+{% endif %}
+    	  <ul class="menu">
+    	    <li><a href="/">Home</a></li>
+            <li><a href="{{ url }}">{{ url_linktext }}</a></li>
+    	    <li><a href="/events">Events</a></li>
+    	    <li><a href="/players">Players</a></li>
+    	    <li><a href="/results">Results</a></li>
+    	    <li><a href="/ranking">Ranking</a></li>
+    	  </ul>
+    	</nav></strong>
+      </div>
+    </header>
+
+    <div class="container">
+      {% block content %}
+      {% endblock %}
+    </div>
+     
+  </body>
+</html>
