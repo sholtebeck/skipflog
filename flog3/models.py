@@ -4,7 +4,6 @@ models.py
 App Engine datastore models for Golf Picks app
 Modified to use Firebase DB in August 2020
 """
-#from google.cloud import ndb
 
 #first try google_cloud then try firebase_admin
 try:
@@ -46,5 +45,5 @@ def is_sent(name):
     else:
         return False 
             
-def send_message(name):
-    set_document('messages',name,{"name":name})    
+def send_message(name,sent):
+    set_document('messages',name,{"name":name, "sent": sent })    

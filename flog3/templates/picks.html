@@ -1,16 +1,19 @@
-{% extends "index2.html" %}
-{% block content %}
-{% if event %}
-   {% if event.lastpick %}
-   Last Pick: {{event.lastpick}} <p>
-    <table border=1>
-	<col width="250">
-	<col width="250">
-    <tr>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>skipflog:picks</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<table>
+    <thead>
+      <tr><th colspan="2">{{event.Name }} - Picks</th></tr>
+      <tr>
    {% for picker in event.pickers %}
 	<th>{{picker}}</th>
    {% endfor %}
-    <tr>
+      </tr>
+    </thead>
    {% for picker in event.pickers %}
 	<td><ol>
         {% for player in event.picks[picker] %}
@@ -18,30 +21,7 @@
         {% endfor %}
      </ol></td>
     {% endfor %}
-   </tr></table>
-  {% endif %}
-   {% if user==event.next %}
-    <p><form action="/pick" method="post">
-    <div>{{user}}'s {{picknum}} Pick: <select name="player"> 
-  	 {% for player in event.picks["Available"] %}
-     <option>{{player}}</option>
-     {% endfor %}
-     </select><input type="submit" id="submit" name="submit" value="Pick"></div>
-    <input type="hidden" name="who" value="{{user}}">
-    <input type="hidden" name="event_id" value="{{event.event_id}}">
-    <input type="hidden" name="pick_no" value="{{pick_no}}">
-    </form>
-   {% else %}
-   {% if event.next=="Done" %}
-   {% if user %}
-   <p><form action="/mail" method="post">We're Done. <input type="hidden" name="event_id" value="{{event.event_id}}">
-      <input type="submit" id="submit" value="Email Picks"></form>
-   {% else %}
-   <p>We're Done.
-   {% endif %}
-   {% else %}
-   <br>It's <b>{{event.next}}'s</b> turn.
-   {% endif %}
-{% endif %}
-{% endif %}
-{% endblock %}
+   </tr>
+   </table>
+</body>
+</html>

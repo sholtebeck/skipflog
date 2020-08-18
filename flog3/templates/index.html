@@ -2,7 +2,9 @@
 <html>
   <head>
     <title>skipflog -- major golf picks</title>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script> 
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script> 
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+<link rel="stylesheet" href="/static/app.css">
 <script type="text/javascript">
 $(document).ready(function() {
 
@@ -17,7 +19,6 @@ $(document).ready(function() {
 		$("#"+activeTab).fadeIn(); 
 	});
 });
-
 </script> 
 <style type="text/css">
 
@@ -33,6 +34,7 @@ $(document).ready(function() {
 	}
 	ul.tabs li {
 		float: left;
+		font-size: 1.0em;
 		margin: 0;
 		cursor: pointer;
 		padding: 0px 21px ;
@@ -62,7 +64,7 @@ $(document).ready(function() {
 	}
 	.tab_content {
 		padding: 20px;
-		font-size: 1.1em;
+		font-size: 1.0em;
 		display: none;
 	}
 	body {
@@ -92,8 +94,8 @@ $(document).ready(function() {
 	  font-size: 1.0em;
     }
 </style>
-  </head>
-  <body>
+</head>
+  <body ng-app="skipflog">
 {% if user %}
     &nbsp;Logged in as <b>{{ user }}</b>:
 {% endif %}
@@ -101,7 +103,7 @@ $(document).ready(function() {
 {% if event %}
      &nbsp;Event: <b>{{ event.event_name }}</b>
 {% endif %}
-<p><div id="container">
+<p><div id="tab_container">
 
   <ul class="tabs"> 
         <li class="active" rel="tab1"> Picks </li>
@@ -150,7 +152,7 @@ $(document).ready(function() {
    {% else %}
    {% if event.next=="Done" %}
    {% if user %}
-   <p><form action="/mailpicks" method="post">We're Done. <input type="hidden" name="event_id" value="{{event.event_id}}">
+   <p><form action="/mail" method="post">We're Done. <input type="hidden" name="event_id" value="{{event.event_id}}">
       <input type="submit" id="submit" value="Email Picks"></form>
    {% else %}
    <p>We're Done.
@@ -159,7 +161,6 @@ $(document).ready(function() {
    <br>It's <b>{{event.next}}'s</b> turn.
    {% endif %}
 {% endif %}
-
 
 </div><!-- #tab1 -->
 <div id="tab2" class="tab_content"> 
@@ -180,21 +181,109 @@ $(document).ready(function() {
 {% endif %}
 </div><!-- #tab2 -->
 
-
 <div id="tab3" class="tab_content">
 {% if results %}
-<iframe width='1250' height='800' frameborder='0' src='/results'></iframe>
+<table>
+    <thead>
+      <tr><th colspan="9">{{results.event.Name }} ({{results.event.Status}})</th></tr>
+      <tr>
+          <th>Pos</th>
+          <th>Player Name</th>
+          <th>R1</th>
+          <th>R2</th>
+          <th>R3</th>
+          <th>R4</th>
+          <th>Total</th>
+          <th>Points</th>
+          <th>Picked-By</th>
+      </tr>
+    </thead>
+    <tbody>
+   {% for player in results.players %}
+      <tr>
+        <td>{{player.POS}}</td>
+        <td>{{player.Name}}</td>
+        <td>{{player.R1}}</td>
+        <td>{{player.R2}}</td>
+        <td>{{player.R3}}</td>
+        <td>{{player.R4}}</td>
+        <td>{{player.Total}}</td>
+        <td>{{"%.2f"|format(player.Points)}}</td>
+        <td>{{player.Picker}}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p>
+  <table>
+    <thead>
+      <tr><th>Rank</th>
+          <th>Picker</th>	
+          <th>Players</a></th>	
+          <th>Points</th>
+         </tr>
+    </thead>
+   <tbody>
+<p>
+{% for picker in results.pickers %}
+     <tr>
+        <td>{{picker.Rank}}</td>
+        <td>{{picker.Name}}</td>
+        <td>{{picker.Count}}</td>
+        <td>{{"%.2f"|format(picker.Points)}}</td>
+      </tr>   
+{% endfor %}
+    </tbody>
+  </table>
 {% else %}
 No results yet.
 {% endif %}
 </div><!-- #tab3 -->
 
 <div id="tab4" class="tab_content"> 
-
-<iframe width='1250' height='800' frameborder='0' src='/players'></iframe>
+<div ng-controller="playersController">
+ Search: <input ng-model="query"> <p>  
+  <table>
+    <thead>
+      <tr><th colspan="7" ng-bind="event.Name"}}</th></tr>
+      <tr>
+	  <th>#</th>
+          <th><a href="#" ng-click="orderProp='name'">Player</a>  <a href="#" ng-click="orderProp='lastname'">Last Name</a></th>	
+          <th><a href="#" ng-click="orderProp='country'">Country</a></th>
+          <th><a href="#" ng-click="orderProp='-points'">Points</a></th>	
+          <th><a href="#" ng-click="orderProp='rank'">World Rank</a></th>
+          <th><a href="#" ng-click="orderProp='odds'">Odds</a></th>
+          <th><a href="#" ng-click="orderProp='picked'">Picked</a></th>         </tr>
+    </thead>
+    <tbody>
+      <tr ng-repeat="player in players | filter:query |orderBy:orderProp">
+        <td ng-bind="$index + 1"></td>
+        <td ng-bind="player.name"></td>
+        <td ng-bind="player.country"></td>
+        <td ng-bind="player.points |number:2"></td>
+        <td ng-bind="player.rank"></td>
+        <td ng-bind="player.odds">/1</td>
+        <td ng-bind="player.picked"></td>
+      </tr>
+   </tbody>
+  </table>
+  <script>
+var skipflog = angular.module('skipflog', []);
+skipflog.controller('playersController', ['$scope', '$http',
+  function($scope, $http) {
+    $http.get('/api/players').success(function(data) {
+      $scope.event = data.event;
+      $scope.players = data.players;
+    });
+    $scope.orderProp = 'name';
+    $scope.year = new Date().getFullYear();
+  }]);
+</script>
+</div>
 
 </div><!-- #tab4 -->
 </div> <!-- .tab_container --> 
 </div> <!-- #container -->
 </body>
+
 </html>
