@@ -2,4 +2,5 @@
 skipconfig.py
 flog1\libs\*
 flog2\libs\*
+flog3\config\*
 

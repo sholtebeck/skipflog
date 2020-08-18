@@ -38,7 +38,8 @@ owg_url="http://www.owgr.com/en/Events/EventResult.aspx?eventid=5520"
 pga_url="http://www.pga.com/news/golf-leaderboard/pga-tour-leaderboard"
 pgatour_url="http://www.pgatour.com/leaderboard.html"
 picks_csv = "picks.csv"
-picks_url = "http://skipflog2.appspot.com/picks?event_id="
+picks_api = "http://localhost:5000/api/picks/"
+picks_url = "http://localhost:5000/picks"
 rankings_api = "http://knarflog.appspot.com/api/rankings/"
 results_api = "http://knarflog.appspot.com/api/results/"
 owg_ranking_url="http://www.owgr.com/ranking"
@@ -64,7 +65,7 @@ def current_year():
     return int(this_year) 
 
 def current_time():
-    right_now=strftime("%H%M",gmtime())
+    right_now=strftime("%c")
     return str(right_now) 
 
 # determine the cut rank for the various majors
@@ -135,7 +136,7 @@ def get_value(string):
 # Get the picks for an event
 def get_picks(event_id):
     picks={}
-    pickdict=json_results(picks_url+str(event_id))
+    pickdict=json_results(picks_api+str(event_id))
     if pickdict.get('picks'):
         for picker in skip_pickers:
             picklist=[str(pick) for pick in pickdict["picks"][picker][:10]]
@@ -354,7 +355,7 @@ def fetch_tables(url):
     return results[:-3]
 
 def fetch_header(html):
-    return str(BeautifulSoup(html).find('th').string)
+    return str(BeautifulSoup(html,"html.parser").find('th').string)
     
 # fetch all table rows
 def fetch_rows(page):

@@ -20,8 +20,8 @@ def fetchEvents():
     events = [{"event_id":f["ID"], "event_name":f["Name"]} for f in fetch_events() if len(f["ID"])==4]
     return events
 
-def getPlayers(event_id='0'):
-    players = get_players()
+def getPlayers(event_id='current'):
+    players = models.get_event(event_id).get("players")
     return players 
 
 def getPicks(event_id):
@@ -55,17 +55,12 @@ def nextEvent():
 def updateEvent(event_data):
     models.update_event(event_data)
     
-def getLastPick(thispick):
-    thisplayer=' '.join(thispick.split()[2:])
-    current_event=models.get_event("current")
-    lastpick=current_event.get("lastpick")
-    if (not lastpick or not lastpick.startswith(thispick.split()[0])):
-        lastpick=thispick
-    elif (not lastpick.endswith(thisplayer)):
-        lastpick=lastpick+" and "+thisplayer
-    current_event["lastpick"]=lastpick
-    models.update_event(current_event)  
-    return lastpick
+def getLastPick(event,picker,player):
+    lastpick=event.get("lastpick")
+    if lastpick.startswith(picker):
+        return lastpick+" and "+player
+    else:
+        return picker+" picked "+player
 
 def nextPick(event):
     if event['picknum'] == "Done":
@@ -76,14 +71,12 @@ def nextPick(event):
         return event["pickers"][1]
     
 def updateLastPick(event):
-    lastpick=getLastPick(event['lastpick'])
     # send alert if needed
     pick_no = event['pick_no']
-    event["next"]=event['pickers'][0] if mypicks.count(pick_no)>0 else event["pickers"][1]
-    if (pick_no<23 and not lastpick.startswith(event["next"])):
-        mail.send_message(numbers.get(event["next"]),lastpick)
+    if (pick_no%2==0 or pick_no==21):
+#        mail.send_message(numbers.get(event["next"]),lastpick)
+        mail.send_message(numbers["Steve"],event["event_name"],event["lastpick"])
     return
-
 
 @app.route('/')
 def main_page(): 
@@ -99,9 +92,8 @@ def main_page():
     pick_no = event.get("pick_no",1)
     event["picknum"] = pick_ord[pick_no]
     event["next"]=nextPick(event)
-    event["results"]=results_url+"/"+str(event_id)
-    user=event["next"]
-    return render_template('index.html',event=event,event_list=event_list,results=2008,url=url,user=user)
+    event["results"]=1
+    return render_template('index.html',event=event,event_list=event_list,results=getResults(event_id),url=url,user=user)
 
 @app.route('/api/events', methods=['GET','POST'])
 def api_events():
@@ -118,14 +110,18 @@ def api_event(event_id=currentEvent()):
     event = getEvent(event_id)
     return jsonify(event)
 
-@app.route('/mail', methods=['GET'])
+@app.route('/mail', methods=['GET','POST'])
 @app.route('/mail/<int:event_id>', methods=['GET'])
 def mail_handler(event_id=currentEvent()):
-    results_html=fetch_tables(results_url)
+    if request.method=="POST":
+        results_html=fetch_tables(picks_url)
+    else:
+        results_html=fetch_tables(results_url)
     event_name = fetch_header(results_html)
     sent=models.is_sent(event_name)
     if not sent:
         mail.send_mail(event_name,results_html)
+        models.send_message(event_name,current_time())
     return jsonify({'event': event_name, "sent":sent })
 
 @app.route('/pick', methods=['GET','POST'])
@@ -140,7 +136,7 @@ def pick_handler(event_id = currentEvent()):
             event["picks"]["Available"].remove(player)
             event["picks"]["Picked"].append(player)
             event["picks"][picker].append(player)
-            event["lastpick"]=picker+" picked "+player
+            event["lastpick"]=getLastPick(event,picker,player)
             event["pick_no"]+=1
             updateEvent(event)
         # update last pick message
@@ -148,7 +144,8 @@ def pick_handler(event_id = currentEvent()):
     # redirect to main page
     return redirect('/',code=302)
 
-@app.route('/picks', methods=['GET','POST'])
+@app.route('/api/picks', methods=['GET'])
+@app.route('/api/picks/<int:event_id>', methods=['GET'])
 def picks_handler(event_id=currentEvent()):   
     if request.method=="POST":
         picklist = request.form.get('picklist')
@@ -160,6 +157,12 @@ def picks_handler(event_id=currentEvent()):
         for player in pick_dict[picker]:
             pick_dict[player]=picker
     return jsonify({'picks': pick_dict })   
+
+@app.route('/picks', methods=['GET'])
+@app.route('/picks/<int:event_id>', methods=['GET'])
+def Picks(event_id=currentEvent()):   
+    event=getEvent(event_id)
+    return render_template('picks.html',event=event)
 
 @app.route('/api/players', methods=['GET'])
 @app.route('/api/players/<int:event_id>', methods=['GET'])
@@ -182,8 +185,14 @@ def RankingHandler():
     sent=models.is_sent(event_name)
     if not sent:
         mail.send_mail(event_name,rankings_html)
-        models.send_message(event_name)
+        models.send_message(event_name,current_time())
     return jsonify({"event":event_name, "sent":sent})       
+
+@app.route('/api/results', methods=['GET'])
+@app.route('/api/results/<int:event_id>', methods=['GET'])
+def ApiResults(event_id=currentEvent()):   
+    results = getResults(event_id)
+    return jsonify({"results":results})   
 
 @app.route('/results', methods=['GET'])
 @app.route('/results/<int:event_id>', methods=['GET'])
