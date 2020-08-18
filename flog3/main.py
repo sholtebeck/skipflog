@@ -1,5 +1,7 @@
 # Main program for golfpicks app (skipflog.appspot.com)
-from flask import Flask, abort,json,jsonify,render_template, redirect, request
+from flask import Flask, abort,json,jsonify,render_template,redirect,request
+from google.auth.transport import requests
+import google.oauth2.id_token
 import datetime,mail,models
 from skipflog import *
 
@@ -78,13 +80,36 @@ def updateLastPick(event):
         mail.send_message(numbers["Steve"],event["event_name"],event["lastpick"])
     return
 
+def getUser(id_token):
+    user_data={"user":None}
+    if id_token:
+        user_data=models.get_document("users",id_token)
+        if not user_data:
+            try:
+                user_data = google.oauth2.id_token.verify_firebase_token(id_token, requests.Request())
+                user_data["user"]=user_data["name"].split()[0] 
+                models.set_document("users",id_token,user_data)
+            except:
+                return None 
+    return user_data
+
+@app.route('/login')
+def login_page(): 
+    title='skipflog - golf picks'
+    event_list=getEvent("current").get("events")
+    id_token = request.cookies.get("token")
+    error_message = None
+    user_data = getUser(id_token)
+    return render_template('login.html',event_list=event_list,title=title,user_data=user_data, error_message=error_message)
+
+
 @app.route('/')
 def main_page(): 
+    id_token=request.cookies.get("token")
     event_id=int( request.args.get('event_id',currentEvent()) )
     event = getEvent(event_id)
     event_list=getEvent("current").get("events")
-    user='Steve'
-    url='/'
+    user=getUser(id_token).get("user")
     if event_id:
         event=getEvent(event_id) 
     else:    
@@ -93,7 +118,7 @@ def main_page():
     event["picknum"] = pick_ord[pick_no]
     event["next"]=nextPick(event)
     event["results"]=1
-    return render_template('index.html',event=event,event_list=event_list,results=getResults(event_id),url=url,user=user)
+    return render_template('index.html',event=event,event_list=event_list,results=getResults(event_id),user=user)
 
 @app.route('/api/events', methods=['GET','POST'])
 def api_events():
