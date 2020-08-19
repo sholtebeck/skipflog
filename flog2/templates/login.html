@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+  <title>{{title}}</title>
+
+  <!-- See https://github.com/firebase/firebaseui-web. -->
+  <!-- [START gae_python38_auth_init_firebase] -->
+  <!-- *******************************************************************************************
+       * TODO(DEVELOPER): Paste the initialization snippet from:
+       * http://console.firebase.google.com > Overview > Add Firebase to your web app.
+       ***************************************************************************************** -->
+<!-- The core Firebase JS SDK is always required and must be listed first -->
+<script src="https://www.gstatic.com/firebasejs/7.17.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.8.0/firebase-auth.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script> 
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+
+<!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+
+<script>
+  // Your web app's Firebase configuration
+  var firebaseConfig = {
+    apiKey: "{{ config.apiKey }}",
+    authDomain: "{{ config.authDomain }}",
+    databaseURL: "{{ config.databaseURL }}",
+    projectId: "{{ config.projectId }}",
+    storageBucket: "{{ config.storageBucket }}",
+    messagingSenderId: "{{ config.messagingSenderId }}",
+    appId: "{{ config.appId }}"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+</script>
+  <!-- [END gae_python38_auth_init_firebase] -->
+  <script>
+    if (typeof firebase === 'undefined') {
+      const msg = "Please paste the Firebase initialization snippet into index.html. See https://console.firebase.google.com > Overview > Add Firebase to your web app.";
+      console.log(msg);
+      alert(msg);
+    }
+  </script>
+
+  <script src="https://www.gstatic.com/firebasejs/ui/4.4.0/firebase-ui-auth.js"></script>
+  <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.4.0/firebase-ui-auth.css" />
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+
+</head>
+<body ng-app="skipflog">
+
+<!-- [START gae_python38_auth_firebase_html] -->
+<center><h2>{{title}}</h2>
+
+{% if user_data.user %}
+  <form action="/" method="get" onchange="this.form.submit()">
+    <p>User: <b>{{ user_data.name }}</b>
+    Select Event: <select name="event_id">
+    {% for event in event_list %}
+     <option value="{{event.event_id}}">{{event.event_name}}</option>
+    {% endfor %}
+    </select><input type="submit" id="submit" value="Pick">
+{% elif error_message %}
+    <p>Error: {{ error_message }}</p>
+{% endif %}
+</center>
+<div id="firebaseui-auth-container"></div>
+
+<button id="sign-out" hidden=true>Sign Out</button>
+
+<div id="login-info" hidden=true>
+
+
+</div>
+<!-- [END gae_python38_auth_firebase_html] -->
+</body>
+</html>
