@@ -106,10 +106,13 @@ def login_page():
 @app.route('/')
 def main_page(): 
     id_token=request.cookies.get("token")
+    user_data=getUser(id_token)
+    if not id_token or not user_data:
+        return redirect('/login')
     event_id=int( request.args.get('event_id',currentEvent()) )
     event = getEvent(event_id)
     event_list=getEvent("current").get("events")
-    user=getUser(id_token).get("user")
+    user=user_data.get("user")
     if event_id:
         event=getEvent(event_id) 
     else:    

@@ -53,12 +53,6 @@
 <!-- [START gae_python38_auth_firebase_html] -->
 <h3>{{title}}</h3>
 
-<div id="firebaseui-auth-container"></div>
-
-<button id="sign-out" hidden=true>Sign Out</button>
-
-<div id="login-info" hidden=true>
-
 {% if user_data %}
   <form action="/" method="get" onchange="this.form.submit()">
     <p>User: <b>{{ user_data.user }}</b>
@@ -70,6 +64,12 @@
 {% elif error_message %}
     <p>Error: {{ error_message }}</p>
 {% endif %}
+
+<div id="firebaseui-auth-container"></div>
+
+<button id="sign-out" hidden=true>Sign Out</button>
+
+<div id="login-info" hidden=true>
 
 
 </div>
