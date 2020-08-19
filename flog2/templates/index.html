@@ -1,0 +1,289 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <title>skipflog -- major golf picks</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script> 
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+<link rel="stylesheet" href="/static/app.css">
+<script type="text/javascript">
+$(document).ready(function() {
+
+	$(".tab_content").hide();
+	$(".tab_content:first").show(); 
+
+	$("ul.tabs li").click(function() {
+		$("ul.tabs li").removeClass("active");
+		$(this).addClass("active");
+		$(".tab_content").hide();
+		var activeTab = $(this).attr("rel"); 
+		$("#"+activeTab).fadeIn(); 
+	});
+});
+</script> 
+<style type="text/css">
+
+	ul.tabs {
+		margin: 0;
+		padding: 0;
+		float: left;
+		list-style: none;
+		height: 32px;
+		border-bottom: 1px solid #999999;
+		border-left: 1px solid #999999;
+		width: 100%;
+	}
+	ul.tabs li {
+		float: left;
+		font-size: 1.0em;
+		margin: 0;
+		cursor: pointer;
+		padding: 0px 21px ;
+		height: 31px;
+		line-height: 31px;
+		border: 1px solid #999999;
+		border-left: none;
+		font-weight: bold;
+		background: #EEEEEE;
+		overflow: hidden;
+		position: relative;
+	}
+	ul.tabs li:hover {
+		background: #CCCCCC;
+	}	
+	ul.tabs li.active{
+		background: #FFFFFF;
+		border-bottom: 1px solid #FFFFFF;
+	}
+	.tab_container {
+		border: 1px solid #999999;
+		border-top: none;
+		clear: both;
+		float: left; 
+		width: 100%;
+		background: #FFFFFF;
+	}
+	.tab_content {
+		padding: 20px;
+		font-size: 1.0em;
+		display: none;
+	}
+	body {
+	  font-family: Helvetica, Arial, sans-serif;	
+          font-size: 1.1em;
+	  background-color: #DDDDDD;
+	}
+	select {
+	  font-family: Helvetica, Arial, sans-serif;
+	  font-size: 1.0em;
+        }
+	#container {
+		width: 1300px;
+		margin: 0 auto;	
+	}
+	table { 
+	color: #333; /* Lighten up font color */
+	font-family: Helvetica, Arial, sans-serif; /* Nicer font */
+	border-collapse: 
+	collapse; border-spacing: 0; 
+	}
+
+	td, th { border: solid; } /* Make cells a bit taller */
+	
+	#submit {
+	  font-family: Helvetica, Arial, sans-serif;
+	  font-size: 1.0em;
+    }
+</style>
+</head>
+  <body ng-app="skipflog">
+{% if user %}
+    &nbsp;Logged in as <b>{{ user }}</b>:
+{% endif %}
+  <a href="{{ url }}">{{ url_linktext }}</a>
+{% if event %}
+     &nbsp;Event: <b>{{ event.event_name }}</b>
+{% endif %}
+<p><div id="tab_container">
+
+  <ul class="tabs"> 
+        <li class="active" rel="tab1"> Picks </li>
+{% if event %}
+        <li rel="tab2"> Players </li>
+        <li rel="tab3"> Results </li>
+        <li rel="tab4"> Ranking </li>
+{% endif %}
+    </ul>
+
+<div class="tab_container"> 
+
+     <div id="tab1" class="tab_content"> 
+
+{% if event %}
+   {% if event.lastpick %}
+   Last Pick: {{event.lastpick}} <p>
+    <table border=1>
+	<col width="250">
+	<col width="250">
+    <tr>
+   {% for picker in event.pickers %}
+	<th>{{picker}}</th>
+   {% endfor %}
+    <tr>
+   {% for picker in event.pickers %}
+	<td><ol>
+        {% for player in event.picks[picker] %}
+        <li>{{ player }}
+        {% endfor %}
+     </ol></td>
+    {% endfor %}
+   </tr></table>
+  {% endif %}
+   {% if user==event.next %}
+    <p><form action="/pick" method="post">
+    <div>{{user}}'s {{event.picknum}} Pick: <select name="player"> 
+  	 {% for player in event.picks["Available"] %}
+     <option>{{player}}</option>
+     {% endfor %}
+     </select><input type="submit" id="submit" name="submit" value="Pick"></div>
+    <input type="hidden" name="who" value="{{user}}">
+    <input type="hidden" name="event_id" value="{{event.event_id}}">
+    <input type="hidden" name="pick_no" value="{{event.pick_no}}">
+    </form>
+   {% else %}
+   {% if event.next=="Done" %}
+   {% if user %}
+   <p><form action="/mail" method="post">We're Done. <input type="hidden" name="event_id" value="{{event.event_id}}">
+      <input type="submit" id="submit" value="Email Picks"></form>
+   {% else %}
+   <p>We're Done.
+   {% endif %}
+   {% else %}
+   <br>It's <b>{{event.next}}'s</b> turn.
+   {% endif %}
+{% endif %}
+
+</div><!-- #tab1 -->
+<div id="tab2" class="tab_content"> 
+
+{% if event.picks["Picked"]  %}
+<p><strong>Picked:</strong>
+{% for player in event.picks["Picked"] %}
+<br>{{player}}
+{% endfor %}
+{% endif %}
+
+{% if event.next!="Done" %}
+<p><strong>Available:</strong>
+{% for player in event.picks["Available"]%}
+<br>{{player}}
+{% endfor %}
+{% endif %}
+{% endif %}
+</div><!-- #tab2 -->
+
+<div id="tab3" class="tab_content">
+{% if results %}
+<table>
+    <thead>
+      <tr><th colspan="9">{{results.event.Name }} ({{results.event.Status}})</th></tr>
+      <tr>
+          <th>Pos</th>
+          <th>Player Name</th>
+          <th>R1</th>
+          <th>R2</th>
+          <th>R3</th>
+          <th>R4</th>
+          <th>Total</th>
+          <th>Points</th>
+          <th>Picked-By</th>
+      </tr>
+    </thead>
+    <tbody>
+   {% for player in results.players %}
+      <tr>
+        <td>{{player.POS}}</td>
+        <td>{{player.Name}}</td>
+        <td>{{player.R1}}</td>
+        <td>{{player.R2}}</td>
+        <td>{{player.R3}}</td>
+        <td>{{player.R4}}</td>
+        <td>{{player.Total}}</td>
+        <td>{{"%.2f"|format(player.Points)}}</td>
+        <td>{{player.Picker}}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p>
+  <table>
+    <thead>
+      <tr><th>Rank</th>
+          <th>Picker</th>	
+          <th>Players</a></th>	
+          <th>Points</th>
+         </tr>
+    </thead>
+   <tbody>
+<p>
+{% for picker in results.pickers %}
+     <tr>
+        <td>{{picker.Rank}}</td>
+        <td>{{picker.Name}}</td>
+        <td>{{picker.Count}}</td>
+        <td>{{"%.2f"|format(picker.Points)}}</td>
+      </tr>   
+{% endfor %}
+    </tbody>
+  </table>
+{% else %}
+No results yet.
+{% endif %}
+</div><!-- #tab3 -->
+
+<div id="tab4" class="tab_content"> 
+<div ng-controller="playersController">
+ Search: <input ng-model="query"> <p>  
+  <table>
+    <thead>
+      <tr><th colspan="7" ng-bind="event.Name"}}</th></tr>
+      <tr>
+	  <th>#</th>
+          <th><a href="#" ng-click="orderProp='name'">Player</a>  <a href="#" ng-click="orderProp='lastname'">Last Name</a></th>	
+          <th><a href="#" ng-click="orderProp='country'">Country</a></th>
+          <th><a href="#" ng-click="orderProp='-points'">Points</a></th>	
+          <th><a href="#" ng-click="orderProp='rank'">World Rank</a></th>
+          <th><a href="#" ng-click="orderProp='odds'">Odds</a></th>
+          <th><a href="#" ng-click="orderProp='picked'">Picked</a></th>         </tr>
+    </thead>
+    <tbody>
+      <tr ng-repeat="player in players | filter:query |orderBy:orderProp">
+        <td ng-bind="$index + 1"></td>
+        <td ng-bind="player.name"></td>
+        <td ng-bind="player.country"></td>
+        <td ng-bind="player.points |number:2"></td>
+        <td ng-bind="player.rank"></td>
+        <td ng-bind="player.odds">/1</td>
+        <td ng-bind="player.picked"></td>
+      </tr>
+   </tbody>
+  </table>
+  <script>
+var skipflog = angular.module('skipflog', []);
+skipflog.controller('playersController', ['$scope', '$http',
+  function($scope, $http) {
+    $http.get('/api/players').success(function(data) {
+      $scope.event = data.event;
+      $scope.players = data.players;
+    });
+    $scope.orderProp = 'name';
+    $scope.year = new Date().getFullYear();
+  }]);
+</script>
+</div>
+
+</div><!-- #tab4 -->
+</div> <!-- .tab_container --> 
+</div> <!-- #container -->
+</body>
+
+</html>

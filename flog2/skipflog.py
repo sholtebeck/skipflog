@@ -2,19 +2,17 @@
 import csv,datetime,json,sys,urllib2
 from time import gmtime, strftime
 # External modules (gspread, bs4)
-import sys
-sys.path[0:0] = ['libs']
 #import gspread
 from bs4 import BeautifulSoup
 #from oauth2client.client import SignedJwtAssertionCredentials
 from skipconfig import *
 
+firestore_json=json.load(open('config/skipfire.json'))
 
 # get current week and year
 def current_event():
     this_event=strftime("%y%m",gmtime())
-    return 2008
-#    return int(this_event) 
+    return int(this_event) 
 
 def current_month():
     this_month=strftime("%m",gmtime())

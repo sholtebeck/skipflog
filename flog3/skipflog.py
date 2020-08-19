@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 #from oauth2client.client import SignedJwtAssertionCredentials
 
 # Misc properties
-br="</br>"
+firestore_json=json.load(open('config/firestore.json'))
 events={ 4:'Masters',6:'US Open', 7:'Open Championship', 8:'PGA Championship'}
 mypicks = [1,4,5,8,9,12,13,16,17,20,22]
 yrpicks = [2,3,6,7,10,11,14,15,18,19,21]

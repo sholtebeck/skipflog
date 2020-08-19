@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="skipflog">
+<html lang="en" ng-app="knarflog">
 <head>
   <title>skipflog:results</title>
-  <link rel="stylesheet" href="/app/app.css">
+  <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
 <table>
@@ -30,7 +30,7 @@
         <td>{{player.R3}}</td>
         <td>{{player.R4}}</td>
         <td>{{player.Total}}</td>
-        <td>{{player.Points}}</td>
+        <td>{{"%.2f"|format(player.Points)}}</td>
         <td>{{player.Picker}}</td>
       </tr>
     {% endfor %}
@@ -43,8 +43,7 @@
       <tr><th>Rank</th>
           <th>Picker</th>	
           <th>Players</a></th>	
-          <th>Points(Week)</th>
-          <th>Points(Total)</th>
+          <th>Points</th>
          </tr>
     </thead>
    <tbody>
@@ -54,9 +53,8 @@
         <td>{{picker.Rank}}</td>
         <td>{{picker.Name}}</td>
         <td>{{picker.Count}}</td>
-        <td>{{picker.Points}}</td>
-        <td>{{picker.Total}}</td>
-     </tr>   
+        <td>{{"%.2f"|format(picker.Points)}}</td>
+      </tr>   
 {% endfor %}
     </tbody>
   </table>

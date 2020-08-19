@@ -10,7 +10,7 @@ from skipflog import *
 #jinja_environment = jinja2.Environment(autoescape=True,loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
 app = Flask(__name__)
 app.config['DEBUG'] = True    
-default_url='/app/index.html'
+default_url='/static/index.html'
    
 def currentEvent():
     now=datetime.datetime.now()
@@ -23,15 +23,15 @@ def fetchEvents():
     return events
 
 def getPlayers(event_id='current'):
-    players = models.get_event(event_id).get("players")
+    players = get_players()
     return players 
 
 def getPicks(event_id):
-    event = getEvent(event_id)
-    return event.get("picks")
+    picks = models.get_event_json(event_id).get("picks")
+    return picks
 
 def getResults(event_id):
-    results = models.get_results(event_id)
+    results = models.get_results_json(event_id)
     if not results or results["event"]["Status"]!="Final":
         try:
             results=get_results(int(event_id))
@@ -41,7 +41,7 @@ def getResults(event_id):
     return results
 
 def getEvent(event_id):
-    event = models.get_event(event_id)
+    event = models.get_event_json(event_id)
     if not event:
         event=default_event(event_id)
         models.update_event(event)
@@ -76,32 +76,28 @@ def updateLastPick(event):
     # send alert if needed
     pick_no = event['pick_no']
     if (pick_no%2==0 or pick_no==21):
-#        mail.send_message(numbers.get(event["next"]),lastpick)
-        mail.send_message(numbers["Steve"],event["event_name"],event["lastpick"])
+        mail.send_message(numbers.get(event["next"]),event["event_name"],event["lastpick"])
     return
 
 def getUser(id_token):
     user_data={"user":None}
     if id_token:
-        user_data=models.get_document("users",id_token)
-        if not user_data:
-            try:
-                user_data = google.oauth2.id_token.verify_firebase_token(id_token, requests.Request())
-                user_data["user"]=user_data["name"].split()[0] 
-                models.set_document("users",user_data["user"],user_data)
-            except:
-                return None 
+        try:
+            user_data = google.oauth2.id_token.verify_firebase_token(id_token, requests.Request())
+            user_data["user"]=user_data["name"].split()[0] 
+            models.set_document("users",id_token,user_data)
+        except:
+            return user_data
     return user_data
 
 @app.route('/login')
 def login_page(): 
     title='skipflog - golf picks'
-    event_list=getEvent("current").get("events")
+    event_list=fetchEvents()
     id_token = request.cookies.get("token")
     error_message = None
     user_data = getUser(id_token)
     return render_template('login.html',config=firestore_json,event_list=event_list,title=title,user_data=user_data, error_message=error_message)
-
 
 @app.route('/')
 def main_page(): 
@@ -111,7 +107,7 @@ def main_page():
         return redirect('/login')
     event_id=int( request.args.get('event_id',currentEvent()) )
     event = getEvent(event_id)
-    event_list=getEvent("current").get("events")
+    event_list=fetchEvents()
     user=user_data.get("user")
     event=getEvent(event_id) 
     pick_no = event.get("pick_no",1)
@@ -146,7 +142,7 @@ def mail_handler(event_id=currentEvent()):
     sent=models.is_sent(event_name)
     if not sent:
         mail.send_mail(event_name,results_html)
-        models.send_message(event_name,current_time())
+        models.set_document('message',event_name,results_html)
     return jsonify({'event': event_name, "sent":sent })
 
 @app.route('/pick', methods=['GET','POST'])
@@ -209,8 +205,8 @@ def RankingHandler():
     event_name = fetch_header(rankings_html)
     sent=models.is_sent(event_name)
     if not sent:
-        mail.send_mail(event_name,rankings_html)
-        models.send_message(event_name,current_time())
+        sent=mail.send_mail(event_name,rankings_html)
+        models.set_document('message',event_name,sent)
     return jsonify({"event":event_name, "sent":sent})       
 
 @app.route('/api/results', methods=['GET'])

@@ -1,0 +1,9 @@
+{
+  "apiKey": "AIzaSyA8xKwt_PiwCnq0rRurfjA0HOvMQ26wrBg",
+  "authDomain": "skipflog.firebaseapp.com",
+  "databaseURL": "https://skipflog.firebaseio.com",
+  "projectId": "skipflog",
+  "storageBucket": "skipflog.appspot.com",
+  "messagingSenderId": "702198181635",
+  "appId": "1:702198181635:web:71bb214a076ef388028336"
+}

@@ -51,7 +51,7 @@
 <body ng-app="skipflog">
 
 <!-- [START gae_python38_auth_firebase_html] -->
-<center><h2>{{title}}</h2></center>
+<center><h2>{{title}}</h2>
 
 {% if user_data.user %}
   <form action="/" method="get" onchange="this.form.submit()">
@@ -64,7 +64,7 @@
 {% elif error_message %}
     <p>Error: {{ error_message }}</p>
 {% endif %}
-
+</center>
 <div id="firebaseui-auth-container"></div>
 
 <button id="sign-out" hidden=true>Sign Out</button>
