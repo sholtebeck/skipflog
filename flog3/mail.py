@@ -12,7 +12,7 @@ def send_mail(mail_subject,mail_content):
             subject=mail_subject,html_content=mail_content)
         grid = SendGridAPIClient(sg_config["sg_key"])
         response = grid.send(message)
-        return True
+        return response
     except Exception as e:
         return False
 
@@ -24,6 +24,6 @@ def send_message(message_to,mail_subject,message_content):
             subject=mail_subject,html_content=message_content)
         grid = SendGridAPIClient(sg_config["sg_key"])
         response = grid.send(message)
-        return True
+        return response
     except Exception as e:
         return False
