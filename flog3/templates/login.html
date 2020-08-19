@@ -21,13 +21,13 @@
 <script>
   // Your web app's Firebase configuration
   var firebaseConfig = {
-    apiKey: "AIzaSyB5YixlJ2pgA5bUWTc9REa_pDswSvbOX18",
-    authDomain: "skipflog3.firebaseapp.com",
-    databaseURL: "https://skipflog3.firebaseio.com",
-    projectId: "skipflog3",
-    storageBucket: "skipflog3.appspot.com",
-    messagingSenderId: "156966377806",
-    appId: "1:156966377806:web:8670f05e5b4e1125e8261f"
+    apiKey: "{{ config.apiKey }}",
+    authDomain: "{{ config.authDomain }}",
+    databaseURL: "{{ config.databaseURL }}",
+    projectId: "{{ config.projectId }}",
+    storageBucket: "{{ config.storageBucket }}",
+    messagingSenderId: "{{ config.messagingSenderId }}",
+    appId: "{{ config.appId }}"
   };
   // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
