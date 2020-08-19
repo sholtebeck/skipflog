@@ -7,8 +7,6 @@ from bs4 import BeautifulSoup
 #from oauth2client.client import SignedJwtAssertionCredentials
 from skipconfig import *
 
-firestore_json=json.load(open('config/skipfire.json'))
-
 # get current week and year
 def current_event():
     this_event=strftime("%y%m",gmtime())
