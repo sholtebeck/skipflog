@@ -1,4 +1,4 @@
-Flask
 BeautifulSoup4
-google-cloud-ndb
+Flask>=1.0.0
+firebase-admin
 sendgrid
