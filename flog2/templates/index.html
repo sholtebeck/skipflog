@@ -182,10 +182,10 @@ $(document).ready(function() {
 </div><!-- #tab2 -->
 
 <div id="tab3" class="tab_content">
-{% if results %}
+{% if event.results %}
 <table>
     <thead>
-      <tr><th colspan="9">{{results.event.Name }} ({{results.event.Status}})</th></tr>
+      <tr><th colspan="9">{{event.results.event.Name }} ({{event.results.event.Status}})</th></tr>
       <tr>
           <th>Pos</th>
           <th>Player Name</th>
@@ -199,7 +199,7 @@ $(document).ready(function() {
       </tr>
     </thead>
     <tbody>
-   {% for player in results.players %}
+   {% for player in event.results.players %}
       <tr>
         <td>{{player.POS}}</td>
         <td>{{player.Name}}</td>
@@ -225,7 +225,7 @@ $(document).ready(function() {
     </thead>
    <tbody>
 <p>
-{% for picker in results.pickers %}
+{% for picker in event.results.pickers %}
      <tr>
         <td>{{picker.Rank}}</td>
         <td>{{picker.Name}}</td>

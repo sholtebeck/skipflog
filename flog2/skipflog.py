@@ -1,11 +1,13 @@
 # skipflog functions
-import csv,datetime,json,sys,urllib2
+import csv,datetime,json,sys
+import urllib.request
+from skipconfig import *
 from time import gmtime, strftime
-# External modules (gspread, bs4)
 #import gspread
 from bs4 import BeautifulSoup
 #from oauth2client.client import SignedJwtAssertionCredentials
-from skipconfig import *
+
+memcache={}
 
 # get current week and year
 def current_event():
@@ -25,7 +27,7 @@ def current_year():
     return int(this_year) 
 
 def current_time():
-    right_now=strftime("%H%M",gmtime())
+    right_now=strftime("%c")
     return str(right_now) 
 
 # determine the cut rank for the various majors
@@ -41,7 +43,7 @@ def cut_rank():
 # debug values
 def debug_values(number, string):
     if debug:
-        print number, string
+        print (number, string)
 
 # Handler for string values to ASCII or integer
 def xstr(string):
@@ -96,7 +98,7 @@ def get_value(string):
 # Get the picks for an event
 def get_picks(event_id):
     picks={}
-    pickdict=json_results(picks_url+str(event_id))
+    pickdict=json_results(picks_api+str(event_id))
     if pickdict.get('picks'):
         for picker in skip_pickers:
             picklist=[str(pick) for pick in pickdict["picks"][picker][:10]]
@@ -113,9 +115,9 @@ def get_picks(event_id):
     return picks
 
 def open_worksheet(spread,work):
-    json_key = json.load(open('skipflog.json'))
+    json_key = json.load(open('config/skipflog.json'))
     scope = [feed_url]
-    credentials = SignedJwtAssertionCredentials(json_key['client_email'], json_key['private_key'], scope)
+#    credentials = SignedJwtAssertionCredentials(json_key['client_email'], json_key['private_key'], scope)
 #    gc = gspread.authorize(credentials)
 #    spreadsheet=gc.open(spread)
 #    worksheet=spreadsheet.worksheet(work)
@@ -124,29 +126,40 @@ def open_worksheet(spread,work):
 
 # json_results -- get results for a url
 def json_results(url):
+    if memcache.get(url):
+        return memcache[url]
     try:
-        page=urllib2.urlopen(url)
+        page=urllib.request.urlopen(url)
         results=json.load(page)
+        memcache[url]=results
         return results
     except:
         return {}
 
 def soup_results(url):
-    page=urllib2.urlopen(url)
-    soup = BeautifulSoup(page.read())
+    page=urllib.request.urlopen(url)
+    soup = BeautifulSoup(page.read(),"html.parser")
     return soup
 
-def fetch_events():
-    result = urllib2.urlopen(events_url)
-    reader = csv.DictReader(result)
-    event_list=[]
-    for row in reader:
-        event_list.append(row)
+def fetch_events(nrows=20):
+    event_list=json_results(events_api)
     return event_list
+
+def fetch_players():
+    players=[]
+    cnum=ncols=6
+    cells=json_results(players_json).get('feed').get('entry')
+    cols=[cell['content']['$t'] for cell in cells[:ncols]]
+    while cnum<len(cells):
+        data=[cell['content']['$t'] for cell in cells[cnum:cnum+ncols]]
+        players.append({c:d for (c,d) in zip(cols,data)})
+        cnum+=ncols
+    return players
+
 
 # Get a default event dictionary
 def default_event(event_id=current_event()):
-    event=[e for e in fetch_events()][0]
+    event=[e for e in fetch_events(10)][0]
     event["event_id"]=int(event['ID'])
     event["event_year"]=int(event['Name'][:4])
     event["event_name"]=event['Name']
@@ -158,22 +171,14 @@ def default_event(event_id=current_event()):
     event["picks"]["Available"]=players=[player['name'] for player in get_players()]
     event["pick_no"]=1 
     return event
-    
+
+# Get a default event dictionary
+def fetch_event(event_id=current_event()):
+    event=json_results(event_api+"/"+str(event_id))
+    return event
+
 def fetch_url(event_id):
-    url={
-    1604: 'http://www.espn.com/golf/leaderboard?tournamentId=2493', 
-    1606: 'http://www.espn.com/golf/leaderboard?tournamentId=2501', 
-    1607: 'http://www.espn.com/golf/leaderboard?tournamentId=2505', 
-    1608: 'http://www.espn.com/golf/leaderboard?tournamentId=2507',
-    1704: 'http://www.espn.com/golf/leaderboard?tournamentId=2700', 
-    1706: 'http://www.espn.com/golf/leaderboard?tournamentId=3066', 
-    1707: 'http://www.espn.com/golf/leaderboard?tournamentId=2710', 
-    1708: 'http://www.espn.com/golf/leaderboard?tournamentId=2712',
-    1804: 'http://www.espn.com/golf/leaderboard?tournamentId=401025221',
-    1806: 'http://www.espn.com/golf/leaderboard?tournamentId=401025255',
-    1807: 'http://www.espn.com/golf/leaderboard?tournamentId=401025259',
-    1808: 'http://www.espn.com/golf/leaderboard?tournamentId=401025263'
-    }
+    url={ int(e['ID']):e["URL"] for e in fetch_events() }
     if url.get(event_id):
         return url[event_id]
     else:
@@ -313,7 +318,7 @@ def fetch_tables(url):
     return results[:-3]
 
 def fetch_header(html):
-    return str(BeautifulSoup(html).find('th').string)
+    return str(BeautifulSoup(html,"html.parser").find('th').string)
     
 # fetch all table rows
 def fetch_rows(page):
@@ -332,55 +337,19 @@ def get_playerpicks(playlist):
 
 # Get the list of players from a spreadsheet (players tab)
 def get_players():
-    picks=get_picks(current_event()).keys()
-    players=[]
-    players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=A2%3AF155&output=csv"
-    result = urllib2.urlopen(players_url)
-    reader = csv.reader(result)
-    rownum = 1
-    for row in reader:
-        if row:
-            rownum += 1
-            player={'rownum':rownum }
-            player['rank']=get_value(row[0])
-            player['name']=row[1]
-            player['lastname']=row[1].split(" ")[-1]
-            player['points']=get_value(row[2].replace(',','').replace('-','0'))
-            if len(row)>5:           
-                player['country']=row[3]
-                player['odds']=get_value(row[4])
-                player['picked']=picks.count(row[1])
-            else:
-                player['hotpoints']=0.0
-                player['odds']=999
-                player['picked']=0
-            players.append(player)
+    picks=list(get_picks(current_event()).keys())
+    players=fetch_players()
+    for player in players:
+        name=player.get('name')
+        player['rownum']=players.index(player)+1
+        player['rank']=get_value(player['rank'])
+        player['lastname']=name.split(" ")[-1]
+        player['points']=player['points']
+        player['picked']=picks.count(name)
     return players
 
-def old_results(event_id):
-    picks=get_picks(event_id)
-    for name in names.values():
-        picks[name]["Count"]=0
-    page=soup_results(espn_url)
-    results={}
-    results['event']=fetch_headers(page)
-    results['players']=[]
-    rows=fetch_rows(page)
-    for row in rows:
-        res=fetch_results(row, results.get('event').get('Columns'))
-        if res.get('Name') in picks.keys():
-            picker=xstr(picks[res['Name']])
-            res['Picker']=picker
-            picks[picker]['Count']+=1
-            picks[picker]['Points']+=res['Points']
-        if res.get('Points')>10 or res.get('Picker'):
-            if res.get('R1'):
-                results['players'].append(res)
-    results['pickers']=[picks[key] for key in picks.keys() if key in picks.values()]
-    if results['pickers'][1]['Points']>results['pickers'][0]['Points']:
-        results['pickers'].reverse()
-    results['pickers'][0]['Rank']=1
-    results['pickers'][1]['Rank']=2
+def get_api_results(event_id):
+    results=json_results(results_api+str(event_id))
     return results
     
 def get_results(event_id):
@@ -450,7 +419,7 @@ def match_name(name, namelist):
 # Post the players to the Players tab in Majors spreadsheet
 def post_players():
 #    current_csv='https://docs.google.com/spreadsheets/d/1v3Jg4w-ZvbMDMEoOQrwJ_2kRwSiPO1PzgtwqO08pMeU/pub?single=true&gid=0&output=csv'
-#    result = urllib2.urlopen(current_csv)
+#    result = urllib.request.urlopen(current_csv)
 #    rows=[row for row in csv.reader(result)]
 #    names=[name[1] for name in rows[3:] if name[1]!='']
     odds_names=[n.strip() for n in open("app\players.txt").readlines()]
