@@ -3,7 +3,7 @@ from flask import Flask, abort,json,jsonify,render_template,redirect,request
 from google.auth.transport import requests
 import google.oauth2.id_token
 import datetime,mail
-from skipflog import *
+from skipflog2 import *
 
 #Load templates from 'templates' folder
 #jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
@@ -19,8 +19,8 @@ def currentEvent():
     return event_current
 
 def fetchEvents():
-    events = [{"event_id":f["ID"], "event_name":f["Name"]} for f in fetch_events() if len(f["ID"])==4]
-    return events
+     events = [{"event_id":f["ID"], "event_name":f["Name"], "event_dates": f["event_dates"], "event_loc": f["event_loc"]} for f in fetch_events() if len(f["ID"])==4]
+     return events
 
 def getPlayers(event_id='current'):
     players=json_results(players_api)
@@ -111,14 +111,15 @@ def api_events():
     events=fetchEvents()    
     return jsonify({'events': events })
 
-@app.route('/event', methods=['GET','POST'])
-@app.route('/event/<int:event_id>', methods=['GET','POST'])
+@app.route('/api/event', methods=['GET','POST'])
+@app.route('/api/event/<int:event_id>', methods=['GET','POST'])
 def api_event(event_id=currentEvent()):
     if request.method == "POST":
         event_data = request.form.get('event_data')
         event_json = json.loads(event_data)
         updateEvent(event_json)
     event = getEvent(event_id)
+    event["pickers"]=dict_to_list(event["pickers"],"points")
     return jsonify(event)
 
 @app.route('/mail', methods=['GET','POST'])
@@ -160,12 +161,8 @@ def picks_handler(event_id=currentEvent()):
         picklist = request.form.get('picklist')
         pick_players(picklist)     
     event = getEvent(event_id)
-    pick_dict={}
-    for picker in skip_pickers:
-        pick_dict[picker]=event["picks"][picker]
-        for player in pick_dict[picker]:
-            pick_dict[player]=picker
-    return jsonify({'picks': pick_dict })   
+    pick_dict=event.get("pickers")
+    return jsonify({'event_name':event.get("Name"), 'picks': pick_dict })   
 
 @app.route('/picks', methods=['GET'])
 @app.route('/picks/<int:event_id>', methods=['GET'])
