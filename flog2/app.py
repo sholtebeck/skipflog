@@ -2,19 +2,19 @@
 from flask import Flask, abort,json,jsonify,render_template,redirect,request
 from google.auth.transport import requests
 import google.oauth2.id_token
-import datetime,mail,models
+import datetime,mail
+import os
 from skipflog import *
 
 #Load templates from 'templates' folder
 #jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
 #jinja_environment = jinja2.Environment(autoescape=True,loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
 app = Flask(__name__)
-app.config['DEBUG'] = True    
-default_url='/app/index.html'
+default_url='/static/index.html'
    
 def currentEvent():
     now=datetime.datetime.now()
-    event_month=min(max(now.month,4),11)
+    event_month=min(max(now.month,4),10)
     event_current=100*(now.year-2000)+event_month
     return event_current
 
@@ -23,39 +23,30 @@ def fetchEvents():
     return events
 
 def getPlayers(event_id='current'):
-    players = models.get_event(event_id).get("players")
+    players=json_results(players_api)
     return players 
 
 def getPicks(event_id):
-    event = getEvent(event_id)
-    return event.get("picks")
+    picks=get_picks(event_id)
+    return picks
 
 def getResults(event_id):
-    results = models.get_results(event_id)
-    if not results or results["event"]["Status"]!="Final":
-        try:
-            results=get_results(int(event_id))
-            models.update_results(results)
-        except:
-            results=None
+    results= get_api_results(event_id)
     return results
 
 def getEvent(event_id):
-    event = models.get_event(event_id)
-    if not event:
-        event=default_event(event_id)
-        models.update_event(event)
+    event = fetch_event(event_id)
     return event
 
 def nextEvent():
     event_current=currentEvent()
-    event = models.get_event(event_current)
+    event=get_event(event_current)
     if not event:
         event=default_event(event_current)
     return event
 
 def updateEvent(event_data):
-    models.update_event(event_data)
+    update_event(event_data)
     
 def getLastPick(event,picker,player):
     lastpick=event.get("lastpick")
@@ -76,32 +67,27 @@ def updateLastPick(event):
     # send alert if needed
     pick_no = event['pick_no']
     if (pick_no%2==0 or pick_no==21):
-#        mail.send_message(numbers.get(event["next"]),lastpick)
-        mail.send_message(numbers["Steve"],event["event_name"],event["lastpick"])
+        mail.send_message(numbers.get(event["next"]),event["event_name"],event["lastpick"])
     return
 
 def getUser(id_token):
     user_data={"user":None}
     if id_token:
-        user_data=models.get_document("users",id_token)
-        if not user_data:
-            try:
-                user_data = google.oauth2.id_token.verify_firebase_token(id_token, requests.Request())
-                user_data["user"]=user_data["name"].split()[0] 
-                models.set_document("users",user_data["user"],user_data)
-            except:
-                return None 
+        try:
+            user_data = google.oauth2.id_token.verify_firebase_token(id_token, requests.Request())
+            user_data["user"]=user_data["name"].split()[0] 
+        except:
+            return user_data
     return user_data
 
 @app.route('/login')
 def login_page(): 
     title='skipflog - golf picks'
-    event_list=getEvent("current").get("events")
+    event_list=fetch_events()
     id_token = request.cookies.get("token")
     error_message = None
     user_data = getUser(id_token)
     return render_template('login.html',config=firestore_json,event_list=event_list,title=title,user_data=user_data, error_message=error_message)
-
 
 @app.route('/')
 def main_page(): 
@@ -111,14 +97,14 @@ def main_page():
         return redirect('/login')
     event_id=int( request.args.get('event_id',currentEvent()) )
     event = getEvent(event_id)
-    event_list=getEvent("current").get("events")
+    event_list=fetch_events()
     user=user_data.get("user")
     event=getEvent(event_id) 
     pick_no = event.get("pick_no",1)
     event["picknum"] = pick_ord[pick_no]
     event["next"]=nextPick(event)
-    event["results"]=1
-    return render_template('index.html',event=event,event_list=event_list,results=getResults(event_id),user=user)
+    event["results"]=getResults(event_id).get("results")
+    return render_template('index.html',event=event,event_list=event_list,user=user)
 
 @app.route('/api/events', methods=['GET','POST'])
 def api_events():
@@ -142,11 +128,10 @@ def mail_handler(event_id=currentEvent()):
         results_html=fetch_tables(picks_url)
     else:
         results_html=fetch_tables(results_url)
-    event_name = fetch_header(results_html)
-    sent=models.is_sent(event_name)
+    event_name=fetch_header(results_html)
     if not sent:
         mail.send_mail(event_name,results_html)
-        models.send_message(event_name,current_time())
+        models.set_document('message',event_name,results_html)
     return jsonify({'event': event_name, "sent":sent })
 
 @app.route('/pick', methods=['GET','POST'])
@@ -191,10 +176,9 @@ def Picks(event_id=currentEvent()):
 
 @app.route('/api/players', methods=['GET'])
 @app.route('/api/players/<int:event_id>', methods=['GET'])
-def ApiPlayers(event_id=currentEvent()):   
-    event=[f for f in fetchEvents() if int(f["event_id"])==event_id][0]
-    players=getPlayers()
-    return jsonify({'event': event, "players":players })   
+def ApiPlayers(event_id=currentEvent()):  
+    players=json_results(players_api)
+    return jsonify(players)
 
 @app.route('/players', methods=['GET'])
 @app.route('/players/<int:event_id>', methods=['GET'])
@@ -209,21 +193,22 @@ def RankingHandler():
     event_name = fetch_header(rankings_html)
     sent=models.is_sent(event_name)
     if not sent:
-        mail.send_mail(event_name,rankings_html)
-        models.send_message(event_name,current_time())
+        sent=mail.send_mail(event_name,rankings_html)
+        models.set_document('message',event_name,sent)
     return jsonify({"event":event_name, "sent":sent})       
 
 @app.route('/api/results', methods=['GET'])
 @app.route('/api/results/<int:event_id>', methods=['GET'])
 def ApiResults(event_id=currentEvent()):   
     results = getResults(event_id)
-    return jsonify({"results":results})   
+    return jsonify(results)   
 
 @app.route('/results', methods=['GET'])
 @app.route('/results/<int:event_id>', methods=['GET'])
 def ResultsHandler(event_id=currentEvent()):   
     results = getResults(event_id)
-    return render_template('results.html',results=results)
+    return render_template('results.html',results=results["results"])
 
+port = int(os.environ.get('PORT', 8080))
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(threaded=True, host='0.0.0.0', port=port)

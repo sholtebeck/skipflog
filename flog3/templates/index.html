@@ -126,12 +126,12 @@ $(document).ready(function() {
 	<col width="250">
     <tr>
    {% for picker in event.pickers %}
-	<th>{{picker}}</th>
+	<th>{{picker["Name"]}}</th>
    {% endfor %}
     <tr>
    {% for picker in event.pickers %}
 	<td><ol>
-        {% for player in event.picks[picker] %}
+        {% for player in picker["picks"] %}
         <li>{{ player }}
         {% endfor %}
      </ol></td>
@@ -141,8 +141,8 @@ $(document).ready(function() {
    {% if user==event.next %}
     <p><form action="/pick" method="post">
     <div>{{user}}'s {{event.picknum}} Pick: <select name="player"> 
-  	 {% for player in event.picks["Available"] %}
-     <option>{{player}}</option>
+  	 {% for player in event.players %}
+     <option>{{player.name}}</option>
      {% endfor %}
      </select><input type="submit" id="submit" name="submit" value="Pick"></div>
     <input type="hidden" name="who" value="{{user}}">
