@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 #from oauth2client.client import SignedJwtAssertionCredentials
 
 # Misc properties
+cache={}
 firestore_json=json.load(open('config/firestore.json'))
 events={ 4:'Masters',6:'US Open', 7:'Open Championship', 8:'PGA Championship'}
 mypicks = [1,4,5,8,9,12,13,16,17,20,22]
@@ -15,7 +16,7 @@ numbers={'Steve':'5103005644@vtext.com','Mark':'5106739570@vmobl.com'}
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
 event_list=[]
 events_json="https://spreadsheets.google.com/feeds/cells/0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E/1/public/full?alt=json"
-events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AE21&output=csv"
+events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AF21&output=csv"
 players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB155&output=csv"
 results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
 ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
@@ -131,6 +132,8 @@ def get_value(string):
         value=round(float(string),2)
     except:
         value=0.0
+    if abs(value-int(value))<0.0001:
+        value=int(value)
     return value
     
 # Get the picks for an event
@@ -152,20 +155,23 @@ def get_picks(event_id):
                     picks[str(pick)]=picker
     return picks
 
+def get_pickers(first):
+    pickers=[sp for sp in skip_pickers if sp==first]+[sp for sp in skip_pickers if sp!=first]
+    return [{"name":p,"number": numbers.get(p), "picks":[],"points":0} for p in pickers]
+
 def open_worksheet(spread,work):
-    json_key = json.load(open('config/skipflog.json'))
-    scope = [feed_url]
-#    credentials = SignedJwtAssertionCredentials(json_key['client_email'], json_key['private_key'], scope)
-#    gc = gspread.authorize(credentials)
-#    spreadsheet=gc.open(spread)
-#    worksheet=spreadsheet.worksheet(work)
-    worksheet=None
+    gc = gspread.service_account('../../skipflog/skipflog.json')
+    spreadsheet=gc.open(spread)
+    worksheet=spreadsheet.worksheet(work)
     return worksheet
 
-# json_results -- get results for a url
+# json_results -- get results for a url (or file)
 def json_results(url):
     try:
-        page=urllib.request.urlopen(url)
+        if url[:4]=="http":
+            page=urllib.request.urlopen(url)
+        else:
+            page=open(url)
         results=json.load(page)
         return results
     except:
@@ -176,41 +182,38 @@ def soup_results(url):
     soup = BeautifulSoup(page.read(),"html.parser")
     return soup
 
-def fetch_events(nrows=20):
+def fetch_events(nrows=10):
+    if cache.get("events"):
+        return cache["events"]
     event_list=[]
-    cnum=ncols=5
+    cnum=ncols=6
     cells=json_results(events_json).get('feed').get('entry')
     cols=[cell['content']['$t'] for cell in cells[:ncols]]
     while len(event_list)<nrows:
         data=[cell['content']['$t'] for cell in cells[cnum:cnum+ncols]]
         event_list.append({c:d for (c,d) in zip(cols,data)})
         cnum+=ncols
+    cache["events"]=event_list
     return event_list
 
 def fetch_players():
-    players=[]
-    cnum=ncols=6
-    cells=json_results(players_json).get('feed').get('entry')
-    cols=[cell['content']['$t'] for cell in cells[:ncols]]
-    while cnum<len(cells):
-        data=[cell['content']['$t'] for cell in cells[cnum:cnum+ncols]]
-        players.append({c:d for (c,d) in zip(cols,data)})
-        cnum+=ncols
+    players=cache.get("players",[])
+    if len(players)==0:
+        players=get_players()
+        cache["players"]=players
     return players
 
 
 # Get a default event dictionary
 def default_event(event_id=current_event()):
-    event=[e for e in fetch_events(10)][0]
+    event=[e for e in fetch_events(1)][0]
     event["event_id"]=int(event['ID'])
     event["event_year"]=int(event['Name'][:4])
     event["event_name"]=event['Name']
-    event["pickers"]=skip_pickers
-    event["next"]=event.get('First',skip_pickers[0])
-    event["picks"]={"Picked":[],"Available":[] }
-    for picker in skip_pickers:
-        event["picks"][picker]=[]
-    event["picks"]["Available"]=players=[player['name'] for player in get_players()]
+    event["next"]=event["first"]
+    event["nextpick"]=event["next"]+"'s First Pick"
+    event["pickers"]=get_pickers(event["first"])
+    event["players"]=fetch_players()
     event["pick_no"]=1 
     return event
     
@@ -372,17 +375,16 @@ def get_playerpicks(playlist):
             current_rank+=1
     return players
 
-# Get the list of players from a spreadsheet (players tab)
+# Get the list of players from the api 
 def get_players():
-    picks=list(get_picks(current_event()).keys())
-    players=fetch_players()
+    players=json_results(players_api).get("players")
     for player in players:
         name=player.get('name')
         player['rownum']=players.index(player)+1
-        player['rank']=get_value(player['rank'])
+        player['rank']=int(player['rank'])
         player['lastname']=name.split(" ")[-1]
         player['points']=player['points']
-        player['picked']=picks.count(name)
+        player['picked']=0
     return players
 
 def old_results(event_id):
@@ -453,17 +455,41 @@ def get_results(event_id):
     results['pickers'][0]['Rank']=1
     results['pickers'][1]['Rank']=2
     return results
-        
-# Update the picks to the Players tab in Majors spreadsheet
-def pick_players(picklist):
-    try:
-        players=json_results(players_api)
-        worksheet=open_worksheet('Majors','Players')
-        for player in players['players']:
-            if str(player['name']) in picklist:
-                worksheet.update_cell(player["rownum"], 6, 1)
-    except:
-        pass
+
+def next_pick(picknames,pick_no):
+    picknum=pick_ord[pick_no%len(pick_ord)]
+    if picknum == "Done":
+        return (None, "We're Done")
+    elif pick_no in mypicks:
+        return (picknames[0],picknum)
+    else:
+        return (picknames[1],picknum)
+
+# Update an event with a picked player. Passing an event dict and an "X picked Y message"
+#  Verify that picker X is next and player Y is available (not picked yet)
+def pick_player(event, player):
+    new_event=event.copy()
+    picker=event["next"]
+    picknames=[n["name"] for n in event["pickers"]]
+    playnames=['z'*p["picked"]+p["name"] for p in event["players"]]
+    if picker in picknames and player in playnames:
+        p=picknames.index(picker)
+        q=playnames.index(player)
+        new_event["pickers"][p]["picks"].append(player)
+        new_event["players"][q]["picked"]=1
+        new_event["pick_no"]=event["pick_no"]+1
+        if event.get("lastpick") and event["lastpick"].startswith(picker):
+            new_event["lastpick"]=event["lastpick"]+" and "+player
+        else:
+            new_event["lastpick"]=picker+" picked "+player
+        picknext,picknum=next_pick(picknames,new_event["pick_no"])
+        new_event["next"]=picknext
+        if picknext:
+            new_event["nextpick"]=picknext+"'s "+picknum+" Pick"
+        else:
+            new_event["nextpick"]=picknum
+    return new_event
+
 # Get a matching name from a list of names
 def match_name(name, namelist):
     if name in namelist:
@@ -489,7 +515,7 @@ def post_players():
     rank_names=[rank['name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
     current_cell=0
-    cell_list = worksheet.range('A2:F'+str(len(odds_names)+1))
+    cell_list = sheet.range('A2:E32')
     for name in odds_names:
         debug_values(odds.get(name), name)
         matching_name=match_name(name,rank_names)

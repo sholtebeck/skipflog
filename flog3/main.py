@@ -1,16 +1,13 @@
-# Main program for golfpicks app (skipflog.appspot.com)
+# Main program for golfpicks app (skipflog3.appspot.com)
 from flask import Flask, abort,json,jsonify,render_template,redirect,request
 from google.auth.transport import requests
 import google.oauth2.id_token
 import datetime,mail,models
 from skipflog import *
 
-#Load templates from 'templates' folder
-#jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
-#jinja_environment = jinja2.Environment(autoescape=True,loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
 app = Flask(__name__)
 app.config['DEBUG'] = True    
-default_url='/app/index.html'
+default_url='/static/index.html'
    
 def currentEvent():
     now=datetime.datetime.now()
@@ -19,7 +16,7 @@ def currentEvent():
     return event_current
 
 def fetchEvents():
-    events = [{"event_id":f["ID"], "event_name":f["Name"]} for f in fetch_events() if len(f["ID"])==4]
+    events = [{"event_id":int(f["ID"]),"event_dates":f["event_dates"], "event_loc":f["event_loc"],"event_name":f["Name"]} for f in fetch_events()[:10] if len(f["ID"])==4]
     return events
 
 def getPlayers(event_id='current'):
@@ -43,8 +40,8 @@ def getResults(event_id):
 def getEvent(event_id):
     event = models.get_event(event_id)
     if not event:
-        event=default_event(event_id)
-        models.update_event(event)
+       event=default_event(event_id)
+#   models.update_event(event)
     return event
 
 def nextEvent():
@@ -107,26 +104,20 @@ def login_page():
 def main_page(): 
     id_token=request.cookies.get("token")
     user_data=getUser(id_token)
-    if not id_token or not user_data:
+    if not id_token or not user_data or not user_data.get("user"):
         return redirect('/login')
-    event_id=int( request.args.get('event_id',currentEvent()) )
-    event = getEvent(event_id)
-    event_list=getEvent("current").get("events")
+    event_id=currentEvent()
+    event=getEvent(event_id)
     user=user_data.get("user")
-    event=getEvent(event_id) 
-    pick_no = event.get("pick_no",1)
-    event["picknum"] = pick_ord[pick_no]
-    event["next"]=nextPick(event)
-    event["results"]=1
-    return render_template('index.html',event=event,event_list=event_list,results=getResults(event_id),user=user)
+    return render_template('index.html',event=event,user=user)
 
 @app.route('/api/events', methods=['GET','POST'])
 def api_events():
     events=fetchEvents()    
     return jsonify({'events': events })
 
-@app.route('/event', methods=['GET','POST'])
-@app.route('/event/<int:event_id>', methods=['GET','POST'])
+@app.route('/api/event', methods=['GET','POST'])
+@app.route('/api/event/<int:event_id>', methods=['GET','POST'])
 def api_event(event_id=currentEvent()):
     if request.method == "POST":
         event_data = request.form.get('event_data')
@@ -157,8 +148,8 @@ def pick_handler(event_id = currentEvent()):
         player = request.form.get('player')
         # update event (add to picks, remove from field)
         event = getEvent(event_id)
-        if player in event["picks"]["Available"]:
-            event["picks"]["Available"].remove(player)
+        if player in [p["name"] for p in event["players"]]:
+            event["p"]["Available"].remove(player)
             event["picks"]["Picked"].append(player)
             event["picks"][picker].append(player)
             event["lastpick"]=getLastPick(event,picker,player)
@@ -171,14 +162,11 @@ def pick_handler(event_id = currentEvent()):
 
 @app.route('/api/picks', methods=['GET'])
 @app.route('/api/picks/<int:event_id>', methods=['GET'])
-def picks_handler(event_id=currentEvent()):   
-    if request.method=="POST":
-        picklist = request.form.get('picklist')
-        pick_players(picklist)     
+def picks_handler(event_id=currentEvent()):      
     event = getEvent(event_id)
     pick_dict={}
     for picker in skip_pickers:
-        pick_dict[picker]=event["picks"][picker]
+        pick_dict[picker]=event[picker]["picks"]
         for player in pick_dict[picker]:
             pick_dict[player]=picker
     return jsonify({'picks': pick_dict })   
@@ -190,18 +178,22 @@ def Picks(event_id=currentEvent()):
     return render_template('picks.html',event=event)
 
 @app.route('/api/players', methods=['GET'])
-@app.route('/api/players/<int:event_id>', methods=['GET'])
-def ApiPlayers(event_id=currentEvent()):   
-    event=[f for f in fetchEvents() if int(f["event_id"])==event_id][0]
-    players=getPlayers()
-    return jsonify({'event': event, "players":players })   
+@app.route('/api/players/<int:picked>', methods=['GET'])
+def ApiPlayers(picked=None):   
+    event=getEvent(currentEvent())
+    eventdict={k:event[k] for k in ["event_id","event_name"]}
+    players=event["players"]
+    if picked in (0,1):
+        players=[p for p in players if p.get("picked")==picked]
+    return jsonify({"event":eventdict, "players":players})
 
 @app.route('/players', methods=['GET'])
 @app.route('/players/<int:event_id>', methods=['GET'])
 def Players(event_id=currentEvent()):   
     event=getEvent(event_id)
-    players=getPlayers()
-    return render_template('players.html',event=event,players=players)
+    event_name=event["Name"]
+    players=event.get("players")
+    return render_template('players.html',event_name=event_name)
 
 @app.route('/ranking', methods=['GET'])
 def RankingHandler(): 
@@ -224,6 +216,11 @@ def ApiResults(event_id=currentEvent()):
 def ResultsHandler(event_id=currentEvent()):   
     results = getResults(event_id)
     return render_template('results.html',results=results)
+
+@app.route('/api/user', methods=['GET'])
+def ApiUser(event_id=currentEvent()):   
+    user= getUser(request.cookies.get("token"))
+    return jsonify(user)
 
 if __name__ == '__main__':
     app.run(debug=True)
