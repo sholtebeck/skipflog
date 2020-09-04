@@ -18,7 +18,8 @@ names={'sholtebeck':'Steve','mholtebeck':'Mark'}
 numbers={'Steve':'5103005644@vtext.com','Mark':'5106739570@vmobl.com'}
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
 event_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=1&output=html&widget=true"
-events_api="https://storage.googleapis.com/skipflog/json/events.json"
+#events_api="https://storage.googleapis.com/skipflog/json/events.json"
+events_api="../json/events.json"
 events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AE42&output=csv"
 players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB155&output=csv"
 results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
@@ -26,7 +27,8 @@ ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU0
 rankings_url="http://knarflog.appspot.com/ranking"
 result_url="http://knarflog.appspot.com/results"
 results_url="http://skipflog2.appspot.com/results"
-players_api="http://knarflog.appspot.com/api/players"
+#players_api="http://knarflog.appspot.com/api/players"
+players_api="../json/players.json"
 leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"
 skip_user="skipfloguser"
 skip_picks={}
@@ -127,6 +129,8 @@ def get_rankings(size=150):
     rank=1
     for row in soup.findAll('tr'):
         name = row.find('a')
+        if '(' in name:
+            name=name[:name.index('(')]
         if name:
             points = float(row.findAll('td')[6].string)
             country = row.find("td",{"class","ctry"}).img.get("title")
@@ -163,6 +167,13 @@ def get_picks(event_id):
                 for pick in picklist:
                     picks[str(pick)]=picker
     return picks
+
+
+def open_worksheet(spread,work):
+    gc = gspread.service_account("skipflog.json")
+    spreadsheet=gc.open(spread)
+    worksheet=spreadsheet.worksheet(work)
+    return worksheet
 
 # json_results -- get results for a url
 def json_results(url):
@@ -473,16 +484,7 @@ def get_results(event_id):
     results['pickers'][1]['Rank']=2
     return results
         
-# Update the picks to the Players tab in Majors spreadsheet
-def pick_players(picklist):
-    try:
-        players=json_results(players_api)
-        worksheet=open_worksheet('Majors','Players')
-        for player in players['players']:
-            if str(player['name']) in picklist:
-                worksheet.update_cell(player["rownum"], 6, 1)
-    except:
-        pass
+# Update the picks to the Players tab in Majors spreadshee
 # Get a matching name from a list of names
 def match_name(name, namelist):
     if name in namelist:
@@ -742,10 +744,11 @@ def load_players(events=load_events()):
             if pname not in pd.keys():
                 pd[pname]=len(players)
                 players.append({"Name":pname, "pickers":[]})
-            pick=(e["event_id"],p["Picker"])
+            pick=str(e["event_id"])+p["Picker"][0]
             players[pd[pname]]["pickers"].append(pick)
     for p in players:
-        p["picked"]={q:len([r for r in p["pickers"] if r[1]==q]) for q in skip_pickers}
+        p["picked"]={q:len([r for r in p["pickers"] if r[-1]==q[0]]) for q in skip_pickers}
         p["picked"]["Total"]=sum(p["picked"].values())
+        p["pickers"]=','.join(p["pickers"])
     players.sort(key=lambda p:p["Name"])
-    return {"players":players}      
+    return {"players":players}   

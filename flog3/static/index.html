@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="skipflog">
+<head>
+  <title>skipflog:picks</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.5/angular.min.js"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+   <link rel="stylesheet" href="app.css" >
+</head>
+<body ng-app="skipflog" ng-controller="eventsController">
+<div class="container-fluid">
+  <p></p>
+  Event Name: <select ng-model="event" ng-options="event.event_name for event in events track by event.event_id" ng-change="setEvent()"></select> <br>
+  {{ event.event_dates }} at {{event.event_loc }}
+  <div class="row">
+    <div class="col">
+      <table>
+        <col width="250">
+        <col width="250">
+        <thead>
+        <tr><th colspan=2>{{event.event_name}} - Picks</th></tr>
+        <tr><th ng-repeat="picker in pickers" ng-bind="picker.name"></th>
+        </thead>
+        <td ng-repeat="picker in pickers">
+        <ol>  
+            <li ng-repeat="pick in picker.picks">{{pick}}</li>  
+         </ol>
+         </td></tr>
+        </table>
+
+    </div> <!-- col -->
+
+    <div class="col">
+        <table>
+            <thead>
+              <tr><th colspan="7" ng-bind="event.event_name"}}></th></tr>
+              <tr><th colspan="7">Search:  <input ng-model="query"></th></tr>
+              <th>#</th>
+                  <th><a href="#" ng-click="orderProp='name'">Player</a>  <a href="#" ng-click="orderProp='lastname'">Last Name</a></th>	
+                  <th><a href="#" ng-click="orderProp='country'">Country</a></th>
+                  <th><a href="#" ng-click="orderProp='-points'">Points</a></th>	
+                  <th><a href="#" ng-click="orderProp='rank'">World Rank</a></th>
+                  <th><a href="#" ng-click="orderProp='odds'">Odds</a></th>
+                  <th><a href="#" ng-click="orderProp='picked'">Picked</a></th>         
+            </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="player in players | filter:query |orderBy:orderProp">
+                <td ng-bind="$index + 1"></td>
+                <td ng-bind="player.name"></td>
+                <td ng-bind="player.country"></td>
+                <td ng-bind="player.points |number:2"></td>
+                <td ng-bind="player.rank"></td>
+                <td ng-bind="player.odds">/1</td>
+                <td ng-bind="player.picked"></td>
+              </tr>
+           </tbody>
+          </table>
+      
+    </div> <!-- col -->
+
+  </div> <!-- row -->
+  </div> <!-- container -->
+  <script src="app.js"></script>
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+</body>
+</html>

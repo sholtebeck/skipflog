@@ -3,10 +3,9 @@ import csv,datetime,json,sys,urllib2
 from time import gmtime, strftime
 # External modules (gspread, bs4)
 import sys
-sys.path[0:0] = ['libs']
+sys.path[0:0] = ['lib']
 import gspread
 from bs4 import BeautifulSoup
-from oauth2client.client import SignedJwtAssertionCredentials
 
 # Misc properties
 br="</br>"
@@ -20,6 +19,7 @@ event_url="https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1Az
 events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AE21&output=csv"
 players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB155&output=csv"
 results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
+ranking_api="http://knarflog.appspot.com/api/ranking/"
 ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
 rankings_url="http://knarflog.appspot.com/ranking"
 result_url="http://knarflog.appspot.com/results"
@@ -82,7 +82,7 @@ def cut_rank():
 # debug values
 def debug_values(number, string):
     if debug:
-        print number, string
+        print (number, string)
 
 # Handler for string values to ASCII or integer
 def xstr(string):
@@ -111,18 +111,7 @@ def get_points(rank):
 
 # Get the rankings from the page
 def get_rankings(size):
-    ranking_url="http://www.owgr.com/ranking?pageSize="+str(size)
-    soup=soup_results(ranking_url)
-    rankings=[]
-    rank=1
-    for row in soup.findAll('tr'):
-        name = row.find('a')
-        if name:
-            points = float(row.findAll('td')[6].string)
-            country = row.find("td",{"class","ctry"}).img.get("title")
-            player={"rank":rank, "name":xstr(name.string), "country": xstr(country), "points":points }
-            rankings.append(player)
-            rank+=1
+    rankings=json_results(ranking_api+str(size))
     return rankings
 
 # Get the value for a string
@@ -154,10 +143,7 @@ def get_picks(event_id):
     return picks
 
 def open_worksheet(spread,work):
-    json_key = json.load(open('skipflog.json'))
-    scope = [feed_url]
-    credentials = SignedJwtAssertionCredentials(json_key['client_email'], json_key['private_key'], scope)
-    gc = gspread.authorize(credentials)
+    gc=gspread.service_account("skipflog.json")
     spreadsheet=gc.open(spread)
     worksheet=spreadsheet.worksheet(work)
     return worksheet
@@ -190,12 +176,14 @@ def default_event(event_id=current_event()):
     event["event_id"]=int(event['ID'])
     event["event_year"]=int(event['Name'][:4])
     event["event_name"]=event['Name']
-    event["pickers"]=skip_pickers
-    event["next"]=event.get('First',skip_pickers[0])
-    event["picks"]={"Picked":[],"Available":[] }
-    for picker in skip_pickers:
-        event["picks"][picker]=[]
-    event["picks"]["Available"]=players=[player['name'] for player in get_players()]
+    pickers=skip_pickers
+    if event.get('first',pickers[0])!=pickers[0]:
+        pickers=pickers[::-1]
+    event["next"]=event.get('first',skip_pickers[0])
+    for picker in pickers:
+        userdata={"name":picker,"picks":[],"points":0}
+        event["pickers"].append(userdata)
+    event["players"]=get_players()
     event["pick_no"]=1 
     return event
     
@@ -493,11 +481,11 @@ def post_players():
 #    result = urllib2.urlopen(current_csv)
 #    rows=[row for row in csv.reader(result)]
 #    names=[name[1] for name in rows[3:] if name[1]!='']
-    odds_names=[n.strip() for n in open("app\players.txt").readlines()]
+#    odds_names=[n.strip() for n in open("app\players.txt").readlines()]
 #    odds=fetch_odds()
 #    odds_names=odds.keys()
     odds_names.sort()
-    rankings=get_rankings(1500)
+    rankings=get_rankings(500).get("players")
     rank_names=[rank['name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
     current_cell=0

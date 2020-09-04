@@ -99,9 +99,9 @@ $(document).ready(function() {
 {% if user %}
     &nbsp;Logged in as <b>{{ user }}</b>:
 {% endif %}
-  <a href="{{ url }}">{{ url_linktext }}</a>
+  
 {% if event %}
-     &nbsp;Event: <b>{{ event.event_name }}</b>
+     &nbsp;Event: <b>{{ event.Name }}</b>
 {% endif %}
 <p><div id="tab_container">
 
@@ -126,7 +126,7 @@ $(document).ready(function() {
 	<col width="250">
     <tr>
    {% for picker in event.pickers %}
-	<th>{{picker["Name"]}}</th>
+	<th>{{picker["name"]}}</th>
    {% endfor %}
     <tr>
    {% for picker in event.pickers %}
@@ -140,7 +140,7 @@ $(document).ready(function() {
   {% endif %}
    {% if user==event.next %}
     <p><form action="/pick" method="post">
-    <div>{{user}}'s {{event.picknum}} Pick: <select name="player"> 
+    <div>{{event.nextpick}}: <select name="player"> 
   	 {% for player in event.players %}
      <option>{{player.name}}</option>
      {% endfor %}
@@ -158,17 +158,17 @@ $(document).ready(function() {
    <p>We're Done.
    {% endif %}
    {% else %}
-   <br>It's <b>{{event.next}}'s</b> turn.
+   <br>Waiting for <b>{{event.nextpick}}.
    {% endif %}
 {% endif %}
 
 </div><!-- #tab1 -->
 <div id="tab2" class="tab_content"> 
 
-{% if event.picks["Picked"]  %}
-<p><strong>Picked:</strong>
-{% for player in event.picks["Picked"] %}
-<br>{{player}}
+{% if event.picks  %}
+<strong>Picked:</strong><p></p>
+{% for player in event.picks %}
+ {{player}}<br/>
 {% endfor %}
 {% endif %}
 
@@ -245,7 +245,7 @@ No results yet.
  Search: <input ng-model="query"> <p>  
   <table>
     <thead>
-      <tr><th colspan="7" ng-bind="event.Name"}}</th></tr>
+      <tr><th colspan="7" ng-bind="event.event_name"></th></tr>
       <tr>
 	  <th>#</th>
           <th><a href="#" ng-click="orderProp='name'">Player</a>  <a href="#" ng-click="orderProp='lastname'">Last Name</a></th>	
@@ -271,7 +271,7 @@ No results yet.
 var skipflog = angular.module('skipflog', []);
 skipflog.controller('playersController', ['$scope', '$http',
   function($scope, $http) {
-    $http.get('/api/players').success(function(data) {
+    $http.get('/api/players/0').success(function(data) {
       $scope.event = data.event;
       $scope.players = data.players;
     });
