@@ -182,7 +182,7 @@ def soup_results(url):
     soup = BeautifulSoup(page.read(),"html.parser")
     return soup
 
-def fetch_events(nrows=20):
+def fetch_events(nrows=10):
     if cache.get("events"):
         return cache["events"]
     event_list=[]
@@ -216,13 +216,14 @@ def default_event(event_id=current_event()):
     event["players"]=fetch_players()
     event["pick_no"]=1 
     return event
-    
+
+# Pull the ESPN url for a given event
 def fetch_url(event_id):
-    url={ int(e['ID']):e["URL"] for e in fetch_events() }
-    if url.get(event_id):
-        return url[event_id]
+    fevents=[f for f in fetch_events() if f["ID"]==str(event_id)]
+    if len(fevents)>0:
+        return fevents[0].get("espn_url",espn_url)
     else:
-        return espn_url
+         return espn_url
 
 def fetch_headers(soup):
     if not soup:
@@ -489,7 +490,7 @@ def pick_player(event, player):
         else:
             new_event["nextpick"]=picknum
     return new_event
-        
+
 # Get a matching name from a list of names
 def match_name(name, namelist):
     if name in namelist:

@@ -12,7 +12,7 @@
  Search: <input ng-model="query"> <p>  
   <table>
     <thead>
-      <tr><th colspan="7" ng-bind="event.event_name"}}</th></tr>
+      <tr><th colspan="7" ng-bind="event_name"}}</th></tr>
       <tr>
 	  <th>#</th>
           <th><a href="#" ng-click="orderProp='name'">Player</a>  <a href="#" ng-click="orderProp='lastname'">Last Name</a></th>	
@@ -20,7 +20,8 @@
           <th><a href="#" ng-click="orderProp='-points'">Points</a></th>	
           <th><a href="#" ng-click="orderProp='rank'">World Rank</a></th>
           <th><a href="#" ng-click="orderProp='odds'">Odds</a></th>
-          <th><a href="#" ng-click="orderProp='picked'">Picked</a></th>         </tr>
+          <th><a href="#" ng-click="orderProp='picked'">Picked</a></th>         
+    </tr>
     </thead>
     <tbody>
       <tr ng-repeat="player in players | filter:query |orderBy:orderProp">
