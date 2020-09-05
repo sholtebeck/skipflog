@@ -2,41 +2,48 @@
 models.py
 
 App Engine datastore models for Golf Picks app
-
+Modified to use Firebase DB in August 2020
 """
-from google.appengine.ext import ndb
-from time import gmtime,strftime
-import datetime
 
-class Event(ndb.Model):
-    event_id = ndb.IntegerProperty(required=True)
-    event_name = ndb.StringProperty()
-    pick_no = ndb.IntegerProperty(indexed=False)
-    event_json = ndb.JsonProperty()
-    results_json = ndb.JsonProperty()
+#first try google_cloud then try firebase_admin
+try:
+    from google.cloud import firestore
+    db = firestore.Client()
+except:
+    from firebase_admin import credentials,firestore,initialize_app
+    firebase_cred = credentials.Certificate('config/skipflog3.json')
+    initialize_app(firebase_cred)
+    db = firestore.client()
 
-class Picker(ndb.Model):
-    picks = ndb.StringProperty(repeated=True)
-    count = ndb.IntegerProperty()
-    points = ndb.FloatProperty()
-
-def get_event(event_id):
-    event=Event.get_by_id(int(event_id))
-    return event
-	
-def get_results(event_id):
-    event=Event.get_by_id(int(event_id))
-    if event:
-        return event.results_json
+def get_document(coll,id):
+    doc=db.collection(coll).document(id).get()
+    if doc.exists:
+        return doc.to_dict()
     else:
-        return None
-	
+        return None 
+
+def set_document(coll,id,data):
+    db.collection(coll).document(id).set(data)
+        
+def get_event(event_id):
+    return get_document('events',str(event_id))       
+    
+def get_results(event_id):
+    return get_document('results',str(event_id))       
+   
 def update_event(event_data):
-    event_id = int(event_data["event_id"])
-    event=Event(id=event_id,event_id=event_id,event_name=event_data["event_name"],event_json=event_data)
-    event.put()
-	
+    set_document('events',str(event_data["ID"]),event_data)
+    return event_data
+    
 def update_results(results_data):
-    event=get_event(results_data['event']['ID'])
-    event.results_json=results_data
-    event.put()
+    set_document('results',str(results_data['event']['ID']),results_data)
+
+def is_sent(name):
+    msg=get_document('messages',name)
+    if msg:
+        return True
+    else:
+        return False 
+            
+def send_message(name,sent):
+    set_document('messages',name,{"name":name, "sent": sent })    
