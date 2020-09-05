@@ -39,8 +39,8 @@ def getResults(event_id):
 
 def getEvent(event_id):
     event = models.get_event(event_id)
-    if not event:
-       event=default_event(event_id)
+#    if not event:
+#       event=default_event(event_id)
 #   models.update_event(event)
     return event
 
@@ -78,7 +78,7 @@ def updateLastPick(event):
     return
 
 def getUser(id_token):
-    user_data={"user":None}
+    user_data={}
     if id_token:
         user_data=models.get_document("users",id_token)
         if not user_data:
@@ -90,10 +90,10 @@ def getUser(id_token):
                 return None 
     return user_data
 
-@app.route('/login')
+@app.route('/login', methods=['GET','POST'])
 def login_page(): 
     title='skipflog - golf picks'
-    event_list=getEvent("current").get("events")
+    event_list=[]
     id_token = request.cookies.get("token")
     error_message = None
     user_data = getUser(id_token)
@@ -102,14 +102,16 @@ def login_page():
 
 @app.route('/')
 def main_page(): 
+    user=None
     id_token=request.cookies.get("token")
     user_data=getUser(id_token)
     if not id_token or not user_data or not user_data.get("user"):
         return redirect('/login')
     event_id=currentEvent()
     event=getEvent(event_id)
+    results=getResults(event_id)
     user=user_data.get("user")
-    return render_template('index.html',event=event,user=user)
+    return render_template('index.html',event=event,results=results,user=user)
 
 @app.route('/api/events', methods=['GET','POST'])
 def api_events():
@@ -138,8 +140,7 @@ def mail_handler(event_id=currentEvent()):
     if not sent:
         mail.send_mail(event_name,results_html)
         models.send_message(event_name,current_time())
-    return results_html
-#    return jsonify({'event': event_name, "sent":sent })
+    return jsonify({'event': event_name, "sent":sent })
 
 @app.route('/pick', methods=['GET','POST'])
 def pick_handler(event_id = currentEvent()): 
@@ -208,8 +209,12 @@ def RankingHandler():
     return jsonify({"event":event_name, "sent":sent})       
 
 @app.route('/api/results', methods=['GET'])
-@app.route('/api/results/<int:event_id>', methods=['GET'])
-def ApiResults(event_id=currentEvent()):   
+@app.route('/api/results/<int:event_id>', methods=['GET','POST'])
+def ApiResults(event_id=currentEvent()): 
+    if request.method=="POST":
+        results=get_results(event_id) 
+        if results:
+            models.update_results(results)     
     results = getResults(event_id)
     return jsonify({"results":results})   
 

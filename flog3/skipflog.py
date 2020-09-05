@@ -248,6 +248,10 @@ def fetch_headers(soup):
         headers['Status']=str(soup.find("div",{"class":"status"}).find("span").string)
         if headers['Status'].startswith("Round "):
             headers['Round']=headers['Status'][6]
+        if "Complete" in headers["Status"] or "Final" in headers["Status"]:
+            headers["Complete"]=True
+        else:
+            headers["Complete"]=False
     else:
         headers['Round']=0
     tables=soup.findAll("table")
@@ -441,20 +445,25 @@ def get_results(event_id):
             else:
                 tie["Players"].append(len(results['players']))
         if res.get('Picker') or res.get('Points')>=9:
+            res["Points"]=round(res["Points"],2)
+            del res["PLAYER"]
             results['players'].append(res)
     # get last tie
     if len(tie["Players"])>1:
         tie["Points"]=float(sum([skip_points[p+1] for p in tie["Players"]]))/len(tie["Players"])
         for p in tie["Players"]:
             results["players"][p]["Points"]=tie["Points"]
+    # filter players
+    results["players"]=[p for p in results["players"] if p["Points"]>20 or p.get("Picker")]
     for picker in skip_pickers:
         picks[picker]["Count"]=len([player for player in results.get("players") if player.get("Picker")==picker])
         picks[picker]["Points"]=sum([player["Points"] for player in results.get("players") if player.get("Picker")==picker])
     results['pickers']=[picks[key] for key in picks.keys() if key in skip_pickers]
     if results['pickers'][1]['Points']>results['pickers'][0]['Points']:
         results['pickers'].reverse()
-    results['pickers'][0]['Rank']=1
-    results['pickers'][1]['Rank']=2
+    for r in range(len(results["pickers"])):
+        results['pickers'][r]['Points']=round(results['pickers'][r]['Points'],2)
+        results['pickers'][r]['Rank']=r+1
     return results
 
 def next_pick(picknames,pick_no):

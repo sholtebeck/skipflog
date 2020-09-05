@@ -52,7 +52,7 @@
 
 <!-- [START gae_python38_auth_firebase_html] -->
 <center><h2>{{title}}</h2></center>
-
+{{ user_data }}
 {% if user_data.user %}
   <form action="/" method="get" onchange="this.form.submit()">
     <p>User: <b>{{ user_data.name }}</b>
