@@ -29,7 +29,7 @@ def getPicks(event_id):
 
 def getResults(event_id):
     results = models.get_results(event_id)
-    if not results or results["event"]["Status"]!="Final":
+    if not results:
         try:
             results=get_results(int(event_id))
             models.update_results(results)
@@ -138,7 +138,8 @@ def mail_handler(event_id=currentEvent()):
     if not sent:
         mail.send_mail(event_name,results_html)
         models.send_message(event_name,current_time())
-    return jsonify({'event': event_name, "sent":sent })
+    return results_html
+#    return jsonify({'event': event_name, "sent":sent })
 
 @app.route('/pick', methods=['GET','POST'])
 def pick_handler(event_id = currentEvent()): 
@@ -165,10 +166,11 @@ def pick_handler(event_id = currentEvent()):
 def picks_handler(event_id=currentEvent()):      
     event = getEvent(event_id)
     pick_dict={}
-    for picker in skip_pickers:
-        pick_dict[picker]=event[picker]["picks"]
-        for player in pick_dict[picker]:
-            pick_dict[player]=picker
+    for picker in event["pickers"]:
+        pickname=picker["name"]
+        pick_dict[pickname]=picker["picks"]
+        for player in pick_dict[pickname]:
+            pick_dict[player]=pickname
     return jsonify({'picks': pick_dict })   
 
 @app.route('/picks', methods=['GET'])
