@@ -118,6 +118,11 @@ $(document).ready(function() {
 <div class="tab_container"> 
 
   <div id="tab1" class="tab_content"> 
+     {% if event.lastpick %}
+    Last Pick: {{event.lastpick}} <p>
+    {% elif event.nextpick %}
+    <br>Waiting for <b>{{event.nextpick}}.<p>
+   {% endif %}
   <table>
 	<col width="250">
 	<col width="250">
@@ -138,7 +143,7 @@ $(document).ready(function() {
    {% if user==event.next %}
     <p><form action="/pick" method="post">
     <div>{{event.nextpick}}: <select name="player"> 
-  	 {% for player in event.players %}
+  	 {% for player in event.players if player.picked ==0 %}
      <option>{{player.name}}</option>
      {% endfor %}
      </select><input type="submit" id="submit" name="submit" value="Pick"></div>
@@ -156,11 +161,7 @@ $(document).ready(function() {
       {% endif %}
    {% endif %}
 {% endif %}
-   {% if event.lastpick %}
-    Last Pick: {{event.lastpick}} <p>
-    {% elif event.nextpick %}
-    <br>Waiting for <b>{{event.nextpick}}.
-   {% endif %}
+
 
 </div><!-- #tab1 -->
 
@@ -263,10 +264,7 @@ $(document).ready(function() {
 {% endfor %}
     </tbody>
   </table>
-{% else %}
-No results yet.
-{% endif %}
-{% if results.event.Complete %}
+  {% if results.event.Complete %}
 <form action="/mail" method="gett">
   <input type="submit" id="submit" value="Email Results">
 </form>
@@ -274,6 +272,9 @@ No results yet.
 <form action="/api/results/{{ results.event.ID }}" method="post">
   <input type="submit" id="submit" value="Update Results">
 </form>
+{% endif %}
+{% else %}
+No results yet.
 {% endif %}
 </div><!-- #tab3 -->
 </div> <!-- .tab_container --> 

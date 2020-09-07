@@ -1,7 +1,5 @@
 # Main program for golfpicks app (skipflog.appspot.com)
 from flask import Flask, abort,json,jsonify,render_template,redirect,request
-from google.auth.transport import requests
-import google.oauth2.id_token
 import datetime,mail
 from skipflog2 import *
 
@@ -13,10 +11,7 @@ app.config['DEBUG'] = True
 default_url='/static/index.html'
    
 def currentEvent():
-    now=datetime.datetime.now()
-    event_month=min(max(now.month,4),10)
-    event_current=100*(now.year-2000)+event_month
-    return event_current
+    return int(fetch_events()[0]["ID"])
 
 def fetchEvents():
      events = [{"event_id":f["ID"], "event_name":f["Name"], "event_dates": f["event_dates"], "event_loc": f["event_loc"]} for f in fetch_events() if len(f["ID"])==4]
@@ -71,13 +66,7 @@ def updateLastPick(event):
     return
 
 def getUser(id_token):
-    user_data={"user":None}
-    if id_token:
-        try:
-            user_data = google.oauth2.id_token.verify_firebase_token(id_token, requests.Request())
-            user_data["user"]=user_data["name"].split()[0] 
-        except:
-            return user_data
+    user_data={"user":'Steve'}
     return user_data
 
 @app.route('/login')
@@ -93,8 +82,6 @@ def login_page():
 def main_page(): 
     id_token=request.cookies.get("token")
     user_data=getUser(id_token)
-    if not id_token or not user_data:
-        return redirect('/login')
     event_id=int( request.args.get('event_id',currentEvent()) )
     event = getEvent(event_id)
     event_list=fetch_events()

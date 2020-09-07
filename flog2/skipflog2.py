@@ -27,8 +27,8 @@ ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU0
 rankings_url="http://knarflog.appspot.com/ranking"
 result_url="http://knarflog.appspot.com/results"
 results_url="http://skipflog2.appspot.com/results"
-#players_api="http://knarflog.appspot.com/api/players"
-players_api="../json/players.json"
+players_api="http://knarflog.appspot.com/api/players"
+#players_api="../json/players.json"
 leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"
 skip_user="skipfloguser"
 skip_picks={}
@@ -208,18 +208,23 @@ def fetch_event(event_id):
     else:
         return {}
 
+def fetch_players():
+    players=cache.get("players",[])
+    if len(players)==0:
+        players=get_players()
+        cache["players"]=players
+    return players
+
 # Get a default event dictionary
 def default_event(event_id=current_event()):
     event=[e for e in fetch_events()][0]
     event["event_id"]=int(event['ID'])
     event["event_year"]=int(event['Name'][:4])
     event["event_name"]=event['Name']
-    event["pickers"]=skip_pickers
-    event["next"]=event.get('First',skip_pickers[0])
-    event["picks"]={"Picked":[],"Available":[] }
-    for picker in skip_pickers:
-        event["picks"][picker]=[]
-    event["players"]=get_players()
+    event["next"]=event["first"]
+    event["nextpick"]=event["next"]+"'s First Pick"
+    event["pickers"]=get_pickers(event["first"])
+    event["players"]=fetch_players()
     event["pick_no"]=1 
     return event
     
@@ -377,6 +382,11 @@ def fetch_rows(page):
 #   return page.find('table').findAll('tr')    
     return page.findAll('tr')    
 
+
+def get_pickers(first):
+    pickers=[sp for sp in skip_pickers if sp==first]+[sp for sp in skip_pickers if sp!=first]
+    return [{"name":p,"number": numbers.get(p), "picks":[],"points":0} for p in pickers]
+
 # Get the list of players
 def get_playerpicks(pickers,players):
     results={"pickers": pickers, "players":[]}
@@ -395,29 +405,14 @@ def get_playerpicks(pickers,players):
 
 # Get the list of players from a spreadsheet (players tab)
 def get_players():
-    picks=get_picks(current_event()).keys()
-    players=[]
-    players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=A2%3AF155&output=csv"
-    result = urllib.request.urlopen(players_url)
-    reader = csv.reader(result)
-    rownum = 1
-    for row in reader:
-        if row:
-            rownum += 1
-            player={'rownum':rownum }
-            player['rank']=get_value(row[0])
-            player['name']=row[1]
-            player['lastname']=row[1].split(" ")[-1]
-            player['points']=get_value(row[2].replace(',','').replace('-','0'))
-            if len(row)>5:           
-                player['country']=row[3]
-                player['odds']=get_value(row[4])
-                player['picked']=picks.count(row[1])
-            else:
-                player['hotpoints']=0.0
-                player['odds']=999
-                player['picked']=0
-            players.append(player)
+    players=json_results(players_api).get("players")
+    for player in players:
+        name=player.get('name')
+        player['rownum']=players.index(player)+1
+        player['rank']=int(player['rank'])
+        player['lastname']=name.split(" ")[-1]
+        player['points']=player['points']
+        player['picked']=0
     return players
 
 # espn_results (all players)
