@@ -1,23 +1,32 @@
 # this will test the skipflog back end
 from skipflog import *
 import models
-print("testing picks..")
+event=models.get_event("current")
+for player in event['players']:
+    if player["name"] in event["pickers"][0]["picks"]+event["pickers"][1]["picks"]:
+        print(player["name"])
+        player["picked"]=1
+    else:
+        player["picked"]=0
+models.update_event(event)
 players=fetch_players()
-pnames=[p["name"] for p in players][:24]
-for p in players:
-    p["picked"]==0
-assert(len(players)==30)
-event=default_event()
-event["players"]=players
-assert(event["pick_no"]==1)
-assert(len(event["players"])==len(players))
-assert(len(event["pickers"])==2)
-for n in range(len(pnames)):
-    if event["next"]:
-        assert(event["pick_no"]==n+1), event["pick_no"]
-        event=pick_player(event,pnames[n]) 
-        assert(event["pick_no"]==n+2), event["pick_no"]
-        assert event["players"][n]["picked"]==1 , event["players"][n]["name"]
+if len(players)==30:
+	print("testing picks..")
+	pnames=[p["name"] for p in players][:24]
+	for p in players:
+		p["picked"]==0
+	assert(len(players)==30)
+	event=default_event()
+	event["players"]=players
+	assert(event["pick_no"]==1)
+	assert(len(event["players"])==len(players))
+	assert(len(event["pickers"])==2)
+	for n in range(len(pnames)):
+		if event["next"]:
+			assert(event["pick_no"]==n+1), event["pick_no"]
+			event=pick_player(event,pnames[n]) 
+			assert(event["pick_no"]==n+2), event["pick_no"]
+			assert event["players"][n]["picked"]==1 , event["players"][n]["name"]
 #       if  event["lastpick"].split()[0] != event["next"]:
 #           print(event["pick_no"], event["lastpick"], event["nextpick"])
 current=current_event()
@@ -38,10 +47,10 @@ if res["event"]["Complete"]:
         res["pickers"][x]["Count"]=0
         res["pickers"][x]["Points"]=0
     for p in players:
-        if p["R1"]!=total:
-            total=p["R1"]
+        if p["Total"][:3]!=total:
+            total=p["Total"][:3]
             rank=get_rank(str(pos))
-            tcount=len([q for q in players if q["R1"]==total])
+            tcount=len([q for q in players if q["Total"][:3]==total])
             if tcount==1:
                 p["POS"]=str(pos)
                 p["Rank"]=rank
@@ -60,37 +69,39 @@ if res["event"]["Complete"]:
             x=pickers.index(p.get("Picker"))
             res["pickers"][x]["Count"]+=1
             res["pickers"][x]["Points"]+=points
-        print(p["Name"],p["R1"],p["POS"],p["Points"])
+        print(p["Name"],p["Total"],p["POS"],p["Points"])
         pos+=1        
-    res["players"]=[p for p in res["players"] if p.get("Picked")]
+    res["players"]=[p for p in res["players"] if p.get("Picker")]
+    assert len(res["players"])==20, "wrong length for players"
     pnames=[p["Name"] for p in res["players"]]
-    evt["players"]=[e for e in evt["players"] if e["Name"] in pnames] 
+    evt["players"]=[e for e in evt["players"] if e["name"] in pnames] 
+    assert len(evt["players"])>=20, "wrong length for players"
     pnames=[p["name"] for p in evt["players"]]           
     for key in res["event"].keys():
         print(key,':', res["event"][key])
     rownum=1
     for p in res["players"]:
         if p.get("Picker"):
-            print(p["Name"], p["POS"], p["Scores"], p["Points"] )
+            print(p["Name"], p["POS"], p["Total"], p["Points"] )
         # update results from player
             if p["Name"] in pnames:
                 n=pnames.index(p["Name"])
                 p["Ctry"]=evt["players"][n]["country"]
-                evt["players"][n]["picked"]=p["Picked"]
+                evt["players"][n]["picked"]=p["Picker"]
                 evt["players"][n]["rank"]=p["Rank"]
                 evt["players"][n]["points"]=p["Points"]
                 evt["players"][n]["rownum"]=rownum
                 rownum+=1
-    picknames=[p["Name"] for p in evt["pickers"]]
+    picknames=[p["name"] for p in evt["pickers"]]
     for p in res["pickers"]:
         q=picknames.index(p["Name"])
-        p["picks"]=evt["pickers"][q]["points"]
+        p["picks"]=evt["pickers"][q]["picks"]
         evt["pickers"][q]["points"]=round(p["Points"],2)
         evt["pickers"][q]["rank"]=p["Rank"]
         evt["pickers"][q]["count"]=len(p["picks"]) 
-    sort(evt["pickers"], key=lambda p:p["rank"]) 
-    sort(evt["players"], key=lambda p:p["rownum"])
+    evt["pickers"].sort(key=lambda p:p["rank"]) 
+    evt["players"].sort(key=lambda p:p["rownum"])
     models.update_results(res)
     models.update_event(evt)  
 else:
-    print(res["event"]["Status"], "not complete..") 
+    print(res["event"]["Status"], "not complete.") 

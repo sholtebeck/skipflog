@@ -18,7 +18,7 @@
         <col width="250">
         <thead>
         <tr><th colspan=2>{{event.event_name}} - Picks</th></tr>
-        <tr><th ng-repeat="picker in pickers" ng-bind="picker.Name"></th>
+        <tr><th ng-repeat="picker in pickers"> {{picker.Name}}</th>
         </thead>
         <td ng-repeat="picker in pickers">
         <ol>  

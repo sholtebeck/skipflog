@@ -481,7 +481,7 @@ def pick_player(event, player):
     new_event=event.copy()
     picker=event["next"]
     picknames=[n["name"] for n in event["pickers"]]
-    playnames=['z'*p["picked"]+p["name"] for p in event["players"]]
+    playnames=[p["name"]+("z"*p["picked"]) for p in event["players"]]
     if picker in picknames and player in playnames:
         p=picknames.index(picker)
         q=playnames.index(player)

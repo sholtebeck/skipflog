@@ -1,11 +1,13 @@
 # Main program for golfpicks app (skipflog3.appspot.com)
 from flask import Flask, abort,json,jsonify,render_template,redirect,request
+from flask_cors import CORS
 from google.auth.transport import requests
 import google.oauth2.id_token
 import datetime,mail,models
 from skipflog import *
 
 app = Flask(__name__)
+cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.config['DEBUG'] = True    
 default_url='/static/index.html'
    
@@ -53,6 +55,7 @@ def nextEvent():
 
 def updateEvent(event_data):
     models.update_event(event_data)
+    return True 
     
 def getLastPick(event,picker,player):
     lastpick=event.get("lastpick")
@@ -73,31 +76,28 @@ def updateLastPick(event):
     # send alert if needed
     pick_no = event['pick_no']
     if (pick_no%2==0 or pick_no==21):
-#        mail.send_message(numbers.get(event["next"]),lastpick)
-        mail.send_message(numbers["Steve"],event["event_name"],event["lastpick"])
+        nextnum=[p["number"] for p in event["pickers"] if p["name"]==event["next"]]
+        mail.send_message(nextnum[0],event["event_name"],event["lastpick"])
     return
 
 def getUser(id_token):
     user_data={}
     if id_token:
-        user_data=models.get_document("users",id_token)
-        if not user_data:
-            try:
-                user_data = google.oauth2.id_token.verify_firebase_token(id_token, requests.Request())
-                user_data["user"]=user_data["name"].split()[0] 
-                models.set_document("users",user_data["user"],user_data)
-            except:
-                return None 
+        try:
+            user_data = google.oauth2.id_token.verify_firebase_token(id_token, requests.Request())
+            user_data["user"]=user_data["name"].split()[0] 
+            models.set_document("users",user_data["user"],user_data)
+        except:
+            return None 
     return user_data
 
 @app.route('/login', methods=['GET','POST'])
 def login_page(): 
     title='skipflog - golf picks'
-    event_list=[]
     id_token = request.cookies.get("token")
     error_message = None
     user_data = getUser(id_token)
-    return render_template('login.html',config=firestore_json,event_list=event_list,title=title,user_data=user_data, error_message=error_message)
+    return render_template('login.html',config=firestore_json,id_token=id_token,title=title,user_data=user_data, error_message=error_message)
 
 
 @app.route('/')
@@ -118,12 +118,11 @@ def api_events():
     events=fetchEvents()    
     return jsonify({'events': events })
 
-@app.route('/api/event', methods=['GET','POST'])
-@app.route('/api/event/<int:event_id>', methods=['GET','POST'])
+@app.route('/api/event', methods=['GET'])
+@app.route('/api/event/<string:event_id>', methods=['GET','POST'])
 def api_event(event_id=currentEvent()):
     if request.method == "POST":
-        event_data = request.form.get('event_data')
-        event_json = json.loads(event_data)
+        event_json = request.json
         updateEvent(event_json)
     event = getEvent(event_id)
     return jsonify(event)
@@ -151,16 +150,30 @@ def pick_handler(event_id = currentEvent()):
         # update event (add to picks, remove from field)
         event = getEvent(event_id)
         if player in [p["name"] for p in event["players"]]:
-            event["p"]["Available"].remove(player)
-            event["picks"]["Picked"].append(player)
-            event["picks"][picker].append(player)
-            event["lastpick"]=getLastPick(event,picker,player)
-            event["pick_no"]+=1
-            updateEvent(event)
-        # update last pick message
-        updateLastPick(event)
+            new_event=pick_player(event,player)
+            if new_event != event:
+                updateEvent(new_event)
+                updateLastPick(new_event)
     # redirect to main page
     return redirect('/',code=302)
+
+@app.route('/api/pick', methods=['POST'])
+def api_pick():
+    if not request.json or not 'player' in request.json:
+        abort(400)
+    picker=request.json.get("picker")
+    player=request.json.get('player')
+    event=models.get_event('current')
+    if picker != event["next"]:
+        return jsonify({'success':False,'message':event["nextpick"]})
+    if player not in [p["name"] for p in event["players"] if p["picked"]==0]:
+        return jsonify({'success':False,'message': player+ " is not available"})
+    new_event=pick_player(event,player)
+    if new_event != event: 
+        success=updateEvent(new_event)
+        updateLastPick(new_event)
+        message=new_event.get("lastpick")
+    return jsonify({'success':success,'message':message})
 
 @app.route('/api/picks', methods=['GET'])
 @app.route('/api/picks/<int:event_id>', methods=['GET'])
