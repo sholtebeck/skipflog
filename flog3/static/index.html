@@ -8,7 +8,8 @@
 </head>
 <body ng-app="skipflog" ng-controller="eventsController">
 <div class="container-fluid">
-  <p></p>
+<div ng-if="user"><button id="submit">Sign Out</button>Logged in as <b ng-bind="user"></b></div>
+<button ng-if="!user" id="submit" value="Sign In"></button>
   Event Name: <select ng-model="event" ng-options="event.event_name for event in events track by event.event_id" ng-change="setEvent()"></select> 
   Search:  <input ng-model="query"><br>
   {{ event.event_dates }} at {{event.event_loc }}

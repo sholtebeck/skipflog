@@ -6,7 +6,7 @@ from time import gmtime, strftime
 #import sys
 #sys.path[0:0] = ['libs']
 #import gspread
-from bs4 import BeautifulSoup
+#from bs4 import BeautifulSoup
 #from oauth2client.client import SignedJwtAssertionCredentials
 
 # Misc properties
@@ -26,7 +26,7 @@ results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU0
 ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
 rankings_url="http://knarflog.appspot.com/ranking"
 result_url="http://knarflog.appspot.com/results"
-results_url="http://skipflog2.appspot.com/results"
+results_url="http://skipflog3.appspot.com/results"
 players_api="http://knarflog.appspot.com/api/players"
 #players_api="../json/players.json"
 leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"

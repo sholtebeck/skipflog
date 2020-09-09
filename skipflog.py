@@ -219,7 +219,7 @@ def default_event(event_id=current_event()):
 
 # Pull the ESPN url for a given event
 def fetch_url(event_id):
-    fevents=[f for f in fetch_events() if f["ID"]==str(event_id)]
+    fevents=[f for f in fetch_events() if f["ID"]=='current']
     if len(fevents)>0:
         return fevents[0].get("espn_url",espn_url)
     else:

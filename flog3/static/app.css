@@ -48,7 +48,7 @@
 	body {
 	  font-family: Helvetica, Arial, sans-serif;	
           font-size: 1.1em;
-	  background-color: #DDDDDD;
+	  background-color:#DDDDDD;
 	}
 	select {
 	  font-family: Helvetica, Arial, sans-serif;
@@ -59,17 +59,29 @@
 		margin: 0 auto;	
 	}
 	table { 
-	color: #333; /* Lighten up font color */
+	color: #222222; /* Lighten up font color */
 	font-family: Helvetica, Arial, sans-serif; /* Nicer font */
 	border-collapse: 
 	collapse; border-spacing: 0; 
 	}
-
+	.no-border { 
+		border: none!important; 
+		border-collapse: collapse;
+	}
 	td, th { border: solid; } /* Make cells a bit taller */
 	
 	#submit {
 	  font-family: Helvetica, Arial, sans-serif;
 	  font-size: 1.0em;
-    }
+	}
+	.heading {
+		font-size: 1.0em;
+		justify-content: center;
+		color: black;
+		background-color: lightgray;
+	}
+	.center {
+		text-align: center;
+	  }
 
 

@@ -45,6 +45,7 @@ window.addEventListener('load', function () {
       document.getElementById('sign-out').hidden = false;
       document.getElementById('login-info').hidden = false;
       console.log(`Signed in as ${user.displayName} (${user.email})`);
+      window.location.href = "/";
       user.getIdToken().then(function (token) {
         // Add the token to the browser's cookies. The server will then be
         // able to verify the token against the API.

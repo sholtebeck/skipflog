@@ -506,7 +506,7 @@ def match_name(name, namelist):
         new_name=name
     else:
         names=name.split()
-        listnames=[n for n in namelist if names[0] in n and names[-1] in n]
+        listnames=[n for n in namelist if n.startswith(names[0]+" "+names[1][:2])]
         listnames.append(name)
         new_name=listnames[0]
     return new_name
@@ -525,30 +525,18 @@ def post_players():
     rank_names=[rank['name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
     current_cell=0
-    cell_list = sheet.range('A2:E32')
-    for name in odds_names:
-        debug_values(odds.get(name), name)
-        matching_name=match_name(name,rank_names)
-        if matching_name in rank_names:
-            player=rankings[rank_names.index(matching_name)]
-            cell_list[current_cell].value=player['rank']
-            cell_list[current_cell+1].value=player['name']
-            cell_list[current_cell+2].value=player['points']
-            cell_list[current_cell+3].value=player['country']
-        else:
-            cell_list[current_cell].value=9999
-            cell_list[current_cell+1].value=name
-            cell_list[current_cell+2].value=0.0
-            cell_list[current_cell+3].value='USA'
-        if name in odds.keys():
-            cell_list[current_cell+4].value=odds[name]
-        else:
-            cell_list[current_cell+4]=9999
-        cell_list[current_cell+5].value=0
-        print(matching_name)
-        current_cell += 6
-    worksheet.update_cells(cell_list)
-    return True
+    event=json_results(event_json)
+    for player in event["players"][128:]:
+        cell_list = worksheet.range('A'+str(row)+':F'+str(row))
+        cell_list[0].value=player['rank']
+        cell_list[1].value=player['name']
+        cell_list[2].value=player['points']
+        cell_list[3].value=player['country']
+        cell_list[4].value=player['odds']
+        cell_list[5].value=0
+        update=worksheet.update_cells(cell_list)
+        row+=1
+
 
 # Post the rankings to the "Rankings" tab
 def post_rankings():
