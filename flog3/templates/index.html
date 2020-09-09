@@ -4,7 +4,7 @@
     <title>skipflog -- major golf picks</title>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script> 
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
-<link rel="stylesheet" href="/static/app.css">
+ <link rel="stylesheet" href="/static/app.css">
 <script type="text/javascript">
 $(document).ready(function() {
 
@@ -96,17 +96,23 @@ $(document).ready(function() {
 </style>
 </head>
   <body ng-app="skipflog">
+<table class="no-border">
+  <td class="no-border" width="25%">
 {% if user %}
-<button id="sign-out">Sign Out</button>&nbsp;Logged in as <b>{{ user }}</b>:
+<form action="/logout" method="post">
+ <button id="signout">Sign Out</button>
+  <label>Logged in as <b>{{ user }}</b>
+</form>
 {% else %}
 <form action="/login" method="post">
-  <input type="submit" id="submit" value="Sign In">
+  <input type="submit" id="signin" value="Sign In">
 </form>
 {% endif %}
-  
-{% if event %}
-     &nbsp;Event: <b>{{ event.Name }}</b>
-{% endif %}
+</td>
+<td class="no-border"><b>Event:</b> {{ event.Name }}
+<b>Dates:</b> {{ event.event_dates }}
+<b>Location:</b> {{ event.event_loc }}</td>
+</table>
 <p><div id="tab_container">
 
   <ul class="tabs"> 
@@ -117,18 +123,18 @@ $(document).ready(function() {
 
 <div class="tab_container"> 
 
-  <div id="tab1" class="tab_content"> 
+  <div id="tab1" class="tab_content">
+   
      {% if event.lastpick %}
     Last Pick: {{event.lastpick}} <p>
-    {% elif event.nextpick %}
-    <br>Waiting for <b>{{event.nextpick}}.<p>
    {% endif %}
+   {% if event.pick_no > 0 %}
   <table>
 	<col width="250">
 	<col width="250">
     <tr>
    {% for picker in event.pickers %}
-	<th>{{picker.name}}</th>
+	<th class="heading">{{picker.name}}</th>
    {% endfor %}
     <tr>
    {% for picker in event.pickers %}
@@ -139,7 +145,7 @@ $(document).ready(function() {
      </ol></td>
     {% endfor %}
    </tr></table>
-
+  {% endif %}
    {% if user==event.next %}
     <p><form action="/pick" method="post">
     <div>{{event.nextpick}}: <select name="player"> 
@@ -159,6 +165,8 @@ $(document).ready(function() {
       {% else %}
       <p>We're Done.
       {% endif %}
+    {% else %}
+      <br>Waiting for <b>{{event.nextpick}}.</b>
    {% endif %}
 {% endif %}
 
@@ -171,7 +179,7 @@ $(document).ready(function() {
    Search: <input ng-model="query"> <p>  
     <table>
       <thead>
-        <tr><th colspan="7" ng-bind="event.event_name"></th></tr>
+      <tr><th class="heading" colspan="7" ng-bind="event.event_name"></th></tr>
         <tr>
       <th>#</th>
             <th><a href="#" ng-click="orderProp='name'">Player</a>  <a href="#" ng-click="orderProp='lastname'">Last Name</a></th>	

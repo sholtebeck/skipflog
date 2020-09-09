@@ -1,14 +1,14 @@
 # Main program for golfpicks app (skipflog3.appspot.com)
-from flask import Flask, abort,json,jsonify,render_template,redirect,request
-from flask_cors import CORS
+from flask import Flask, abort,json,jsonify,render_template,redirect,request,session
+#from flask_cors import CORS
 from google.auth.transport import requests
 import google.oauth2.id_token
 import datetime,mail,models
 from skipflog import *
 
 app = Flask(__name__)
-cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
-app.config['DEBUG'] = True    
+#cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+app.secret_key = str.encode(firestore_json.get("apiKey"))
 default_url='/static/index.html'
    
 def currentEvent():
@@ -80,38 +80,49 @@ def updateLastPick(event):
         mail.send_message(nextnum[0],event["event_name"],event["lastpick"])
     return
 
-def getUser(id_token):
-    user_data={}
+def getUser(id_token=None):
+    user=None
     if id_token:
         try:
             user_data = google.oauth2.id_token.verify_firebase_token(id_token, requests.Request())
-            user_data["user"]=user_data["name"].split()[0] 
-            models.set_document("users",user_data["user"],user_data)
+            user=user_data["name"].split()[0] 
+            session['user']=user_data["user"]=user
+            models.set_document("users",user,user_data)
         except:
             return None 
-    return user_data
+    else:
+        user=session.get("user")
+    return user
 
 @app.route('/login', methods=['GET','POST'])
 def login_page(): 
-    title='skipflog - golf picks'
+    title='skipflog - major golf picks'
+    user=None
     id_token = request.cookies.get("token")
-    error_message = None
-    user_data = getUser(id_token)
-    return render_template('login.html',config=firestore_json,id_token=id_token,title=title,user_data=user_data, error_message=error_message)
+    if id_token:
+        user = getUser(id_token)
+    return render_template('login.html',config=firestore_json,id_token=id_token,title=title,user=user)
 
+@app.route('/logout', methods=['POST'])
+def logout(): 
+    title='skipflog - major golf picks'
+    session.pop('username', None)
+    return redirect('/login')
 
 @app.route('/')
 def main_page(): 
-    user=None
-    id_token=request.cookies.get("token")
-    user_data=getUser(id_token)
-    if not id_token or not user_data or not user_data.get("user"):
+    #find the username in either the session or cookie
+    user=getUser()
+    if not user:
+        id_token=request.cookies.get("token")
+        user=getUser(id_token)
+    if user:
+        event_id=currentEvent()
+        event=getEvent(event_id)
+        results=getResults(event_id)
+        return render_template('index.html',event=event,results=results,user=user)
+    else:
         return redirect('/login')
-    event_id=currentEvent()
-    event=getEvent(event_id)
-    results=getResults(event_id)
-    user=user_data.get("user")
-    return render_template('index.html',event=event,results=results,user=user)
 
 @app.route('/api/events', methods=['GET','POST'])
 def api_events():
@@ -239,8 +250,9 @@ def ResultsHandler(event_id=currentEvent()):
 
 @app.route('/api/user', methods=['GET'])
 def ApiUser(event_id=currentEvent()):   
-    user= getUser(request.cookies.get("token"))
-    return jsonify(user)
+    user= getUser()
+    return jsonify(models.get_document("users",user))
+
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True,port=5000)

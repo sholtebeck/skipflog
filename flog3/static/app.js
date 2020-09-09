@@ -39,6 +39,8 @@ skipflog.controller('eventsController', ['$scope', '$http',
     $http.get('/api/event').success(function(data) {
       $scope.players = data.players;
       $scope.pickers = data.pickers;
+      $scope.user = "Steve";
+      $scope.pick_no = data.pick_no;
     });
     
    $scope.orderProp = '-Points';

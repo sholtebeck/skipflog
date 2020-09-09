@@ -3,9 +3,6 @@ from flask import Flask, abort,json,jsonify,render_template,redirect,request
 import datetime,mail
 from skipflog2 import *
 
-#Load templates from 'templates' folder
-#jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
-#jinja_environment = jinja2.Environment(autoescape=True,loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
 app = Flask(__name__)
 app.config['DEBUG'] = True    
 default_url='/static/index.html'
@@ -109,8 +106,8 @@ def api_event(event_id=currentEvent()):
     event["pickers"]=dict_to_list(event["pickers"],"points")
     return jsonify(event)
 
-@app.route('/mail', methods=['GET','POST'])
-@app.route('/mail/<int:event_id>', methods=['GET'])
+@app.route('/api/mail', methods=['GET','POST'])
+@app.route('/api/mail/<int:event_id>', methods=['GET'])
 def mail_handler(event_id=currentEvent()):
     if request.method=="POST":
         results_html=fetch_tables(picks_url)

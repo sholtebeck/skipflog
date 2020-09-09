@@ -1,6 +1,5 @@
 BeautifulSoup4
 Flask>=1.0.0
-flask-cors
 firebase-admin
 google-cloud-firestore==1.8.1
 sendgrid
