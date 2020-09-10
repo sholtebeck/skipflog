@@ -20,7 +20,7 @@
           <th><a href="#" ng-click="orderProp='-points'">Points</a></th>	
           <th><a href="#" ng-click="orderProp='rank'">World Rank</a></th>
           <th><a href="#" ng-click="orderProp='odds'">Odds</a></th>
-          <th><a href="#" ng-click="orderProp='picked'">Picked</a></th>         
+          <th><a href="#" ng-click="orderProp='picked'">Action</a></th>         
     </tr>
     </thead>
     <tbody>
@@ -31,7 +31,10 @@
         <td ng-bind="player.points |number:2"></td>
         <td ng-bind="player.rank"></td>
         <td ng-bind="player.odds">/1</td>
-        <td ng-bind="player.picked"></td>
+        <td><form  ng-submit="pickPlayer()">
+          <input type="hidden" name="picker" ng-model="event.user"><input type="hidden" name="player" ng-model="player.name">
+          <button type="submit" ng-disabled="event.nopick" >Pick</button>
+        </form></td>
       </tr>
    </tbody>
   </table>
@@ -40,12 +43,26 @@
 var skipflog = angular.module('skipflog', []);
 skipflog.controller('playersController', ['$scope', '$http',
   function($scope, $http) {
-    $http.get('/api/players').success(function(data) {
+    $http.get('/api/players/0').success(function(data) {
       $scope.event = data.event;
       $scope.players = data.players;
     });
     $scope.orderProp = 'name';
     $scope.year = new Date().getFullYear();
   }]);
+
+  $scope.pickPlayer = function()
+    {
+      //console.log("picking "+ this.player.name);
+      $http.post("/api/pick", { player: this.player.name })
+      .success(function(data, status, headers, config) {
+                     if (data.success) {
+                          $http.get('/api/event/current').success(function(data)  {   
+                            $scope.pickers = data.pickers 
+                            $scope.players = data.players
+                          });
+                            } 
+                        }).error(function(data, status, headers, config) {});
+    };
 </script>
 </html>

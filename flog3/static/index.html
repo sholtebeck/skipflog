@@ -8,19 +8,20 @@
 </head>
 <body ng-app="skipflog" ng-controller="eventsController">
 <div class="container-fluid">
-<div ng-if="user"><button id="submit">Sign Out</button>Logged in as <b ng-bind="user"></b></div>
+<div ng-if="user"><button type="submit" class="btn btn-primary">Sign Out</button>Logged in as <b ng-bind="user"></b></div>
 <button ng-if="!user" id="submit" value="Sign In"></button>
   Event Name: <select ng-model="event" ng-options="event.event_name for event in events track by event.event_id" ng-change="setEvent()"></select> 
   Search:  <input ng-model="query"><br>
   {{ event.event_dates }} at {{event.event_loc }}
+ 
   <div class="row">
-    <div class="col">
-      <table>
+    <div class="col" >
+      <table >
         <col width="250">
         <col width="250">
         <thead>
         <tr><th colspan=2>{{event.event_name}} - Picks</th></tr>
-        <tr><th ng-repeat="picker in pickers" ng-bind="picker.name"></th>
+        <tr><th class="heading" ng-repeat="picker in pickers" ng-bind="picker.name"></th>
         </thead>
         <td ng-repeat="picker in pickers">
         <ol>  
@@ -29,12 +30,12 @@
          </td></tr>
         </table>
 
-    </div> <!-- col -->
+      </div> <!-- col -->
 
     <div class="col">
         <table>
             <thead>
-              <tr><th colspan="7"> {{event.event_name}} : {{event.event_dates}}</th></tr>
+              <tr><th class="heading" colspan="7"> {{event.event_name}} : {{event.event_dates}}</th></tr>
               <th>#</th>
                   <th><a href="#" ng-click="orderProp='name'">Player</a>  <a href="#" ng-click="orderProp='lastname'">Last Name</a></th>	
                   <th><a href="#" ng-click="orderProp='country'">Country</a></th>
@@ -52,7 +53,10 @@
                 <td ng-bind="player.points |number:2"></td>
                 <td ng-bind="player.rank"></td>
                 <td ng-bind="player.odds">/1</td>
-                <td ng-bind="player.picked"></td>
+                <td>
+                  <form  ng-if="player.picked==0" ng-submit="pickPlayer()"><input type="hidden" name="player" ng-model="player.name"><button type="submit" class="btn btn-primary">Pick</button></form>
+                  <span ng-if="player.picked">Picked</span>
+                </td>
               </tr>
            </tbody>
           </table>

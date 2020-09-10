@@ -3,3 +3,4 @@ Flask>=1.0.0
 firebase-admin
 google-cloud-firestore==1.8.1
 sendgrid
+gspread
