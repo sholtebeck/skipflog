@@ -3,7 +3,6 @@ import csv,datetime,json,sys,urllib
 from time import gmtime, strftime
 import gspread
 from bs4 import BeautifulSoup
-#from oauth2client.client import SignedJwtAssertionCredentials
 
 # Misc properties
 cache={}
@@ -469,7 +468,7 @@ def get_results(event_id):
 def next_pick(picknames,pick_no):
     picknum=pick_ord[pick_no%len(pick_ord)]
     if picknum == "Done":
-        return (None, "We're Done")
+        return ("Done", "We're Done")
     elif pick_no in mypicks:
         return (picknames[0],picknum)
     else:

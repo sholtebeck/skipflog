@@ -1,9 +1,9 @@
 # Main program for golfpicks app (skipflog3.appspot.com)
-from flask import Flask, abort,json,jsonify,render_template,redirect,request,session
+from flask import Flask, abort, jsonify, render_template, redirect, request, session
 #from flask_cors import CORS
 from google.auth.transport import requests
 import google.oauth2.id_token
-import datetime,mail,models
+import datetime, mail, models
 from skipflog import *
 
 app = Flask(__name__)
@@ -39,12 +39,11 @@ def getResults(event_id):
             results=None
     return results
 
+
 def getEvent(event_id):
     event = models.get_event(event_id)
-#    if not event:
-#       event=default_event(event_id)
-#   models.update_event(event)
     return event
+
 
 def nextEvent():
     event_current=currentEvent()
@@ -71,23 +70,24 @@ def nextPick(event):
         return event["pickers"][0]
     else:
         return event["pickers"][1]
-    
+
 def updateLastPick(event):
     # send alert if needed
     pick_no = event['pick_no']
     if (pick_no%2==0 or pick_no==21):
         nextnum=[p["number"] for p in event["pickers"] if p["name"]==event["next"]]
-        mail.send_message(nextnum[0],event["event_name"],event["lastpick"])
-    return
+        mail.send_message(nextnum[0], event["event_name"], event["lastpick"])
+        models.send_message(event["lastpick"],current_time())
+    return True
 
 def getUser(id_token=None):
     user=None
     if id_token:
         try:
             user_data = google.oauth2.id_token.verify_firebase_token(id_token, requests.Request())
-            user=user_data["name"].split()[0] 
-            session['user']=user_data["user"]=user
-            models.set_document("users",user,user_data)
+            user = user_data["name"].split()[0] 
+            session['user'] = user_data["user"]=user
+            models.set_document("users", user, user_data)
         except:
             return None 
     else:
@@ -172,9 +172,10 @@ def pick_handler(event_id = currentEvent()):
 def api_pick():
     if not request.json or not 'player' in request.json:
         abort(400)
-    picker=request.json.get("picker")
+#    picker=request.json.get("picker")
     player=request.json.get('player')
     event=models.get_event('current')
+    picker=event["next"]
     if picker != event["next"]:
         return jsonify({'success':False,'message':event["nextpick"]})
     if player not in [p["name"] for p in event["players"] if p["picked"]==0]:
@@ -208,7 +209,9 @@ def Picks(event_id=currentEvent()):
 @app.route('/api/players/<int:picked>', methods=['GET'])
 def ApiPlayers(picked=None):   
     event=getEvent(currentEvent())
-    eventdict={k:event[k] for k in ["event_id","event_name"]}
+    eventdict={k:event[k] for k in [e for e in event.keys() if e.startswith("event") or e.endswith("pick")]}
+    eventdict["user"]=getUser()
+    eventdict["nopick"]=(event["next"]!=eventdict["user"])
     players=event["players"]
     if picked in (0,1):
         players=[p for p in players if p.get("picked")==picked]

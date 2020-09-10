@@ -74,6 +74,10 @@
 	  font-family: Helvetica, Arial, sans-serif;
 	  font-size: 1.0em;
 	}
+	.submit-btn {
+		font-family: Helvetica, Arial, sans-serif;
+		font-size: 1.0em;
+	  }
 	.heading {
 		font-size: 1.0em;
 		justify-content: center;
