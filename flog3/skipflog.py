@@ -40,8 +40,8 @@ pgatour_url="http://www.pgatour.com/leaderboard.html"
 picks_csv = "picks.csv"
 picks_api = "https://skipflog3.appspot.com/api/picks/"
 picks_url = "https://skipflog3.appspot.com/picks"
-rankings_api = "http://knarflog.appspot.com/api/rankings/"
-results_api = "http://knarflog.appspot.com/api/results/"
+rankings_api="https://us-west2-skipflog.cloudfunctions.net/getRankings"
+results_api="https://us-west2-skipflog.cloudfunctions.net/getResults"
 owg_ranking_url="http://www.owgr.com/ranking"
 yahoo_base_url="http://sports.yahoo.com"
 yahoo_url=yahoo_base_url+"/golf/pga/leaderboard"
@@ -205,7 +205,7 @@ def fetch_players():
 
 # Get a default event dictionary
 def default_event(event_id=current_event()):
-    event=[e for e in fetch_events(1)][0]
+    event=[e for e in fetch_events()][0]
     event["event_id"]=int(event['ID'])
     event["event_year"]=int(event['Name'][:4])
     event["event_name"]=event['Name']

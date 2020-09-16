@@ -39,7 +39,6 @@ def getResults(event_id):
             results=None
     return results
 
-
 def getEvent(event_id):
     event = models.get_event(event_id)
     return event
@@ -172,7 +171,7 @@ def pick_handler(event_id = currentEvent()):
 def api_pick():
     if not request.json or not 'player' in request.json:
         abort(400)
-#    picker=request.json.get("picker")
+    picker=request.json.get("picker")
     player=request.json.get('player')
     event=models.get_event('current')
     picker=event["next"]
@@ -210,8 +209,8 @@ def Picks(event_id=currentEvent()):
 def ApiPlayers(picked=None):   
     event=getEvent(currentEvent())
     eventdict={k:event[k] for k in [e for e in event.keys() if e.startswith("event") or e.endswith("pick")]}
-    eventdict["user"]=getUser()
-    eventdict["nopick"]=(event["next"]!=eventdict["user"])
+    eventdict["picker"]=getUser()
+    eventdict["nopick"]=(event["next"]!=eventdict["picker"])
     players=event["players"]
     if picked in (0,1):
         players=[p for p in players if p.get("picked")==picked]

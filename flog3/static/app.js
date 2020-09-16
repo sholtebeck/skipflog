@@ -50,7 +50,7 @@ skipflog.controller('eventsController', ['$scope', '$http',
 
     $scope.pickPlayer = function()
     {
-      console.log("picking "+ this.player.name);
+      //console.log("picking "+ this.player.name);
       $http.post("/api/pick", { player: this.player.name })
       .success(function(data, status, headers, config) {
                      if (data.success) {
