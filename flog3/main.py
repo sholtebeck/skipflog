@@ -1,13 +1,13 @@
 # Main program for golfpicks app (skipflog3.appspot.com)
 from flask import Flask, abort, jsonify, render_template, redirect, request, session
-#from flask_cors import CORS
+from flask_cors import CORS
 from google.auth.transport import requests
 import google.oauth2.id_token
 import datetime, mail, models
 from skipflog import *
 
 app = Flask(__name__)
-#cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.secret_key = str.encode(firestore_json.get("apiKey"))
 default_url='/static/index.html'
    
