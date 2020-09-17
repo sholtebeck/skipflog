@@ -391,32 +391,6 @@ def get_players():
         player['picked']=0
     return players
 
-def old_results(event_id):
-    picks=get_picks(event_id)
-    for name in names.values():
-        picks[name]["Count"]=0
-    page=soup_results(espn_url)
-    results={}
-    results['event']=fetch_headers(page)
-    results['players']=[]
-    rows=fetch_rows(page)
-    for row in rows:
-        res=fetch_results(row, results.get('event').get('Columns'))
-        if res.get('Name') in picks.keys():
-            picker=xstr(picks[res['Name']])
-            res['Picker']=picker
-            picks[picker]['Count']+=1
-            picks[picker]['Points']+=res['Points']
-        if res.get('Points')>10 or res.get('Picker'):
-            if res.get('R1'):
-                results['players'].append(res)
-    results['pickers']=[picks[key] for key in picks.keys() if key in picks.values()]
-    if results['pickers'][1]['Points']>results['pickers'][0]['Points']:
-        results['pickers'].reverse()
-    results['pickers'][0]['Rank']=1
-    results['pickers'][1]['Rank']=2
-    return results
-    
 def get_results(event_id):
     picks=get_picks(event_id)
     for name in skip_pickers:
@@ -452,6 +426,36 @@ def get_results(event_id):
         tie["Points"]=float(sum([skip_points[p+1] for p in tie["Players"]]))/len(tie["Players"])
         for p in tie["Players"]:
             results["players"][p]["Points"]=tie["Points"]
+    # filter players
+    results["players"]=[p for p in results["players"] if p["Points"]>20 or p.get("Picker")]
+    for picker in skip_pickers:
+        picks[picker]["Count"]=len([player for player in results.get("players") if player.get("Picker")==picker])
+        picks[picker]["Points"]=sum([player["Points"] for player in results.get("players") if player.get("Picker")==picker])
+    results['pickers']=[picks[key] for key in picks.keys() if key in skip_pickers]
+    if results['pickers'][1]['Points']>results['pickers'][0]['Points']:
+        results['pickers'].reverse()
+    for r in range(len(results["pickers"])):
+        results['pickers'][r]['Points']=round(results['pickers'][r]['Points'],2)
+        results['pickers'][r]['Rank']=r+1
+    return results
+
+def new_results(event_id):
+    picks=get_picks(event_id)
+    for name in skip_pickers:
+       picks[name]={"Name":name, "Count":0, "Points":0}
+    res_url=fetch_url(event_id)
+    page=soup_results(res_url)
+    tie={"Points":100,"Players":[]}
+    results=json_results(results_api)
+    pts=[get_points(r) for r in range(len(results["players"])) if get_points(r)>0]
+    positions={p["POS"]: sum(1 for q in results["players"] if q["POS"]==p["POS"]) for p in results["players"]}
+    points={p:round(sum(pts[get_rank(p):get_rank(p)+positions[p]])/positions[p],2) for p in positions.keys() if get_rank(p)<len(pts)}
+    results['event']['ID']=event_id
+    for res in results["players"]:
+        res["Points"]=points.get(res["POS"],get_points(res["Rank"]))
+        if res.get('Name') in picks.keys():
+            picker=xstr(picks[res['Name']])
+            res['Picker']=picker
     # filter players
     results["players"]=[p for p in results["players"] if p["Points"]>20 or p.get("Picker")]
     for picker in skip_pickers:
