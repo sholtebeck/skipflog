@@ -408,7 +408,7 @@ def get_results(event_id):
         if res.get('Name') in picks.keys():
             picker=xstr(picks[res['Name']])
             res['Picker']=picker
-        if res.get('Points')>=9:
+        if res.get('Points',0)>=9:
             if res["Points"]!=tie.get("Points"):
                 if len(tie["Players"])>1:
                    tie["Points"]=float(sum([skip_points[p+1] for p in tie["Players"]]))/len(tie["Players"])
@@ -417,7 +417,7 @@ def get_results(event_id):
                 tie={"Players": [len(results['players'])], "Points":res["Points"], "POS":res["POS"]}
             else:
                 tie["Players"].append(len(results['players']))
-        if res.get('Picker') or res.get('Points')>=9:
+        if res.get('Picker') or res.get('Points',0)>=9:
             res["Points"]=round(res["Points"],2)
             del res["PLAYER"]
             results['players'].append(res)
