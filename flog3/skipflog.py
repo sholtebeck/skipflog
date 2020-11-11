@@ -520,25 +520,34 @@ def post_players():
 #    result = urllib.request.urlopen(current_csv)
 #    rows=[row for row in csv.reader(result)]
 #    names=[name[1] for name in rows[3:] if name[1]!='']
-    odds_names=[n.strip() for n in open("app\players.txt").readlines()]
-#    odds=fetch_odds()
-#    odds_names=odds.keys()
+    odds=fetch_odds()
+    odds_names=list(odds.keys())
     odds_names.sort()
     rankings=get_rankings(1500)
     rank_names=[rank['name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
-    current_cell=0
-    event=json_results(event_json)
-    for player in event["players"][128:]:
+    row=2
+#   event=json_results(event_json)
+    for pname in odds_names:
+        print(pname)
         cell_list = worksheet.range('A'+str(row)+':F'+str(row))
-        cell_list[0].value=player['rank']
-        cell_list[1].value=player['name']
-        cell_list[2].value=player['points']
-        cell_list[3].value=player['country']
-        cell_list[4].value=player['odds']
-        cell_list[5].value=0
+        if match_name(pname,rank_names) in rank_names:
+            player=rankings[rank_names.index(match_name(pname,rank_names))]
+            cell_list[0].value=player['rank']
+            cell_list[1].value=player['name']
+            cell_list[2].value=player['points']
+            cell_list[3].value=player['country']
+            cell_list[4].value=odds.get(pname)
+            cell_list[5].value=0
+        else:
+            cell_list = worksheet.range('B'+str(row)+':E'+str(row))
+            cell_list[0].value=pname
+            cell_list[1].value=0
+            cell_list[2].value='USA'    
+            cell_list[3].value=odds.get(pname)
         update=worksheet.update_cells(cell_list)
         row+=1
+        time.sleep(2)
 
 
 # Post the rankings to the "Rankings" tab
