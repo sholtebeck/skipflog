@@ -107,8 +107,7 @@ def xstr(string):
 def get_rank(position):
     if not position.replace('T','').isdigit():
         return 99
-    else:
-        rank = int(position.replace('T',''))
+    else:re
         return rank
 
 def get_points(rank):
@@ -702,10 +701,10 @@ def load_events(k=42):
     ecount=0  
     for n in range(ecount):
         e=events[n]
-        if e["Year"]==2017:
+        if e["Year"]==2020:
             event_id=int(e.get("event_id",e.get("ID")))
             event_name=e.get("Name")
-            event_year=2017
+            event_year=2020
             print(event_id,event_name)
             if len(majors)==0:
                 majors=load_majors(event_year)

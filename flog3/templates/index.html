@@ -152,7 +152,7 @@ $(document).ready(function() {
   	 {% for player in event.players if player.picked ==0 %}
      <option>{{player.name}}</option>
      {% endfor %}
-     </select><input type="submit" id="submit" name="submit" value="Pick"></div>
+     </select><input type="submit" class="submit-btn" id="subpick" name="submit" value="Pick"></div>
     <input type="hidden" name="who" value="{{user}}">
     <input type="hidden" name="event_id" value="{{event.event_id}}">
     <input type="hidden" name="pick_no" value="{{event.pick_no}}">
@@ -161,7 +161,7 @@ $(document).ready(function() {
     {% if event.next=="Done" %}
       {% if user %}
     <p><form action="/mail" method="post">We're Done. <input type="hidden" name="event_id" value="{{event.event_id}}">
-      <input type="submit" id="submit" value="Email Picks"></form>
+      <input type="submit" id="submail" value="Email Picks"></form>
       {% else %}
       <p>We're Done.
       {% endif %}
@@ -198,9 +198,10 @@ $(document).ready(function() {
           <td ng-bind="player.points |number:2"></td>
           <td ng-bind="player.rank"></td>
           <td ng-bind="player.odds">/1</td>
-          <td><span ng-if="player.picked>0">Picked</span><form ng-if="player.picked==0" ng-submit="pickPlayer()">
-            <input type="hidden" name="picker" ng-model="event.user"><input type="hidden" name="player" ng-model="player.name">
-            <button type="submit" class="submit-btn" ng-disabled="event.nopick" >Pick</button>
+          <td><span ng-if="player.picked>0">Picked</span>
+				   <form ng-if="player.picked==0" action="/pick" method="post">
+				<input type="hidden" name="who" ng-value="event.user"><input type="hidden" name="player" ng-value="player.name"><input type="hidden" name="event_id" value="event.event_id">
+				<button id="submit-pick" type="submit" class="submit-btn" ng-disabled="event.nopick" >Pick</button>
           </form></td>
         </tr>
      </tbody>
@@ -216,19 +217,6 @@ $(document).ready(function() {
       $scope.orderProp = 'name';
       $scope.year = new Date().getFullYear();
     }]);
-
-    $scope.pickPlayer = function()
-    {
-      //console.log("picking "+ this.player.name);
-      $http.post("/api/pick", { player: this.player.name })
-      .success(function(data, status, headers, config) {
-                     if (data.success) {
-                          $http.get('/api/players').success(function(data)  {   
-                             $scope.players = data.players
-                          });
-                            } 
-                        }).error(function(data, status, headers, config) {});
-    }; 
   </script>
   </div><!--playersController-->
   </div><!-- #tab2 -->
@@ -287,17 +275,16 @@ $(document).ready(function() {
         <td>{{"%.2f"|format(picker.Points)}}</td>
       </tr>   
 {% endfor %}
+<td colspan="2">
+  <form action="/api/results/{{ results.event.ID }}" method="post"><input type="submit" id="submit" value="Get Results"></form>
+</td>
+<td colspan="2">
+  {% if results.event.Complete %}
+  <form action="/mail" method="get"><input type="submit" id="submit" value="Email Results">    </form>
+  {% endif %}
+</td>
     </tbody>
   </table>
-  {% if results.event.Complete %}
-<form action="/mail" method="gett">
-  <input type="submit" id="submit" value="Email Results">
-</form>
-{% else %}
-<form action="/api/results/{{ results.event.ID }}" method="post">
-  <input type="submit" id="submit" value="Update Results">
-</form>
-{% endif %}
 {% else %}
 No results yet.
 {% endif %}
