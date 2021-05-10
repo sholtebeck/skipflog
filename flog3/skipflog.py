@@ -1,6 +1,6 @@
 # skipflog functions
 import csv,datetime,json,sys,urllib
-from time import gmtime, strftime
+from time import gmtime, strftime, sleep
 import gspread
 from bs4 import BeautifulSoup
 
@@ -267,7 +267,7 @@ def fetch_odds():
     odds_url='http://golfodds.com/upcoming-major-odds.html'
     soup=soup_results(odds_url)
     odds={}
-    for tr in soup.findAll('tr')[:106]:
+    for tr in soup.findAll('tr')[:140]:
         td =tr.findAll('td')
         if len(td)==2 and td[0].string and '/' in td[1].string:
             odds[xstr(td[0].string)]=xstr(td[1].string.split('/')[0])
@@ -526,9 +526,9 @@ def post_players():
     rankings=get_rankings(1500)
     rank_names=[rank['name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
-    row=82
+    row=2
 #   event=json_results(event_json)
-    for pname in odds_names[80:]:
+    for pname in odds_names:
         print(pname)
         cell_list = worksheet.range('A'+str(row)+':F'+str(row))
         if match_name(pname,rank_names) in rank_names:
@@ -547,7 +547,7 @@ def post_players():
             cell_list[3].value=odds.get(pname)
         update=worksheet.update_cells(cell_list)
         row+=1
-#       time.sleep(2)
+        sleep(1)
 
 
 # Post the rankings to the "Rankings" tab
