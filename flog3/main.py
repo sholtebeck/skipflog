@@ -154,11 +154,11 @@ def mail_handler(event_id=currentEvent()):
 @app.route('/pick', methods=['GET','POST'])
 def pick_handler(event_id = currentEvent()): 
     if request.method=="POST":
+        event = getEvent(event_id)
         event_id = request.form.get('event_id')
         picker = request.form.get('who')
         player = request.form.get('player')
         # update event (add to picks, remove from field)
-        event = getEvent(event_id)
         if player in [p["name"] for p in event["players"]]:
             new_event=pick_player(event,player)
             if new_event != event:

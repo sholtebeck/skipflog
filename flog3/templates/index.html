@@ -200,7 +200,7 @@ $(document).ready(function() {
           <td ng-bind="player.odds">/1</td>
           <td><span ng-if="player.picked>0">Picked</span>
 				   <form ng-if="player.picked==0" action="/pick" method="post">
-				<input type="hidden" name="who" ng-value="event.user"><input type="hidden" name="player" ng-value="player.name"><input type="hidden" name="event_id" value="event.event_id">
+				<input type="hidden" name="who" ng-value="event.picker"><input type="hidden" name="player" ng-value="player.name"><input type="hidden" name="event_id" ng-value="event.event_id">
 				<button id="submit-pick" type="submit" class="submit-btn" ng-disabled="event.nopick" >Pick</button>
           </form></td>
         </tr>
