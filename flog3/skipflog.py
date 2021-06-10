@@ -362,7 +362,11 @@ def fetch_tables(url):
     return results[:-3]
 
 def fetch_header(html):
-    return str(BeautifulSoup(html,"html.parser").find('th').string)
+    str_header=str(BeautifulSoup(html,"html.parser").find('th').string)
+    str_year=str(current_year())+" "
+    if str_header[:5]!=str_year:
+        str_header=str_year+str_header
+    return str_header
     
 # fetch all table rows
 def fetch_rows(page):
@@ -379,15 +383,19 @@ def get_playerpicks(playlist):
             current_rank+=1
     return players
 
-# Get the list of players from the api 
+# Get the list of players from the spreadsheet 
 def get_players():
-    players=json_results(players_api).get("players")
-    for player in players:
-        name=player.get('name')
-        player['rownum']=players.index(player)+1
+    cnum=ncols=6
+    cells=json_results(players_json).get('feed').get('entry')  
+    players=[]
+    cols=[cell['content']['$t'] for cell in cells[:ncols]]
+    while cnum < len(cells):
+        player={c:d for (c,d) in zip(cols,[cell['content']['$t'] for cell in cells[cnum:cnum+ncols]])}
+        player['rownum']=int(cnum/ncols)+1
         player['rank']=int(player['rank'])
-        player['lastname']=name.split(" ")[-1]
-        player['points']=player['points']
+        player['lastname']=player['name'].split(" ")[-1]
+        player['points']=float(player['points'])
+        player['odds']=int(player['odds'])
         player['picked']=0
     return players
 
