@@ -44,10 +44,12 @@
 <!-- [START gae_python38_auth_firebase_html] -->
 <h2 class="center">{{title}}</h2>
 <div id="firebaseui-auth-container"></div>
-
-<button onclick="window.location.href='/'">Sign In</button>
+<form action="/" method="post">
+  User: <input type=text name="user" size=20 value="{{user}}">
+  <input type="submit" class="submit-btn" id="loginbtn" name="submit" value="Sign In">
 <button id="sign-out" hidden=true>Sign Out</button>
-<div id="login-info" hidden=true>
+<div id="login-info" hidden=true></div>
+</form>
 
 
 </div>

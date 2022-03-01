@@ -14,7 +14,7 @@ names={'sholtebeck':'Steve','mholtebeck':'Mark'}
 numbers={'Steve':'5103005644@vtext.com','Mark':'5106739570@vmobl.com'}
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
 event_list=[]
-events_json="https://spreadsheets.google.com/feeds/cells/0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E/1/public/full?alt=json"
+events_api="https://skipflog3.appspot.com/api/event/2000"
 events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AF21&output=csv"
 players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB155&output=csv"
 results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
@@ -184,24 +184,24 @@ def soup_results(url):
 def fetch_events(nrows=10):
     if cache.get("events"):
         return cache["events"]
-    event_list=[]
-    cnum=ncols=6
-    cells=json_results(events_json).get('feed').get('entry')
-    cols=[cell['content']['$t'] for cell in cells[:ncols]]
-    while len(event_list)<nrows:
-        data=[cell['content']['$t'] for cell in cells[cnum:cnum+ncols]]
-        event_list.append({c:d for (c,d) in zip(cols,data)})
-        cnum+=ncols
+    event_list=json_results(events_api).get("events")
+    if len(event_list)==0:
+        cnum=ncols=6
+        worksheet=open_worksheet('Majors','Events')
+        keys=[worksheet.cell(1,k).value for k in range(1,ncols+1)]
+        for r in range(2,nrows):
+            event={keys[c]:worksheet.cell(r,c+1).value for c in range(ncols)}
+            event_list.append(event)
+            sleep(5)
     cache["events"]=event_list
     return event_list
 
 def fetch_players():
     players=cache.get("players",[])
     if len(players)==0:
-        players=get_players()
+        players=json_results(events_api).get("players")
         cache["players"]=players
     return players
-
 
 # Get a default event dictionary
 def default_event(event_id=current_event()):
@@ -363,6 +363,7 @@ def fetch_tables(url):
 
 def fetch_header(html):
     str_header=str(BeautifulSoup(html,"html.parser").find('th').string)
+    str_header=str_header.replace("The "," ")
     str_year=str(current_year())+" "
     if str_header[:5]!=str_year:
         str_header=str_year+str_header
@@ -386,17 +387,22 @@ def get_playerpicks(playlist):
 # Get the list of players from the spreadsheet 
 def get_players():
     cnum=ncols=6
-    cells=json_results(players_json).get('feed').get('entry')  
+    worksheet=open_worksheet('Majors','Players')
     players=[]
-    cols=[cell['content']['$t'] for cell in cells[:ncols]]
-    while cnum < len(cells):
-        player={c:d for (c,d) in zip(cols,[cell['content']['$t'] for cell in cells[cnum:cnum+ncols]])}
-        player['rownum']=int(cnum/ncols)+1
-        player['rank']=int(player['rank'])
+    cols=[worksheet.cell(1,k).value for k in range(1,ncols+1)]
+    r=len(players)+2
+    while r < 108:
+        player={cols[c]:worksheet.cell(r,c+1).value for c in range(ncols)}
+        player['rownum']=r
+        player['rank']=get_value(player.get('rank',9999))
         player['lastname']=player['name'].split(" ")[-1]
         player['points']=float(player['points'])
-        player['odds']=int(player['odds'])
+        player['odds']=int(player.get('odds',9999))
         player['picked']=0
+        players.append(player)
+        print(player["name"])
+        r+=1
+        sleep(4)
     return players
 
 def get_results(event_id):

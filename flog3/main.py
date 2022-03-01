@@ -76,12 +76,15 @@ def updateLastPick(event):
     if (pick_no%2==0 or pick_no==21):
         nextnum=[p["number"] for p in event["pickers"] if p["name"]==event["next"]]
         mail.send_message(nextnum[0], event["event_name"], event["lastpick"])
+        mail.send_mail(event["event_name"], event["lastpick"])
         models.send_message(event["lastpick"],current_time())
     return True
 
 def getUser(id_token=None):
-    user=None
-    if id_token:
+    user=session.get("user")
+    if user:
+        return user
+    elif id_token:
         try:
             user_data = google.oauth2.id_token.verify_firebase_token(id_token, requests.Request())
             user = user_data["name"].split()[0] 
@@ -89,12 +92,13 @@ def getUser(id_token=None):
             models.set_document("users", user, user_data)
         except:
             return None 
-    else:
-        user=session.get("user")
     return user
 
 @app.route('/login', methods=['GET','POST'])
 def login_page(): 
+    if request.method == "POST":
+        session['user']=request.form.get('user')
+        return redirect('/')
     title='skipflog - major golf picks'
     user=None
     id_token = request.cookies.get("token")
@@ -105,17 +109,20 @@ def login_page():
 @app.route('/logout', methods=['POST'])
 def logout(): 
     title='skipflog - major golf picks'
-    session.pop('username', None)
+    session.pop('user', None)
     return redirect('/login')
 
-@app.route('/')
+@app.route('/', methods=['GET','POST'])
 def main_page(): 
     #find the username in either the session or cookie
-    user=getUser()
+    if request.method == "POST":
+        user=session['user']=request.form.get('user')
+    else:
+        user=getUser()
     if not user:
         id_token=request.cookies.get("token")
         user=getUser(id_token)
-    if user:
+    if user in skip_pickers:
         event_id=currentEvent()
         event=getEvent(event_id)
         results=getResults(event_id)
@@ -135,6 +142,14 @@ def api_event(event_id=currentEvent()):
         event_json = request.json
         updateEvent(event_json)
     event = getEvent(event_id)
+    return jsonify(event)
+
+@app.route('/event', methods=['GET','POST'])
+def post_event(event_id=currentEvent()):
+    if request.method == "POST":
+        event_data = request.form.get('event_data')
+        event_json = json.loads(event_data)
+        updateEvent(event_json)
     return jsonify(event)
 
 @app.route('/mail', methods=['GET','POST'])
