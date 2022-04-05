@@ -3,7 +3,7 @@
 import json
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
-from skipconfig import sg_config
+sg_config=json.load(open('config/sendgrid.json'))
 def send_mail(mail_subject,mail_content):
     try:
         message = Mail(

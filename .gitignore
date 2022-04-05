@@ -1,5 +1,7 @@
 *pyc
+*json
 skipconfig.py
+flog1\config\*
 flog1\libs\*
 flog2\libs\*
 flog3\config\*

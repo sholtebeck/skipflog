@@ -1,2 +1,8 @@
-gspread
-oauth2client
+# Testing the new appengine libraries in python3
+# removing BeautifulSoup and Gspread libraries
+#appengine-python-standard>=1.0.0
+BeautifulSoup4
+gunicorn
+Flask
+Pyrebase4
+sendgrid

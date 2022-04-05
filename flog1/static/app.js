@@ -9,26 +9,16 @@ function($scope, $http) {
   }
 );
   
-   $scope.addPlayer = function()
-  {
-//      alert("picking "+ this.player);
-    $http.post("/pick", { player: this.player })
-    .success(function(data, status, headers, config) {
-                   $scope.message=data.message;
-                   if (data.success) {
-                        $http.get('/api/picks').success(function(data)  {   $scope.picks = data.picks });
-                          } 
-                      }).error(function(data, status, headers, config) {});
-  };   
+ 
   
   $scope.dropPlayer = function()
   {
-//      alert("dropping "+ this.player);
+    console.log("dropping "+ this.player);
     $http.post("/player/drop", { player: this.player })
     .success(function(data, status, headers, config) {
                  $scope.message=data.message;
                  if (data.success) {
-                         $http.get('/api/picks').success(function(data)  {   $scope.picks = data.picks });
+                         $http.get('/api/event').success(function(data)  {   $scope.pickers = data.pickers });
                        } 
                       }).error(function(data, status, headers, config) {});
   };
@@ -39,6 +29,8 @@ skipflog.controller('eventsController', ['$scope', '$http',
     $http.get('/api/event').success(function(data) {
       $scope.players = data.players;
       $scope.pickers = data.pickers;
+      $scope.pick_no = data.pick_no;
+      $scope.results = data.results;
     });
     
    $scope.orderProp = '-Points';
@@ -54,7 +46,23 @@ skipflog.controller('eventsController', ['$scope', '$http',
       $http.get('/api/event/'+ $scope.event.event_id ).success(function(data) {
 			$scope.players = data.players;
 			$scope.pickers = data.pickers;
+      $scope.results = data.results;
 		});
     };
-	
+
+    $scope.pickPlayer = function()
+    {
+      //console.log("picking "+ this.player.name);
+      $http.post("/api/pick", { player: this.player.name })
+      .success(function(data, status, headers, config) {
+                     if (data.success) {
+                          $http.get('/api/event').success(function(data)  {   
+                            $scope.pickers = data.pickers 
+                            $scope.players = data.players
+                          });
+                            } 
+                        }).error(function(data, status, headers, config) {});
+    };   
+    
+
   }]);

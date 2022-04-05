@@ -2,12 +2,12 @@
 <html lang="en" ng-app="knarflog">
 <head>
   <title>skipflog:results</title>
-  <link rel="stylesheet" href="/app/app.css">
+  <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
 <table>
     <thead>
-      <tr><th colspan="9">{{results.event.Name }} ({{results.event.Status}})</th></tr>
+      <tr><th colspan="9">{{results.event.Year }} {{results.event.Name }} ({{results.event.Status}})</th></tr>
       <tr>
           <th>Pos</th>
           <th>Player Name</th>
@@ -42,12 +42,11 @@
     <thead>
       <tr><th>Rank</th>
           <th>Picker</th>	
-          <th>Players</a></th>	
+          <th>Players</th>	
           <th>Points</th>
          </tr>
     </thead>
    <tbody>
-<p>
 {% for picker in results.pickers %}
      <tr>
         <td>{{picker.Rank}}</td>

@@ -36,7 +36,7 @@ window.addEventListener('load', function () {
 
     ],
     // Terms of service url.
-    tosUrl: '<your-tos-url>'
+    tosUrl: '/tos'
   };
 
   firebase.auth().onAuthStateChanged(function (user) {
@@ -44,7 +44,9 @@ window.addEventListener('load', function () {
       // User is signed in, so display the "sign out" button and login info.
       document.getElementById('sign-out').hidden = false;
       document.getElementById('login-info').hidden = false;
-      console.log(`Signed in as ${user.displayName} (${user.email})`);
+      const userName=user.displayName.split(" ")[0];
+      document.getElementById("userName").value = userName;
+      console.log(`Signed in as ${userName}`);
       user.getIdToken().then(function (token) {
         // Add the token to the browser's cookies. The server will then be
         // able to verify the token against the API.
@@ -52,6 +54,7 @@ window.addEventListener('load', function () {
         // token (which is verified server-side) in a cookie; do not add other
         // user information.
         document.cookie = "token=" + token;
+        document.getElementById("userForm").submit();
       });
     } else {
       // User is signed out.
@@ -71,4 +74,3 @@ window.addEventListener('load', function () {
   });
 });
 // [END gae_python38_auth_javascript]
-
