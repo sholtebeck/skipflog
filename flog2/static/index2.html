@@ -8,20 +8,18 @@
 </head>
 <body ng-app="skipflog" ng-controller="eventsController">
 <div class="container-fluid">
-<div ng-if="user"><button type="submit">Sign Out</button>Logged in as <b ng-bind="user"></b></div>
-<button class="btn btn-primary" id="signn" ng-click="signIn()">Sign In</button> 
+  <p></p>
   Event Name: <select ng-model="event" ng-options="event.event_name for event in events track by event.event_id" ng-change="setEvent()"></select> 
   Search:  <input ng-model="query"><br>
   {{ event.event_dates }} at {{event.event_loc }}
- 
   <div class="row">
-    <div class="col" >
-      <table >
+    <div class="col">
+      <table>
         <col width="250">
         <col width="250">
         <thead>
         <tr><th colspan=2>{{event.event_name}} - Picks</th></tr>
-        <tr><th class="heading" ng-repeat="picker in pickers" ng-bind="picker.name"></th>
+        <tr><th ng-repeat="picker in pickers" ng-bind="picker.name"></th>
         </thead>
         <td ng-repeat="picker in pickers">
         <ol>  
@@ -30,36 +28,12 @@
          </td></tr>
         </table>
 
-        <span ng-if="user">
-        <select data-ng-model="player" data-ng-options="player.name for player in players if !player.picked"></select>
-        <button ng-click="addPlayer()" class="btn btn-primary">Pick</button>
-        </span>
-
-        <p>
-          <table ng-if="results.pickers">
-            <thead>
-              <tr><th>Rank</th>
-                  <th>Picker</th>	
-                  <th>Players</th>	
-                  <th>Points</th>
-                 </tr>
-            </thead>
-           <tbody>
-             <tr ng-repeat="picker in results.pickers">
-                <td ng-bind="picker.Rank"></td>
-                <td ng-bind="picker.Name"></td>
-                <td ng-bind="picker.Count"></td>
-                <td ng-bind="picker.Points"></td>
-              </tr>   
-            </tbody>
-          </table>
-
-      </div> <!-- col -->
+    </div> <!-- col -->
 
     <div class="col">
-        <table ng-if="!results">
+        <table>
             <thead>
-              <tr><th class="heading" colspan="7"> {{event.event_name}} : {{event.event_dates}}</th></tr>
+              <tr><th colspan="7"> {{event.event_name}} : {{event.event_dates}}</th></tr>
               <th>#</th>
                   <th><a href="#" ng-click="orderProp='name'">Player</a>  <a href="#" ng-click="orderProp='lastname'">Last Name</a></th>	
                   <th><a href="#" ng-click="orderProp='country'">Country</a></th>
@@ -77,45 +51,11 @@
                 <td ng-bind="player.points |number:2"></td>
                 <td ng-bind="player.rank"></td>
                 <td ng-bind="player.odds">/1</td>
-                <td>
-                  <form  ng-if="player.picked==0" ng-submit="pickPlayer()"><input type="hidden" name="player" ng-model="player.name"><button type="submit" class="btn btn-primary">Pick</button></form>
-                  <span ng-if="player.picked">Picked</span>
-                </td>
+                <td ng-bind="player.picked"></td>
               </tr>
            </tbody>
           </table>
-
-          <table ng-if="results.players">
-            <thead>
-              <tr><th colspan="9">{{results.event.Year }} {{results.event.Name }} ({{results.event.Status}})</th></tr>
-              <tr>
-                  <th>Pos</th>
-                  <th>Player Name</th>
-                  <th>R1</th>
-                  <th>R2</th>
-                  <th>R3</th>
-                  <th>R4</th>
-                  <th>Total</th>
-                  <th>Points</th>
-                  <th>Picked-By</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr ng-repeat="player in results.players">
-                <td ng-bind="player.POS"></td>
-                <td ng-bind="player.Name"></td>
-                <td ng-bind="player.R1"></td>
-                <td ng-bind="player.R2"></td>
-                <td ng-bind="player.R3"></td>
-                <td ng-bind="player.R4"></td>
-                <td ng-bind="player.Total"></td>
-                <td ng-bind="player.Points"></td>
-                <td ng-bind="player.Picker"></td>
-              </tr>
-            </tbody>
-          </table> 
-          
-       
+      
     </div> <!-- col -->
 
   </div> <!-- row -->

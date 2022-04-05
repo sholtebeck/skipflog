@@ -2,7 +2,9 @@
 <html>
   <head>
     <title>skipflog -- major golf picks</title>
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script> 
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script> 
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+ <link rel="stylesheet" href="/static/app.css">
 <script type="text/javascript">
 $(document).ready(function() {
 
@@ -17,7 +19,6 @@ $(document).ready(function() {
 		$("#"+activeTab).fadeIn(); 
 	});
 });
-
 </script> 
 <style type="text/css">
 
@@ -33,6 +34,7 @@ $(document).ready(function() {
 	}
 	ul.tabs li {
 		float: left;
+		font-size: 1.0em;
 		margin: 0;
 		cursor: pointer;
 		padding: 0px 21px ;
@@ -62,7 +64,7 @@ $(document).ready(function() {
 	}
 	.tab_content {
 		padding: 20px;
-		font-size: 1.1em;
+		font-size: 1.0em;
 		display: none;
 	}
 	body {
@@ -92,88 +94,203 @@ $(document).ready(function() {
 	  font-size: 1.0em;
     }
 </style>
-  </head>
-  <body>
+</head>
+  <body ng-app="skipflog">
+<table class="no-border">
+  <td class="no-border" width="25%">
 {% if user %}
-    &nbsp;Logged in as <b>{{ user }}</b>:
+<form action="/logout" method="post">
+ <button id="signout">Sign Out</button>
+  <label>Logged in as <b>{{ user }}</b>
+</form>
+{% else %}
+<form action="/login" method="post">
+  <input type="submit" id="signin" value="Sign In">
+</form>
 {% endif %}
-  <a href="{{ url }}">{{ url_linktext }}</a>
-{% if event %}
-     &nbsp;Event: <b>{{ event.event_name }}</b> <a href="/">Clear</a>
-{% endif %}
-<p><div id="container">
+</td>
+<td class="no-border"><b>Event:</b> {{ event.Name }}
+<b>Dates:</b> {{ event.event_dates }}
+<b>Location:</b> {{ event.event_loc }}</td>
+</table>
+<p><div id="tab_container">
 
   <ul class="tabs"> 
-        <li class="active" rel="tab1"> Picks</li>
-{% if event %}
+        <li class="active" rel="tab1"> Picks </li>
         <li rel="tab2"> Players </li>
         <li rel="tab3"> Results </li>
-        <li rel="tab4"> {{ event.event_name[4:] }} </li>
-        <li rel="tab5"> Major Years</li>
-        <li rel="tab6"> PGA Rank</li>
-{% endif %}
-    </ul>
+  </ul>
 
 <div class="tab_container"> 
 
-     <div id="tab1" class="tab_content"> 
-
-{% if event %}
-   {% block content %}
-   {% endblock %}
-{% else %}
-   <form action="/pick" method="get" onchange="this.form.submit()">
-   Select Event: <select name="event_id">
-   {% for event in event_list %}
-    <option value="{{event.event_id}}">{{event.event_name}}</option>
-   {% endfor %}
-   </select><input type="submit" id="submit" value="Get">
-</form>
+  <div id="tab1" class="tab_content">
+   
+     {% if event.lastpick %}
+    Last Pick: {{event.lastpick}} <p>
    {% endif %}
+   {% if event.pick_no > 0 %}
+  <table>
+	<col width="250">
+	<col width="250">
+    <tr>
+   {% for picker in event.pickers %}
+	<th class="heading">{{picker.name}}</th>
+   {% endfor %}
+    <tr>
+   {% for picker in event.pickers %}
+	<td><ol>
+        {% for player in picker.picks %}
+        <li>{{ player }}
+        {% endfor %}
+     </ol></td>
+    {% endfor %}
+   </tr></table>
+  {% endif %}
+   {% if user==event.next %}
+    <p><form action="/pick" method="post">
+    <div>{{event.nextpick}}: <select name="player"> 
+  	 {% for player in event.players if player.picked ==0 %}
+     <option>{{player.name}}</option>
+     {% endfor %}
+     </select><input type="submit" class="submit-btn" id="subpick" name="submit" value="Pick"></div>
+    <input type="hidden" name="who" value="{{user}}">
+    <input type="hidden" name="event_id" value="{{event.event_id}}">
+    <input type="hidden" name="pick_no" value="{{event.pick_no}}">
+    </form>
+   {% else %}
+    {% if event.next=="Done" %}
+      {% if user %}
+    <p><form action="/mail" method="post">We're Done. <input type="hidden" name="event_id" value="{{event.event_id}}">
+      <input type="submit" id="submit" value="Email Picks"></form>
+      {% else %}
+      <p>We're Done.
+      {% endif %}
+    {% else %}
+      <br>Waiting for <b>{{event.nextpick}}.</b>
+   {% endif %}
+{% endif %}
 
-{% if event %}
 
 </div><!-- #tab1 -->
+
+
 <div id="tab2" class="tab_content"> 
+  <div ng-controller="playersController">
+   Search: <input ng-model="query"> <p>  
+    <table>
+      <thead>
+      <tr><th class="heading" colspan="7" ng-bind="event.event_name"></th></tr>
+        <tr>
+      <th>#</th>
+            <th><a href="#" ng-click="orderProp='name'">Player</a>  <a href="#" ng-click="orderProp='lastname'">Last Name</a></th>	
+            <th><a href="#" ng-click="orderProp='country'">Country</a></th>
+            <th><a href="#" ng-click="orderProp='-points'">Points</a></th>	
+            <th><a href="#" ng-click="orderProp='rank'">World Rank</a></th>
+            <th><a href="#" ng-click="orderProp='odds'">Odds</a></th>
+            <th>Action</th>         
+          </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="player in players | filter:query |orderBy:orderProp">
+          <td ng-bind="$index + 1"></td>
+          <td ng-bind="player.name"></td>
+          <td ng-bind="player.country"></td>
+          <td ng-bind="player.points |number:2"></td>
+          <td ng-bind="player.rank"></td>
+          <td ng-bind="player.odds">/1</td>
+          <td><span ng-if="player.picked>0">Picked</span>
+				   <form ng-if="player.picked==0" action="/pick" method="post">
+				<input type="hidden" name="who" ng-value="event.picker"><input type="hidden" name="player" ng-value="player.name"><input type="hidden" name="event_id" ng-value="event.event_id">
+				<button id="submit-pick" type="submit" class="submit-btn" ng-disabled="event.nopick" >Pick</button>
+          </form></td>
+        </tr>
+     </tbody>
+    </table>
+    <script>
+  var skipflog = angular.module('skipflog', []);
+  skipflog.controller('playersController', ['$scope', '$http',
+    function($scope, $http) {
+      $http.get('/api/players').success(function(data) {
+        $scope.event = data.event;
+        $scope.players = data.players;
+      });
+      $scope.orderProp = 'name';
+      $scope.year = new Date().getFullYear();
+    }]);
+  </script>
+  </div><!--playersController-->
+  </div><!-- #tab2 -->
+  
 
-{% if event.picks["Picked"]  %}
-<p><strong>Picked:</strong>
-{% for player in event.picks["Picked"] %}
-<br>{{player}}
+
+<div id="tab3" class="tab_content">
+{% if results %}
+<table>
+    <thead>
+      <tr><th colspan="9">{{results.event.Name }} ({{results.event.Status}})</th></tr>
+      <tr>
+          <th>Pos</th>
+          <th>Player Name</th>
+          <th>R1</th>
+          <th>R2</th>
+          <th>R3</th>
+          <th>R4</th>
+          <th>Total</th>
+          <th>Points</th>
+          <th>Picked-By</th>
+      </tr>
+    </thead>
+    <tbody>
+   {% for player in results.players %}
+      <tr>
+        <td>{{player.POS}}</td>
+        <td>{{player.Name}}</td>
+        <td>{{player.R1}}</td>
+        <td>{{player.R2}}</td>
+        <td>{{player.R3}}</td>
+        <td>{{player.R4}}</td>
+        <td>{{player.Total}}</td>
+        <td>{{"%.2f"|format(player.Points)}}</td>
+        <td>{{player.Picker}}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p>
+  <table>
+    <thead>
+      <tr><th>Rank</th>
+          <th>Picker</th>	
+          <th>Players</a></th>	
+          <th>Points</th>
+         </tr>
+    </thead>
+   <tbody>
+<p>
+{% for picker in results.pickers %}
+     <tr>
+        <td>{{picker.Rank}}</td>
+        <td>{{picker.Name}}</td>
+        <td>{{picker.Count}}</td>
+        <td>{{"%.2f"|format(picker.Points)}}</td>
+      </tr>   
 {% endfor %}
-{% endif %}
-{% if event.next!="Done" %}
-<p><strong>Available:</strong>
-{% for player in event.picks["Available"]%}
-<br>{{player}}
-{% endfor %}
-{% endif %}
-{% endif %}
-
-</div><!-- #tab2 -->
-
-<div id="tab3" class="tab_content"> 
-{% if event %}
-<iframe width='1250' height='800' frameborder='0' src='http://skipflog.appspot.com/results?event_id={{event.event_id}}'></iframe>
+<td colspan="2">
+  <form action="/api/results/{{ results.event.ID }}" method="post"><input type="submit" id="submit" value="Get Results"></form>
+</td>
+<td colspan="2">
+  {% if results.event.Complete %}
+  <form action="/mail" method="get"><input type="submit" id="submit" value="Email Results">    </form>
+  {% endif %}
+</td>
+    </tbody>
+  </table>
+{% else %}
+No results yet.
 {% endif %}
 </div><!-- #tab3 -->
-
-<div id="tab4" class="tab_content"> 
-<iframe width='1250' height='800' frameborder='0' src='https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=1&output=html&widget=true'></iframe>
-
-</div><!-- #tab4 -->
-
-<div id="tab5" class="tab_content"> 
-
-<iframe width='1250' height='800' frameborder='0' src='https://docs.google.com/spreadsheet/pub?key=0Ahf3eANitEpndGhpVXdTM1AzclJCRW9KbnRWUzJ1M2c&single=true&gid=0&output=html&widget=true'></iframe>
-
-</div><!-- #tab5 -->
-<div id="tab6" class="tab_content"> 
-
-<iframe width='1250' height='800' frameborder='0' src='http://skipflog.appspot.com/app/players.html'></iframe>
-
-</div><!-- #tab6 -->
 </div> <!-- .tab_container --> 
 </div> <!-- #container -->
 </body>
+
 </html>

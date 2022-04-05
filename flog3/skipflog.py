@@ -316,7 +316,7 @@ def fetch_results(row, columns):
             results['Today']+='('+results['TODAY']+')'
         elif results.get('THRU').isdigit():
             results['Today']='('+results['TODAY']+') thru '+results['THRU']
-            results['Total']='('+results.get('TO PAR')+') thru '+results['THRU']
+            results['Total']='('+results.get('SCORE')+') thru '+results['THRU']
         elif results['THRU'][-2:] in ('AM','PM'):
             results['Time']='@ '+results['THRU']
         elif results['THRU'] in ('MC','CUT'):
@@ -324,7 +324,7 @@ def fetch_results(row, columns):
             results['Today']=results['THRU']
         # Get Total
         if results.get('TOT') not in (None,"--"):
-            results['Total']=results['TOT']+'('+results['TO PAR']+')'
+            results['Total']=results['TOT']+'('+results['SCORE']+')'
     return results
 
 def fetch_scores(url):

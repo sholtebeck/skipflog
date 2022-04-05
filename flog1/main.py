@@ -1,22 +1,16 @@
 # Main program for golfpicks app (skipflog.appspot.com)
-import cgi,csv,json,datetime
-import jinja2
-import logging
-import urllib2
-import webapp2
-import os,sys
+from flask import Flask, abort, jsonify, render_template, redirect, request, session
+#from google.appengine.api import users, wrap_wsgi_app
+import json,datetime,os
+import mail
 import models
-#from google.appengine.ext import db
-from google.appengine.api import mail
-from google.appengine.api import memcache
-from google.appengine.api import taskqueue
-from google.appengine.api import users
 from skipflog import *
 
-#Load templates from 'templates' folder
-#jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
-jinja_environment = jinja2.Environment(autoescape=True,loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
-     
+# set Flask app
+app=Flask(__name__)
+app.secret_key = str.encode(firestore_json.get("apiKey"))
+#app.wsgi_app = wrap_wsgi_app(app.wsgi_app)
+   
    
 def currentEvent():
     now=datetime.datetime.now()
@@ -25,52 +19,37 @@ def currentEvent():
     return event_current
 
 def fetchEvents():
-    events = memcache.get('events')
-    if not events:
-        events=fetch_events()
-        memcache.add('events', events)
+    events = [{"event_id":int(f["ID"]),"event_dates":f["event_dates"], "event_loc":f["event_loc"],"event_name":f["Name"]} for f in fetch_events()[:10] if len(f["ID"])==4]
     return events
 
-def getPlayers(event_id='0'):
-    players = memcache.get('players')
-    if not players:
-        players=get_players()
-        memcache.add('players', players)
-    return players 
+def getPlayers(event_id='current'):
+    players = models.get_event(event_id).get("players")
+    return players
 
 def getPicks(event_id):
-    picks = memcache.get('picks'+event_id)
-    if not picks:
-        event = getEvent(event_id)
-        memcache.add('picks'+event_id, event.get("picks"))
-    return picks
+    event = getEvent(event_id)
+    return event.get("picks")
 
 def getResults(event_id):
-    results_key='results'+str(event_id)
-    resultstr = memcache.get(results_key)
-    if resultstr:
-        results=json.loads(resultstr)
-    else:
-        results=models.get_results(event_id)
-        if not results or results["event"]["Status"]!="Final":
-            try:
-                results=get_results(int(event_id))
-                models.update_results(results)
-                resultstr=str(json.dumps(results))
-                memcache.add(results_key,resultstr,240)
-            except:
-                memcache.delete(results_key)    
+    results = models.get_results(event_id)
+    if not results:
+        try:
+            results=new_results(int(event_id))
+            models.update_results(results)
+        except:
+            results=None
     return results
 
 def getEvent(event_id):
-#    event = Event.get(event_key(event_id))
-    event = models.get_event(event_id)
-    if event:
-        event_data=event.event_json
+    event=models.get_event(event_id)
+    event["results"]=models.get_results(event_id)
+    return event
+
+def getUser(id_token=None):
+    if session.get("user"):
+        return session["user"]
     else:
-        event_data=default_event(event_id)
-        models.update_event(event_data)
-    return event_data
+        return "Steve"
 
 def nextEvent():
     event_current=currentEvent()
@@ -81,17 +60,25 @@ def nextEvent():
 
 def updateEvent(event_data):
     models.update_event(event_data)
+    return True
     
-def getLastPick(thispick):
-    thisplayer=' '.join(thispick.split()[2:])
-    lastpick=memcache.get("lastpick")
-    if (not lastpick or not lastpick.startswith(thispick.split()[0])):
-        lastpick=thispick
-    elif (not lastpick.endswith(thisplayer)):
-        lastpick=lastpick+" and "+thisplayer
-    memcache.delete("lastpick")  
-    memcache.add("lastpick",lastpick)  
-    return lastpick
+def getLastPick(event,picker,player):
+    lastpick=event.get("lastpick")
+    if lastpick.startswith(picker):
+        return lastpick+" and "+player
+    else:
+        return picker+" picked "+player
+
+def updateLastPick(event):
+    # send alert if needed
+    pick_no = event['pick_no']
+    if (pick_no%2==0 or pick_no==21):
+        nextnum=[p["number"] for p in event["pickers"] if p["name"]==event["next"]]
+        mail.send_message(nextnum[0], event["event_name"], event["lastpick"])
+        mail.send_mail(event["event_name"], event["lastpick"])
+        models.send_message(event["lastpick"],current_time())
+    return True
+
     
 def updateLastPick(event):
     lastpick=getLastPick(event['lastpick'])
@@ -105,236 +92,182 @@ def updateLastPick(event):
         message.send()    
     return
 
-class MainPage(webapp2.RequestHandler):       
-    def get(self):
-        event_list = []
-        event_name = "None"
-        event_id = self.request.get('event_id');
-        if not event_id:
-            event_list=[{"event_id":event["ID"],"event_name":event["Name"]} for event in fetchEvents()]
-    
-        if users.get_current_user():
-            user = names[users.get_current_user().nickname()]
-            url = users.create_logout_url(self.request.uri)
-            url_linktext = 'Logout'
-        else:
-            user = ""
-            url = users.create_login_url(self.request.uri)
-            url_linktext = 'Login'
+# API routes
+@app.route('/api/event', methods=['GET'])
+@app.route('/api/event/<string:event_id>', methods=['GET','POST'])
+def api_event(event_id=currentEvent()):
+    if request.method == "POST":
+        event_json = request.json
+        updateEvent(event_json)
+    event = getEvent(event_id)
+    return jsonify(event)
 
-        template_values = {
-            'event_list': event_list,
-            'event_name': event_name,
-            'title': "Events",
-            'url': url,
-            'url_linktext': url_linktext,
-            'user': user,
-        }
-        template = jinja_environment.get_template('index.html')
-        self.response.out.write(template.render(template_values))
+@app.route('/api/events', methods=['GET','POST'])
+def api_events():
+    events=fetchEvents()    
+    return jsonify({'events': events })
 
-class MailHandler(webapp2.RequestHandler):       
-    def get(self):
-        event_id = self.request.get('event_id')
-        if event_id:
-            event = getEvent(event_id)
-            results=getResults(event_id)
-            eventdict=results.get("event")
-            message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=str(eventdict["Year"])+" "+eventdict["Name"]+" ("+eventdict["Status"]+")")
-            message.to = "skipflog@googlegroups.com"
-            result = urllib2.urlopen(results_url)
-            message.html=result.read()
-            message.send()
- 
+@app.route('/api/pick', methods=['POST'])
+def api_pick():
+    if not request.json or not 'player' in request.json:
+        abort(400)
+    picker=request.json.get("picker")
+    player=request.json.get('player')
+    event=models.get_event('current')
+    picker=event["next"]
+    if picker != event["next"]:
+        return jsonify({'success':False,'message':event["nextpick"]})
+    if player not in [p["name"] for p in event["players"] if p["picked"]==0]:
+        return jsonify({'success':False,'message': player+ " is not available"})
+    new_event=pick_player(event,player)
+    if new_event != event: 
+        success=updateEvent(new_event)
+        updateLastPick(new_event)
+        message=new_event.get("lastpick")
+    return jsonify({'success':success,'message':message})
 
-    def post(self):
-        event_id = self.request.get('event_id')
-        event = getEvent(event_id)
-        user = users.get_current_user()
-        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',
-                            subject=event.get('event_name')+" picks")
-        message.to = "skipflog@googlegroups.com"
-        message.html=event.get('event_name')+"<br>"
-        players = {"Steve":[],"Mark":[]}
-        picks = getPicks(event_id)
-        for pick in picks:
-            players[pick.who].append(pick.player)
-        for picker in skip_pickers:
-            message.html += picker+"'s Picks:<ol>"
-            for player in players[picker]:
-                message.html+="<li>"+player
-            message.html+="</ol>"
-        message.send()
-        self.redirect('/pick?event_id=' + event_id)
+@app.route('/api/picks', methods=['GET'])
+@app.route('/api/picks/<int:event_id>', methods=['GET'])
+def picks_handler(event_id=currentEvent()):      
+    event = getEvent(event_id)
+    pick_dict={}
+    for picker in event["pickers"]:
+        pickname=picker["name"]
+        pick_dict[pickname]=picker["picks"]
+        for player in pick_dict[pickname]:
+            pick_dict[player]=pickname
+    return jsonify({'picks': pick_dict })
 
-class PickHandler(webapp2.RequestHandler):
-    def get(self):     
-        event_id = int(self.request.get('event_id',currentEvent()))
-        event = getEvent(event_id)
-        pick_no = event["pick_no"]
-        picknum = pick_ord[pick_no]
-        # get next player
-        if picknum != "Done":
-            event["next"]=event["pickers"][0] if mypicks.count(pick_no)>0 else event["pickers"][1]
-        else:
-            event["next"]="Done"
-        # check results
-        if memcache.get("lastpick"):
-            event["lastpick"]=memcache.get("lastpick")
-        event["results"]=results_url+"?event_id="+str(event_id)
-        if users.get_current_user():
-            user = names[users.get_current_user().nickname()]
-            url = users.create_logout_url(self.request.uri)
-            url_linktext = 'Logout'
-        else:
-            user = ""
-            url = users.create_login_url(self.request.uri)
-            url_linktext = 'Login'
-     
-        template_values = {
-            'event': event,
-            'pick_no': pick_no,
-            'picknum': picknum,
-            'url': url,
-            'url_linktext': url_linktext,
-            'user': user
-        }
-        template = jinja_environment.get_template('picks.html')
-        self.response.out.write(template.render(template_values))
+@app.route('/api/players', methods=['GET'])
+@app.route('/api/players/<int:picked>', methods=['GET'])
+def ApiPlayers(picked=None):   
+    event=getEvent(currentEvent())
+    eventdict={k:event[k] for k in [e for e in event.keys() if e.startswith("event") or e.endswith("pick")]}
+    eventdict["picker"]=getUser()
+    eventdict["nopick"]=(event["next"]!=eventdict["picker"])
+    players=event["players"]
+    if picked in (0,1):
+        players=[p for p in players if p.get("picked")==picked]
+    return jsonify({"event":eventdict, "players":players})
 
-    def post(self):
-        event_id = self.request.get('event_id')
-        picker = self.request.get('who')
-        player = self.request.get('player')
-        memcache.delete('picks'+event_id)
-        # update event (add to picks, remove from field)
-        event = getEvent(event_id)
-        if player in event["picks"]["Available"]:
-            event["picks"]["Available"].remove(player)
-            event["picks"]["Picked"].append(player)
-            event["picks"][picker].append(player)
-            event["lastpick"]=picker+" picked "+player
-            event["pick_no"]+=1
-            updateEvent(event)
-        # update last pick message
-        updateLastPick(event)
-        self.redirect('/pick?event_id=' + event_id) 
+@app.route('/api/results', methods=['GET'])
+@app.route('/api/results/<int:event_id>', methods=['GET','POST'])
+def ApiResults(event_id=currentEvent()): 
+    if request.method=="POST":
+        results=get_results(event_id) 
+        if results:
+            models.update_results(results)     
+    results = getResults(event_id)
+    return jsonify({"results":results})
 
-class EventHandler(webapp2.RequestHandler):
-    def get(self):     
-        event_id = int(self.request.get('event_id',currentEvent()))
-        output=self.request.get('output')
-        if "results" in self.request.url:
-            template_values = { 'results': getResults(event_id) }
-            template = jinja_environment.get_template('results.html')
-            self.response.out.write(template.render(template_values))
-        else:
-            event = getEvent(event_id)
-            self.response.headers['Content-Type'] = 'application/json'
-            self.response.write(json.dumps(event))
-            
-    def post(self):     
-        event_data = self.request.get('event_data')
+@app.route('/api/user', methods=['GET'])
+def ApiUser(event_id=currentEvent()):   
+    user= getUser()
+    return jsonify({"user":user})
+
+@app.route('/', methods=['GET','POST'])
+def main_page(): 
+    #find the username in either the session or cookie
+    if request.method == "POST":
+        user=session['user']=request.form.get('user')
+    else:
+        user=getUser()
+    if user in skip_pickers:
+        event_id=currentEvent()
+        event=getEvent(event_id)
+        results=getResults(event_id)
+        return render_template('index.html',event=event,results=results,user=user)
+    else:
+        return redirect('/login')
+
+
+@app.route('/event', methods=['GET','POST'])
+def post_event(event_id=currentEvent()):
+    if request.method == "POST":
+        event_data = request.form.get('event_data')
         event_json = json.loads(event_data)
         updateEvent(event_json)
-        event_id = str(event_json["event_id"])
-        self.redirect('/event?event_id=' +event_id) 
+    return jsonify(event)
 
-class PicksHandler(webapp2.RequestHandler):   
-    def get(self):
-        output_format = self.request.get('output','json')
-        event_id = self.request.get('event_id',currentEvent())
-        if not event_id:
-            event_id=currentEvent()    
+@app.route('/login', methods=['GET','POST'])
+def login_page(): 
+    if request.method == "POST":
+        session['user']=request.form.get('user')
+        return redirect('/')
+    title='skipflog - major golf picks'
+    user=""
+    id_token = request.cookies.get("token")
+    if id_token:
+        user = getUser(id_token)
+    return render_template('login.html',config=firestore_json,id_token=id_token,title=title,user=user)
+
+@app.route('/logout', methods=['POST'])
+def logout(): 
+    title='skipflog - major golf picks'
+    session.pop('user', None)
+    return redirect('/login')
+
+
+@app.route('/mail', methods=['GET','POST'])
+@app.route('/mail/<int:event_id>', methods=['GET'])
+def mail_handler(event_id=currentEvent()):
+    if request.method=="POST":
+        results_html=fetch_tables(picks_url)
+    else:
+        results_html=fetch_tables(results_url)
+    event_name = fetch_header(results_html)
+    sent=models.is_sent(event_name)
+    if not sent:
+        mail.send_mail(event_name,results_html)
+        models.send_message(event_name,current_time())
+    return jsonify({'event': event_name, "sent":sent })
+
+@app.route('/pick', methods=['GET','POST'])
+def pick_handler(event_id = currentEvent()): 
+    if request.method=="POST":
         event = getEvent(event_id)
-        if event:
-            pick_dict={}
-            for picker in skip_pickers:
-                pick_dict[picker]=event["picks"][picker]
-                for player in pick_dict[picker]:
-                     pick_dict[player]=picker
-            if output_format=='json':
-                self.response.headers['Content-Type'] = 'application/json'
-                self.response.write(json.dumps({"picks":pick_dict}))
-                    
-    def post(self):
-        picklist = self.request.get('picklist')
-        pick_players(picklist)     
+        event_id = request.form.get('event_id')
+        picker = request.form.get('who')
+        player = request.form.get('player')
+        # update event (add to picks, remove from field)
+        if player in [p["name"] for p in event["players"]]:
+            new_event=pick_player(event,player)
+            if new_event != event:
+                updateEvent(new_event)
+                updateLastPick(new_event)
+    # redirect to main page
+    return redirect('/',code=302)
 
-class PlayersHandler(webapp2.RequestHandler):   
-    def get(self):
-        event_name=default_event().get("Name")
-        players=getPlayers()
-        self.response.headers['Content-Type'] = 'application/json'
-        template_values = { 'event': {"name": event_name }, "players": players }
-        self.response.write(json.dumps(template_values))
+@app.route('/picks', methods=['GET'])
+@app.route('/picks/<int:event_id>', methods=['GET'])
+def Picks(event_id=currentEvent()):   
+    event=getEvent(event_id)
+    return render_template('picks.html',event=event)    
 
-class RankingHandler(webapp2.RequestHandler): 
-    def get(self):
-        taskqueue.add(url='/ranking', params={'event_week': current_week(),'event_year': current_year()})
-#       taskqueue.add(url='/results', params={'event_week': current_week(),'event_year': current_year()})
-        
-    def post(self):
-#       event_update=post_rankings()
-        rankings_html=fetch_tables(rankings_url)
-        event_name = fetch_header(rankings_html)
-        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name)
-        message.to = "skipflog@googlegroups.com"
-        message.html=rankings_html+"<p>"
-        message.html+=fetch_tables(result_url)
-        message.send()        
-            
-class ResultsHandler(webapp2.RequestHandler):   
-    def get(self):
-        output_format = self.request.get('output')
-        if not output_format:
-            output_format='html'
-        event_id = self.request.get('event_id')
-        if not event_id:
-            event_id = currentEvent()
-        results = getResults(event_id)
-        if output_format=='json':
-            self.response.headers['Content-Type'] = 'application/json'
-            self.response.write(json.dumps({"results":results}))
-        elif output_format=='html':
-            template_values = {'results': results }
-            template = jinja_environment.get_template('results.html')
-            self.response.out.write(template.render(template_values))
-                    
-    def post(self):
-        event_week = self.request.get('event_week')
-        event_year = self.request.get('event_year')
-        this_week = str((int(event_year)-2000)*100+int(event_week))
-        event_update=post_results(this_week)
-        event_name = event_year + " World Golf Results (Week "+str(event_week)+")"
-        message = mail.EmailMessage(sender='admin@skipflog.appspotmail.com',subject=event_name)
-        message.to = "skipflog@googlegroups.com"
-        message.html=fetch_tables(result_url)
-        message.send()        
+@app.route('/players', methods=['GET'])
+@app.route('/players/<int:event_id>', methods=['GET'])
+def Players(event_id=currentEvent()):   
+    event=getEvent(event_id)
+    event_name=event["Name"]
+    players=event.get("players")
+    return render_template('players.html',event_name=event_name)
 
-class UpdateHandler(webapp2.RequestHandler):
-    def get(self):
-        current=datetime.datetime.now()
-        taskqueue.add(url='/update', params={'event_id': currentEvent()})
+@app.route('/ranking', methods=['GET'])
+def RankingHandler(): 
+    rankings_html=fetch_tables(rankings_url)
+    event_name = fetch_header(rankings_html)
+    sent=models.is_sent(event_name)
+    if not sent:
+        mail.send_mail(event_name,rankings_html)
+        models.send_message(event_name,current_time())
+    return jsonify({"event":event_name, "sent":sent}) 
 
-    def post(self):
-        event_id = self.request.get('event_id')
-        event_update=update_results(event_id)
-
-app = webapp2.WSGIApplication([
-  ('/', MainPage),
-  ('/event', EventHandler),
-  ('/mail', MailHandler),
-  ('/pick', PickHandler),
-  ('/picks', PicksHandler),
-  ('/players', PlayersHandler),
-  ('/ranking', RankingHandler),
-  ('/results', ResultsHandler), 
-  ('/update', UpdateHandler)  
-], debug=True)
-
-def main():
-  run_wsgi_app(app)
+@app.route('/results', methods=['GET'])
+@app.route('/results/<int:event_id>', methods=['GET'])
+def ResultsHandler(event_id=currentEvent()):   
+    results = getResults(event_id)
+    return render_template('results.html',results=results)
 
 if __name__ == '__main__':
-  main()
+    app.run(debug=True, threaded=True, host='0.0.0.0',port=int(os.environ.get('PORT', 8080)))
+

@@ -2,41 +2,58 @@
 models.py
 
 App Engine datastore models for Golf Picks app
-
+Modified to use pyrebase lib in March 2022
 """
-from google.appengine.ext import ndb
-from time import gmtime,strftime
-import datetime
+import pyrebase
+from skipflog import firestore_json 
 
-class Event(ndb.Model):
-    event_id = ndb.IntegerProperty(required=True)
-    event_name = ndb.StringProperty()
-    pick_no = ndb.IntegerProperty(indexed=False)
-    event_json = ndb.JsonProperty()
-    results_json = ndb.JsonProperty()
-
-class Picker(ndb.Model):
-    picks = ndb.StringProperty(repeated=True)
-    count = ndb.IntegerProperty()
-    points = ndb.FloatProperty()
-
+config={key:firestore_json.get(key) for key in ("apiKey", "authDomain", "databaseURL", "storageBucket")}
+firebase = pyrebase.initialize_app(config)
+auth=firebase.auth()
+db = firebase.database()
+      
 def get_event(event_id):
-    event=Event.get_by_id(int(event_id))
-    return event
-	
-def get_results(event_id):
-    event=Event.get_by_id(int(event_id))
-    if event:
-        return event.results_json
-    else:
-        return None
-	
+    event_data=dict(db.child("events").child(str(event_id)).get().val())
+    return event_data     
+      
 def update_event(event_data):
-    event_id = int(event_data["event_id"])
-    event=Event(id=event_id,event_id=event_id,event_name=event_data["event_name"],event_json=event_data)
-    event.put()
-	
+    event_dict={ekey:event_data[ekey] for ekey in event_data.keys() if ekey !="results"}
+    db.child("events").child(str(event_dict["ID"])).set(event_dict)
+    return True
+
+def get_results(event_id):
+    results_data=dict(db.child("results").child(str(event_id)).get().val())
+    return results_data
+    
 def update_results(results_data):
-    event=get_event(results_data['event']['ID'])
-    event.results_json=results_data
-    event.put()
+    event_id=str(results_data.get("event").get("ID"))
+    db.child("results").child(event_id).set(results_data)
+
+def get_document(coll,id):
+    doc=db.child(coll).child(id).get()
+    if doc:
+        return doc.val()
+    else:
+        return None 
+
+def set_document(coll,id,data):
+    return db.child(coll).child(id).set(data)
+
+def get_userid(email,password):
+    user=auth.sign_in_with_email_and_password(user, password)
+    uid=user["localID"]
+    set_document("users",uid,auth.get_account_info(user["idToken"]))
+    return uid
+    
+
+def is_sent(name):
+    msg=get_document('messages',name)
+    if msg:
+        return True
+    else:
+        return False 
+            
+def send_message(name,sent):
+    set_document('messages',name,{"name":name, "sent": sent })    
+
+
