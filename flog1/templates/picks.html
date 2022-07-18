@@ -10,13 +10,13 @@
       <tr><th colspan="2">{{event.event_name }} - Picks</th></tr>
       <tr>
    {% for picker in event.pickers %}
-	<th>{{picker.name}}</th>
+	<th>{{picker.Name}}</th>
    {% endfor %}
       </tr>
     </thead>
    {% for picker in event.pickers %}
 	<td><ol>
-        {% for player in picker.picks %}
+        {% for player in picker.Picks %}
         <li>{{ player }}
         {% endfor %}
      </ol>

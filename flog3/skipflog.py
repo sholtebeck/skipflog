@@ -15,12 +15,13 @@ numbers={'Steve':'5103005644@vtext.com','Mark':'5106739570@vmobl.com'}
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
 event_list=[]
 events_api="https://skipflog3.appspot.com/api/event/2000"
+mail_url="https://skipflog3.appspot.com/api/mail"
 events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AF21&output=csv"
 players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB155&output=csv"
 results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
 ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
 rankings_url="http://knarflog.appspot.com/ranking"
-result_url="http://knarflog.appspot.com/results"
+result_api="https://skipflog3.appspot.com/api/results/"
 results_url="https://skipflog3.appspot.com/results"
 players_api="http://knarflog.appspot.com/api/players"
 players_json="https://spreadsheets.google.com/feeds/cells/0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E/2/public/full?alt=json"
@@ -184,16 +185,10 @@ def soup_results(url):
 def fetch_events(nrows=10):
     if cache.get("events"):
         return cache["events"]
-    event_list=json_results(events_api).get("events")
+    if nrows>0:
+        event_list=json_results(events_api).get("events")
     if len(event_list)==0:
-        cnum=ncols=6
-        worksheet=open_worksheet('Majors','Events')
-        keys=[worksheet.cell(1,k).value for k in range(1,ncols+1)]
-        for r in range(2,nrows):
-            event={keys[c]:worksheet.cell(r,c+1).value for c in range(ncols)}
-            event_list.append(event)
-            sleep(5)
-    cache["events"]=event_list
+        cache["events"]=event_list
     return event_list
 
 def fetch_players():
@@ -267,7 +262,12 @@ def fetch_odds():
     odds_url='http://golfodds.com/upcoming-major-odds.html'
     soup=soup_results(odds_url)
     odds={}
-    for tr in soup.findAll('tr')[:140]:
+    spans=soup.findAll("span")
+    odds["event_name"]=str(current_year())+" "+" ".join(spans[1].text.split())
+    locdate=[s.strip() for s in spans[2].text.split('\r\n')]
+    odds["event_loc"]=" ".join(locdate[:2])
+    odds["event_dates"]=locdate[2]
+    for tr in soup.findAll('tr')[:100]:
         td =tr.findAll('td')
         if len(td)==2 and td[0].string and '/' in td[1].string:
             odds[xstr(td[0].string)]=xstr(td[1].string.split('/')[0])
@@ -522,8 +522,9 @@ def match_name(name, namelist):
     if name in namelist:
         new_name=name
     else:
-        names=name.split()
-        listnames=[n for n in namelist if n.startswith(names[0]+" "+names[1][:2])]
+        firstinitial=name[:2]
+        lastname=name.split()[-1]
+        listnames=[n for n in namelist if n.startswith(firstinitial) and n.endswith(lastname)]
         listnames.append(name)
         new_name=listnames[0]
     return new_name
@@ -535,9 +536,9 @@ def post_players():
 #    rows=[row for row in csv.reader(result)]
 #    names=[name[1] for name in rows[3:] if name[1]!='']
     odds=fetch_odds()
-    odds_names=list(odds.keys())
+    odds_names=[o for o in odds.keys() if not o.startswith("event")]
     odds_names.sort()
-    rankings=get_rankings(1500)
+    rankings=get_rankings(500)
     rank_names=[rank['name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
     row=2
@@ -557,7 +558,7 @@ def post_players():
             cell_list = worksheet.range('B'+str(row)+':E'+str(row))
             cell_list[0].value=pname
             cell_list[1].value=0
-            cell_list[2].value='USA'    
+            cell_list[2].value='???'    
             cell_list[3].value=odds.get(pname)
         update=worksheet.update_cells(cell_list)
         row+=1
@@ -724,3 +725,13 @@ def update_results(event_id):
         worksheet.update_cell(current_row, 9, picker['Points'])
         current_row+=1
     return True
+
+def mail_results():
+    res=get_results(current_event())
+    status=res["event"]["Status"]
+    if 'Complete' in status:
+        models.update_results(res)
+        res=json_results(mail_url)
+    else:
+        res={"last update":res["event"]["Last Update"], "status":status}
+    return res

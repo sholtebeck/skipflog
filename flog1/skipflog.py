@@ -20,10 +20,10 @@ events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05
 players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB155&output=csv"
 results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
 ranking_url="https://us-west2-skipflog.cloudfunctions.net/getRankings"
-rankings_url="http://knarflog.appspot.com/ranking"
+rankings_url=skipflog_url+"rankings"
 result_url="https://us-west2-skipflog.cloudfunctions.net/getResults"
-results_url="https://skipflog3.appspot.com/results"
-players_api="http://knarflog.appspot.com/api/players"
+results_url=skipflog_url+"results"
+players_api=skipflog_url+"api/players"
 players_json="https://spreadsheets.google.com/feeds/cells/0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E/2/public/full?alt=json"
 leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"
 skip_user="skipfloguser"
@@ -39,7 +39,7 @@ owg_url="http://www.owgr.com/en/Events/EventResult.aspx?eventid=5520"
 pga_url="http://www.pga.com/news/golf-leaderboard/pga-tour-leaderboard"
 pgatour_url="http://www.pgatour.com/leaderboard.html"
 picks_csv = "picks.csv"
-picks_api = "https://skipflog3.appspot.com/api/picks/"
+picks_api = "http://skipflog.appspot.com/api/event/"
 picks_url = "https://skipflog3.appspot.com/picks"
 rankings_api="https://us-west2-skipflog.cloudfunctions.net/getRankings"
 results_api="https://us-west2-skipflog.cloudfunctions.net/getResults"
@@ -129,19 +129,14 @@ def get_value(string):
 def get_picks(event_id):
     picks={}
     pickdict=json_results(picks_api+str(event_id))
-    if pickdict.get('picks'):
-        for picker in skip_pickers:
-            picklist=[str(pick) for pick in pickdict["picks"][picker][:10]]
-            picks[picker]={'Name':picker,'Count':len(picklist),'Picks':picklist,'Points':0}
+    if pickdict.get('pickers'):
+        for p in range(2):
+            picd=pickdict["pickers"][p]
+            picker=picd["Name"]
+            picklist=[str(pick) for pick in picd["Picks"][:10]]
+            picks[picker]=picd
             for pick in picklist:
                 picks[str(pick)]=picker
-    else:
-        for picker in skip_pickers:
-            if pickdict.get(picker):
-                picklist=[str(pick) for pick in pickdict[picker][:10]]
-                picks[picker]={'Name':picker,'Count':len(picklist),'Picks':picklist,'Points':0}
-                for pick in picklist:
-                    picks[str(pick)]=picker
     return picks
 
 def get_pickers(first):

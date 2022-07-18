@@ -150,7 +150,7 @@ def post_event(event_id=currentEvent()):
         event_data = request.form.get('event_data')
         event_json = json.loads(event_data)
         updateEvent(event_json)
-    return jsonify(event)
+    return jsonify(event_json)
 
 @app.route('/mail', methods=['GET','POST'])
 @app.route('/mail/<int:event_id>', methods=['GET'])
@@ -162,7 +162,7 @@ def mail_handler(event_id=currentEvent()):
     event_name = fetch_header(results_html)
     sent=models.is_sent(event_name)
     if not sent:
-        mail.send_mail(event_name,results_html)
+        sent=mail.send_mail(event_name,results_html)
         models.send_message(event_name,current_time())
     return jsonify({'event': event_name, "sent":sent })
 
@@ -255,9 +255,11 @@ def ApiResults(event_id=currentEvent()):
     if request.method=="POST":
         results=get_results(event_id) 
         if results:
-            models.update_results(results)     
+            models.update_results(results) 
+            return render_template('results.html',results=results)
     results = getResults(event_id)
     return jsonify({"results":results})   
+    
 
 @app.route('/results', methods=['GET'])
 @app.route('/results/<int:event_id>', methods=['GET'])
