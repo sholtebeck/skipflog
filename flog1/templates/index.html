@@ -134,12 +134,12 @@ $(document).ready(function() {
 	<col width="250">
     <tr>
    {% for picker in event.pickers %}
-	<th class="heading">{{picker.name}}</th>
+	<th class="heading">{{picker.Name}}</th>
    {% endfor %}
     <tr>
    {% for picker in event.pickers %}
 	<td><ol>
-        {% for player in picker.picks %}
+        {% for player in picker.Picks %}
         <li>{{ player }}
         {% endfor %}
      </ol></td>
@@ -193,10 +193,10 @@ $(document).ready(function() {
       <tbody>
         <tr ng-repeat="player in players | filter:query |orderBy:orderProp">
           <td ng-bind="$index + 1"></td>
-          <td ng-bind="player.name"></td>
+          <td ng-bind="player.Name"></td>
           <td ng-bind="player.country"></td>
-          <td ng-bind="player.points |number:2"></td>
-          <td ng-bind="player.rank"></td>
+          <td ng-bind="player.Points |number:2"></td>
+          <td ng-bind="player.Rank"></td>
           <td ng-bind="player.odds">/1</td>
           <td><span ng-if="player.picked>0">Picked</span>
 				   <form ng-if="player.picked==0" action="/pick" method="post">

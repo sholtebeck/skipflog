@@ -1,29 +1,35 @@
-# sendmail using SendGrid's Python Library
+# sendmail using python smtplib
 # https://github.com/sendgrid/sendgrid-python
-import json
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
-sg_config=json.load(open('config/sendgrid.json'))
-def send_mail(mail_subject,mail_content):
-    try:
-        message = Mail(
-            from_email=sg_config["sg_from"],
-            to_emails=sg_config["sg_to"],
-            subject=mail_subject,html_content=mail_content)
-        grid = SendGridAPIClient(sg_config["sg_key"])
-        response = grid.send(message)
-        return response
-    except Exception as e:
-        return False
+import json,smtplib,socket
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
-def send_message(message_to,mail_subject,message_content):
+mail_config=json.load(open('config/sendmail.json'))
+def send_message(message_to, mail_subject,mail_content):
     try:
-        message = Mail(
-            from_email=sg_config["sg_from"],
-            to_emails=message_to,
-            subject=mail_subject,html_content=message_content)
-        grid = SendGridAPIClient(sg_config["sg_key"])
-        response = grid.send(message)
-        return response
+        msg = MIMEMultipart()
+        msg["Subject"] = mail_subject
+        msg["From"] = mail_config["mail_from"]
+        msg["To"] = message_to
+        msg.attach(MIMEText(mail_content, "html"))
+        server = smtplib.SMTP_SSL(mail_config["mail_smtp"], mail_config["mail_port"])
+        server.ehlo()
+        server.login(mail_config["mail_from"], mail_config["mail_pass"])
+        server.sendmail(mail_config["mail_from"], message_to, msg.as_string())
+        server.close()
+        return True 
     except Exception as e:
-        return False
+        return e
+
+def send_mail(mail_subject,mail_content):
+    msg = MIMEMultipart()
+    msg["Subject"] = mail_subject
+    msg["From"] = mail_config["mail_from"]
+    msg["To"] = mail_config["mail_to"]
+    msg.attach(MIMEText(mail_content, "html"))
+    server = smtplib.SMTP_SSL(mail_config["mail_smtp"], mail_config["mail_port"])
+    server.ehlo()
+    server.login(mail_config["mail_from"], mail_config["mail_pass"])
+    server.sendmail(mail_config["mail_from"], mail_config["mail_to"], msg.as_string())
+    server.close()
+    return True

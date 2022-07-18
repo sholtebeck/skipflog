@@ -19,7 +19,7 @@ def currentEvent():
     return event_current
 
 def fetchEvents():
-    events = [{"event_id":int(f["ID"]),"event_dates":f["event_dates"], "event_loc":f["event_loc"],"event_name":f["Name"]} for f in fetch_events()[:10] if len(f["ID"])==4]
+    events = [{"event_id":int(f["ID"]),"event_dates":f["event_dates"], "event_loc":f["event_loc"],"event_name":f["Name"]} for f in fetch_events() if len(f["ID"])==4]
     return events
 
 def getPlayers(event_id='current'):
@@ -28,7 +28,7 @@ def getPlayers(event_id='current'):
 
 def getPicks(event_id):
     event = getEvent(event_id)
-    return event.get("picks")
+    return event.get("pickers")
 
 def getResults(event_id):
     results = models.get_results(event_id)
@@ -42,7 +42,7 @@ def getResults(event_id):
 
 def getEvent(event_id):
     event=models.get_event(event_id)
-    event["results"]=models.get_results(event_id)
+#   event["results"]=models.get_results(event_id)
     return event
 
 def getUser(id_token=None):
@@ -132,8 +132,8 @@ def picks_handler(event_id=currentEvent()):
     event = getEvent(event_id)
     pick_dict={}
     for picker in event["pickers"]:
-        pickname=picker["name"]
-        pick_dict[pickname]=picker["picks"]
+        pickname=picker["Name"]
+        pick_dict[pickname]=picker["Picks"]
         for player in pick_dict[pickname]:
             pick_dict[player]=pickname
     return jsonify({'picks': pick_dict })
@@ -218,7 +218,7 @@ def mail_handler(event_id=currentEvent()):
     event_name = fetch_header(results_html)
     sent=models.is_sent(event_name)
     if not sent:
-        mail.send_mail(event_name,results_html)
+        sent=mail.send_mail(event_name,results_html)
         models.send_message(event_name,current_time())
     return jsonify({'event': event_name, "sent":sent })
 
