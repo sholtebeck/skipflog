@@ -4,6 +4,12 @@ models.py
 App Engine datastore models for Golf Picks app
 Modified to use Firebase DB in August 2020
 """
+#Authentication Object
+import pyrebase
+from skipflog import firestore_json 
+config={key:firestore_json.get(key) for key in ("apiKey", "authDomain", "databaseURL", "storageBucket")}
+firebase = pyrebase.initialize_app(config)
+auth=firebase.auth()
 
 #first try google_cloud then try firebase_admin
 try:

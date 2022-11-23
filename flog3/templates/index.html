@@ -100,12 +100,12 @@ $(document).ready(function() {
   <td class="no-border" width="25%">
 {% if user %}
 <form action="/logout" method="post">
- <button id="signout">Sign Out</button>
+ <button class="submit-btn" id="signout">Sign Out</button>
   <label>Logged in as <b>{{ user }}</b>
 </form>
 {% else %}
 <form action="/login" method="post">
-  <input type="submit" id="signin" value="Sign In">
+  <input type="submit" class="submit-btn" id="signin" value="Sign In">
 </form>
 {% endif %}
 </td>
@@ -161,7 +161,7 @@ $(document).ready(function() {
     {% if event.next=="Done" %}
       {% if user %}
     <p><form action="/mail" method="post">We're Done. <input type="hidden" name="event_id" value="{{event.event_id}}">
-      <input type="submit" id="submail" value="Email Picks"></form>
+      <input type="submit" class="submit-btn" id="submail" value="Email Picks"></form>
       {% else %}
       <p>We're Done.
       {% endif %}
