@@ -1,7 +1,5 @@
 BeautifulSoup4
 Flask
-Flask-Cors
 firebase-admin
-google-cloud-firestore==2.4.0
 sendgrid
-gspread
+Pyrebase4

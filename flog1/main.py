@@ -40,7 +40,7 @@ def getResults(event_id):
             results=None
     return results
 
-def getEvent(event_id):
+def getEvent(event_id=0):
     event=models.get_event(event_id)
 #   event["results"]=models.get_results(event_id)
     return event
@@ -49,7 +49,7 @@ def getUser(id_token=None):
     if session.get("user"):
         return session["user"]
     else:
-        return "Steve"
+        return ""
 
 def nextEvent():
     event_current=currentEvent()
@@ -167,15 +167,11 @@ def ApiUser(event_id=currentEvent()):
 
 @app.route('/', methods=['GET','POST'])
 def main_page(): 
-    #find the username in either the session or cookie
-    if request.method == "POST":
-        user=session['user']=request.form.get('user')
-    else:
-        user=getUser()
-    if user in skip_pickers:
-        event_id=currentEvent()
-        event=getEvent(event_id)
-        results=getResults(event_id)
+    user=getUser()
+    if user in skip_pickers or user=="skipflog":
+#       event_id=currentEvent()
+        event=getEvent()
+        results=getResults()
         return render_template('index.html',event=event,results=results,user=user)
     else:
         return redirect('/login')
@@ -190,16 +186,24 @@ def post_event(event_id=currentEvent()):
     return jsonify(event)
 
 @app.route('/login', methods=['GET','POST'])
-def login_page(): 
+def login(): 
     if request.method == "POST":
-        session['user']=request.form.get('user')
-        return redirect('/')
-    title='skipflog - major golf picks'
-    user=""
-    id_token = request.cookies.get("token")
-    if id_token:
-        user = getUser(id_token)
-    return render_template('login.html',config=firestore_json,id_token=id_token,title=title,user=user)
+        user=request.form.get('user')
+        password=request.form.get('password')
+        email=emails.get(user.lower())
+        try:
+            email=emails.get(user)
+            usr=models.auth.sign_in_with_email_and_password(email, password)
+            token=models.auth.refresh(usr['refreshToken'])
+            session["user"]=user
+            return jsonify({"user":user, "session":session})
+#            return redirect("/")
+        except Exception as e:
+            return jsonify({"user":user, "email":email, "error": str(e) })
+    else:
+        user=getUser()
+        title='skipflog - major golf picks'
+        return render_template('login.html',config=firestore_json,title=title,user=user)
 
 @app.route('/logout', methods=['POST'])
 def logout(): 

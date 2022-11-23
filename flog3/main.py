@@ -12,10 +12,8 @@ app.secret_key = str.encode(firestore_json.get("apiKey"))
 default_url='/static/index.html'
    
 def currentEvent():
-    now=datetime.datetime.now()
-    event_month=min(max(now.month,4),11)
-    event_current=100*(now.year-2000)+event_month
-    return event_current
+    e=models.get_event(2000)
+    return e["events"][0]["ID"]
 
 def fetchEvents():
     events = [{"event_id":int(f["ID"]),"event_dates":f["event_dates"], "event_loc":f["event_loc"],"event_name":f["Name"]} for f in fetch_events()[:10] if len(f["ID"])==4]
@@ -96,15 +94,21 @@ def getUser(id_token=None):
 
 @app.route('/login', methods=['GET','POST'])
 def login_page(): 
+    message=""
     if request.method == "POST":
-        session['user']=request.form.get('user')
-        return redirect('/')
+        user=request.form.get('user')
+        password=request.form.get('password')
+        email=emails.get(user.lower())
+        try:
+            usr=models.auth.sign_in_with_email_and_password(email, password)
+            token=models.auth.refresh(usr['refreshToken'])
+            session["user"]=user
+            return redirect('/')
+        except Exception as e:
+            message=str(e)
+
     title='skipflog - major golf picks'
-    user=None
-    id_token = request.cookies.get("token")
-    if id_token:
-        user = getUser(id_token)
-    return render_template('login.html',config=firestore_json,id_token=id_token,title=title,user=user)
+    return render_template('login.html',title=title,message=message)
 
 @app.route('/logout', methods=['POST'])
 def logout(): 
@@ -119,9 +123,6 @@ def main_page():
         user=session['user']=request.form.get('user')
     else:
         user=getUser()
-    if not user:
-        id_token=request.cookies.get("token")
-        user=getUser(id_token)
     if user in skip_pickers:
         event_id=currentEvent()
         event=getEvent(event_id)

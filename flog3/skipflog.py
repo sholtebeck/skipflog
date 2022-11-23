@@ -11,6 +11,7 @@ events={ 4:'Masters',6:'US Open', 7:'Open Championship', 8:'PGA Championship'}
 mypicks = [1,4,5,8,9,12,13,16,17,20,22]
 yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
 names={'sholtebeck':'Steve','mholtebeck':'Mark'}
+emails={'steve':'sholtebeck@gmail.com','mark':'mholtebeck@gmail.com'}
 numbers={'Steve':'5103005644@vtext.com','Mark':'5106739570@vmobl.com'}
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
 event_list=[]
@@ -19,8 +20,8 @@ mail_url="https://skipflog3.appspot.com/api/mail"
 events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AF21&output=csv"
 players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB155&output=csv"
 results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
-ranking_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=3&output=html"
-rankings_url="http://knarflog.appspot.com/ranking"
+ranking_url="https://us-west2-skipflog.cloudfunctions.net/getRankings"
+result_url="https://us-west2-skipflog.cloudfunctions.net/getResults"
 result_api="https://skipflog3.appspot.com/api/results/"
 results_url="https://skipflog3.appspot.com/results"
 players_api="http://knarflog.appspot.com/api/players"
@@ -109,21 +110,10 @@ def get_points(rank):
     else:
         return 0
 
-# Get the rankings from the page
-def get_rankings(size):
-    ranking_url="http://www.owgr.com/ranking?pageSize="+str(size)
-    soup=soup_results(ranking_url)
-    rankings=[]
-    rank=1
-    for row in soup.findAll('tr'):
-        name = row.find('a')
-        if name:
-            points = float(row.findAll('td')[6].string)
-            country = row.find("td",{"class","ctry"}).img.get("title")
-            player={"rank":rank, "name":xstr(name.string), "country": xstr(country), "points":points }
-            rankings.append(player)
-            rank+=1
-    return rankings
+# Get the rankings from the getRankings cloud function
+def get_rankings(size=200):
+    rankings=json_results(ranking_url)
+    return rankings.get("players")[:size]
 
 # Get the value for a string
 def get_value(string):

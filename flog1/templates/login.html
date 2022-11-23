@@ -2,54 +2,15 @@
 <html>
 <head>
   <title>{{title}}</title>
-
-  <!-- See https://github.com/firebase/firebaseui-web. -->
-  <!-- [START gae_python38_auth_init_firebase] -->
-  <!-- *******************************************************************************************
-       * TODO(DEVELOPER): Paste the initialization snippet from:
-       * http://console.firebase.google.com > Overview > Add Firebase to your web app.
-       ***************************************************************************************** -->
-<!-- The core Firebase JS SDK is always required and must be listed first -->
-<script src="https://www.gstatic.com/firebasejs/7.17.2/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/7.8.0/firebase-auth.js"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script> 
-
-<!-- TODO: Add SDKs for Firebase products that you want to use
-     https://firebase.google.com/docs/web/setup#available-libraries -->
-
-<script>
-  // Your web app's Firebase configuration
-  var firebaseConfig = {
-    apiKey: "{{ config.apiKey }}",
-    authDomain: "{{ config.authDomain }}",
-    databaseURL: "{{ config.databaseURL }}",
-    projectId: "{{ config.projectId }}",
-    storageBucket: "{{ config.storageBucket }}",
-    messagingSenderId: "{{ config.messagingSenderId }}",
-    appId: "{{ config.appId }}"
-  };
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-</script>
-
-  <script src="https://www.gstatic.com/firebasejs/ui/4.4.0/firebase-ui-auth.js"></script>
-  <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.4.0/firebase-ui-auth.css" />
-
-  <script src="{{ url_for('static', filename='script.js') }}"></script>
-  <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
-
+  <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
-
-<!-- [START gae_python38_auth_firebase_html] -->
-<h2 class="center">{{title}}</h2>
-<div id="firebaseui-auth-container"></div>
-<div id="login-info">
-<form id="userForm" action="/" method="post">
-  <input id="userName" type=text name="user" size=20 value="{{user}}">
-<button id="sign-out" hidden=true>Sign Out</button>
+<h2>{{title}}</h2>
+<form id="userForm" action="/login" method="post">
+<label>Username: </label> <input id="username" type=text name="user" size=10 value="{{user}}">
+<label>Password: </label> <input id="password" type="password" name="password" size=10 >
+<button type="submit">Login</button>
 </form>
-</div>
-<!-- [END gae_python38_auth_firebase_html] -->
+{{message}}
 </body>
 </html>
