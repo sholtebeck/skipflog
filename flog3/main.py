@@ -1,5 +1,6 @@
 # Main program for golfpicks app (skipflog3.appspot.com)
-from flask import Flask, abort, jsonify, render_template, redirect, request, session
+from flask import Flask, abort, jsonify, render_template, redirect, request, session, send_from_directory
+
 #from flask_cors import CORS
 from google.auth.transport import requests
 import google.oauth2.id_token
@@ -41,7 +42,6 @@ def getEvent(event_id):
     event = models.get_event(event_id)
     return event
 
-
 def nextEvent():
     event_current=currentEvent()
     event = models.get_event(event_current)
@@ -72,9 +72,10 @@ def updateLastPick(event):
     # send alert if needed
     pick_no = event['pick_no']
     if (pick_no%2==0 or pick_no==21):
-        nextnum=[p["number"] for p in event["pickers"] if p["name"]==event["next"]]
-        mail.send_message(nextnum[0], event["event_name"], event["lastpick"])
-        mail.send_mail(event["event_name"], event["lastpick"])
+        nextnum=[p.get("number") for p in event["pickers"] if p["name"]==event["next"]]
+        if nextnum:
+            mail.send_message(nextnum[0], event["event_name"], event["lastpick"])
+            mail.send_mail(event["event_name"], event["lastpick"])
         models.send_message(event["lastpick"],current_time())
     return True
 
@@ -118,18 +119,14 @@ def logout():
 
 @app.route('/', methods=['GET','POST'])
 def main_page(): 
-    #find the username in either the session or cookie
-    if request.method == "POST":
-        user=session['user']=request.form.get('user')
-    else:
-        user=getUser()
-    if user in skip_pickers:
-        event_id=currentEvent()
-        event=getEvent(event_id)
-        results=getResults(event_id)
-        return render_template('index.html',event=event,results=results,user=user)
-    else:
-        return redirect('/login')
+    return render_template("index.html")
+
+@app.route("/manifest.json")
+def manifest():
+    return send_from_directory('./static', 'manifest.json')
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory('./static', 'favicon.ico')
 
 @app.route('/api/events', methods=['GET','POST'])
 def api_events():
@@ -183,13 +180,13 @@ def pick_handler(event_id = currentEvent()):
     # redirect to main page
     return redirect('/',code=302)
 
-@app.route('/api/pick', methods=['POST'])
-def api_pick():
+@app.route('/api/pick/<int:event_id>', methods=['PUT'])
+def api_pick(event_id=currentEvent()):
     if not request.json or not 'player' in request.json:
         abort(400)
     picker=request.json.get("picker")
     player=request.json.get('player')
-    event=models.get_event('current')
+    event=models.get_event(event_id)
     picker=event["next"]
     if picker != event["next"]:
         return jsonify({'success':False,'message':event["nextpick"]})
@@ -198,9 +195,9 @@ def api_pick():
     new_event=pick_player(event,player)
     if new_event != event: 
         success=updateEvent(new_event)
-        updateLastPick(new_event)
+#       updateLastPick(new_event)
         message=new_event.get("lastpick")
-    return jsonify({'success':success,'message':message})
+    return jsonify({'event':new_event, 'success':success,'message':message})
 
 @app.route('/api/picks', methods=['GET'])
 @app.route('/api/picks/<int:event_id>', methods=['GET'])

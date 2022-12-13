@@ -1,351 +1,288 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html lang="en" ng-app="skipflog">
+<!doctype html>
+<html lang="en">
   <head>
-    <title>skipflog -- major golf picks</title>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script> 
-<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-<link rel="stylesheet" href="app.css" >
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
- <link rel="stylesheet" href="/static/app.css">
-<script type="text/javascript">
-$(document).ready(function() {
-
-	$(".tab_content").hide();
-	$(".tab_content:first").show(); 
-
-	$("ul.tabs li").click(function() {
-		$("ul.tabs li").removeClass("active");
-		$(this).addClass("active");
-		$(".tab_content").hide();
-		var activeTab = $(this).attr("rel"); 
-		$("#"+activeTab).fadeIn(); 
-	});
-});
-</script> 
-<style type="text/css">
-
-	ul.tabs {
-		margin: 0;
-		padding: 0;
-		float: left;
-		list-style: none;
-		height: 32px;
-		border-bottom: 1px solid #999999;
-		border-left: 1px solid #999999;
-		width: 100%;
-	}
-	ul.tabs li {
-		float: left;
-		font-size: 1.0em;
-		margin: 0;
-		cursor: pointer;
-		padding: 0px 21px ;
-		height: 31px;
-		line-height: 31px;
-		border: 1px solid #999999;
-		border-left: none;
-		font-weight: bold;
-		background: #EEEEEE;
-		overflow: hidden;
-		position: relative;
-	}
-	ul.tabs li:hover {
-		background: #CCCCCC;
-	}	
-	ul.tabs li.active{
-		background: #FFFFFF;
-		border-bottom: 1px solid #FFFFFF;
-	}
-	.tab_container {
-		border: 1px solid #999999;
-		border-top: none;
-		clear: both;
-		float: left; 
-		width: 100%;
-		background: #FFFFFF;
-	}
-	.tab_content {
-		padding: 20px;
-		font-size: 1.0em;
-		display: none;
-	}
-	body {
-	  font-family: Helvetica, Arial, sans-serif;	
-          font-size: 1.1em;
-	  background-color: #DDDDDD;
-	}
-	select {
-	  font-family: Helvetica, Arial, sans-serif;
-	  font-size: 1.0em;
-        }
-	#container {
-		width: 1300px;
-		margin: 0 auto;	
-	}
-	table { 
-	color: #333; /* Lighten up font color */
-	font-family: Helvetica, Arial, sans-serif; /* Nicer font */
-	border-collapse: 
-	collapse; border-spacing: 0; 
-	}
-
-	td, th { border: solid; } /* Make cells a bit taller */
-	
-	#submit {
-	  font-family: Helvetica, Arial, sans-serif;
-	  font-size: 1.0em;
-    }
-</style>
-</head>
-  <body ng-app="skipflog">
-
-<p><div id="tab_container">
-
-  <ul class="tabs"> 
-        <li class="active" rel="tab1"> Picks </li>
-        <li rel="tab2"> Players </li>
-        <li rel="tab3"> Events </li>
-  </ul>
-
-<div class="tab_container"> 
-
-<div id="tab1" class="tab_content">
-<div class="container-fluid" ng-controller="eventsController">
-  Event Name: <select ng-model="event" ng-options="event.Name for event in events track by event.ID" ng-change="setEvent()"></select> 
-  {{ event.event_dates }} at {{event.event_loc }}
- 
-  <div class="row">
-    <div class="col" >
-      <table >
-        <col width="250">
-        <col width="250">
-        <thead>
-        <tr><th colspan=2>{{event.Name}} - Picks</th></tr>
-        <tr><th class="heading" ng-repeat="picker in pickers" ng-bind="picker.Name"></th>
-        </thead>
-        <td ng-repeat="picker in pickers">
-        <ol>  
-            <li ng-repeat="pick in picker.Picks">{{pick}}</li>  
-         </ol>
-         </td></tr>
-        </table>
-
-        <span ng-if="user">
-        <select data-ng-model="player" data-ng-options="player.name for player in players if !player.picked"></select>
-        <button ng-click="addPlayer()" class="btn btn-primary">Pick</button>
-        </span>
-
-        <p>
-          <table ng-if="pickers">
-            <thead>
-              <tr><th>Rank</th>
-                  <th>Picker</th>	
-                  <th>Players</th>	
-                  <th>Points</th>
-                 </tr>
-            </thead>
-           <tbody>
-             <tr ng-repeat="picker in pickers">
-                <td ng-bind="picker.Rank"></td>
-                <td ng-bind="picker.Name"></td>
-                <td ng-bind="picker.Count"></td>
-                <td ng-bind="picker.Points"></td>
-              </tr>   
-            </tbody>
-          </table>
-
-      </div> <!-- col -->
-
-    <div class="col">
-        <table ng-if="!players">
-            <thead>
-              <tr><th class="heading" colspan="7"> {{event.event_name}} : {{event.event_dates}}</th></tr>
-              <th>#</th>
-                  <th><a href="#" ng-click="orderProp='name'">Player</a>  <a href="#" ng-click="orderProp='lastname'">Last Name</a></th>	
-                  <th><a href="#" ng-click="orderProp='country'">Country</a></th>
-                  <th><a href="#" ng-click="orderProp='-points'">Points</a></th>	
-                  <th><a href="#" ng-click="orderProp='rank'">World Rank</a></th>
-                  <th><a href="#" ng-click="orderProp='odds'">Odds</a></th>
-                  <th><a href="#" ng-click="orderProp='picked'">Picked</a></th>         
-            </tr>
-            </thead>
-            <tbody>
-              <tr ng-repeat="player in players | filter:query |orderBy:orderProp">
-                <td ng-bind="$index + 1"></td>
-                <td ng-bind="player.name"></td>
-                <td ng-bind="player.country"></td>
-                <td ng-bind="player.points |number:2"></td>
-                <td ng-bind="player.rank"></td>
-                <td ng-bind="player.odds">/1</td>
-                <td>
-                  <form  ng-if="player.picked==0" ng-submit="pickPlayer()"><input type="hidden" name="player" ng-model="player.name"><button type="submit" class="btn btn-primary">Pick</button></form>
-                  <span ng-if="player.picked">Picked</span>
-                </td>
-              </tr>
-           </tbody>
-          </table>
-
-          <table ng-if="players">
-            <thead>
-              <tr><th colspan="9">{{event.Name }}</th></tr>
+    <!-- Bootstrap 5.0.2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="./app.css">
+    <title>skipflog</title>
+  </head>
+  <body>
+    <nav class="navbar navbar-light bg-light">
+      <div class="container-fluid">
+        <label><button id="signout" class="btn btn-dark">Sign Out</button>Logged in as <b>Steve</b></label>
+        <label><b>Event:</b>2023 Masters</label>
+        <label><b>Dates:</b> April 6 - 9, 2023</label>
+        <label><b>Location:</b> Augusta National Golf Club - Augusta, GA</label>
+      </div>
+    </nav>
+      
+          <div class="container mt-3">
+            <div class="row align-items-start">
+            <div class="col">
+         <label class="mb-2"><b>Last Pick:</b>Steve picked Hideki Matsuyama</label>  
+             
+            <table>
+            <col width="250">
+            <col width="250">
               <tr>
-                  <th>Pos</th>
+             
+            <th class="heading">Steve</th>
+            <th class="heading">Mark</th>
+              <tr>
+            <td><ol>
+                  <li>Rory McIlroy
+                  
+                  <li>Justin Thomas
+                  
+                  <li>Collin Morikawa
+                  
+                  <li>Matt Fitzpatrick
+                  
+                  <li>Patrick Cantlay
+                  
+                  <li>Will Zalatoris
+                  
+                  <li>Dustin Johnson
+                  
+                  <li>Hideki Matsuyama
+                  
+               </ol></td>
+              
+            <td><ol>
+                  
+                  <li>Scottie Scheffler
+                  
+                  <li>Jon Rahm
+                  
+                  <li>Xander Schauffele
+                  
+                  <li>Cameron Smith
+                  
+                  <li>Jordan Spieth
+                  
+                  <li>Shane Lowry
+                  
+                  <li>Viktor Hovland
+                  
+                  <li>Brooks Koepka
+                  
+               </ol></td>
+              
+             </tr></table>
+            
+             
+              <p><form action="/pick" method="post">
+              <div >Steve&#39;s Ninth Pick: <select name="player">
+               <option value="" selected>Select Player</option>
+               <option>Abraham Ancer</option>
+               
+               <option>Adam Scott</option>
+               
+               <option>Alexander Bjork</option>
+               
+               <option>Ashley Chesters</option>
+               
+               <option>Bernd Wiesberger</option>
+               
+               <option>Billy Horschel</option>
+               
+               <option>Brian Harman</option>
+               
+               <option>Bryson DeChambeau</option>
+               
+               <option>Chan Kim</option>
+               
+               <option>Chris Kirk</option>
+               
+               <option>Christiaan Bezuidenhout</option>
+               
+               <option>Corey Conners</option>
+               
+               <option>Daniel Berger</option>
+               
+               <option>Danny Willett</option>
+               
+               <option>Dean Burmester</option>
+               
+               <option>Dylan Frittelli</option>
+               
+               <option>Erik van Rooyen</option>
+               
+               <option>Francesco Molinari</option>
+               
+               <option>Garrick Higgo</option>
+               
+               <option>Gary Woodland</option>
+               
+               <option>Guido Migliozzi</option>
+               
+               <option>Harris English</option>
+               
+               <option>Henrik Stenson</option>
+               
+               <option>Ian Poulter</option>
+               
+               <option>Jason Kokrak</option>
+               
+               <option>Jason Scrivener</option>
+               
+               <option>Jimmy Walker</option>
+               
+               <option>Joaquin Niemann</option>
+               
+               <option>Joohyung Kim</option>
+               
+               <option>Jorge Fernandez-Valdes</option>
+               
+               <option>Justin Harding</option>
+               
+               <option>Justin Rose</option>
+               
+               <option>Kevin Na</option>
+               
+               <option>Laurie Canter</option>
+               
+               <option>Lee Westwood</option>
+               
+               <option>Louis Oosthuizen</option>
+               
+               <option>Lucas Herbert</option>
+               
+               <option>Mackenzie Hughes</option>
+               
+               <option>Marc Leishman</option>
+               
+               <option>Max Homa</option>
+               
+               <option>Min Woo Lee</option>
+               
+               <option>Nicolai Hojgaard</option>
+               
+               <option>Padraig Harrington</option>
+               
+               <option>Patrick Reed</option>
+               
+               <option>Paul Casey</option>
+               
+               <option>Phil Mickelson</option>
+               
+               <option>Richard Bland</option>
+               
+               <option>Robert MacIntyre</option>
+               
+               <option>Russell Henley</option>
+               
+               <option>Sadom Kaewkanjana</option>
+               
+               <option>Sam Burns</option>
+               
+               <option>Sergio Garcia</option>
+               
+               <option>Shaun Norris</option>
+               
+               <option>Sihwan Kim</option>
+               
+               <option>Stewart Cink</option>
+               
+               <option>Sungjae Im</option>
+               
+               <option>Takumi Kanaya</option>
+               
+               <option>Talor Gooch</option>
+               
+               <option>Thomas Detry</option>
+               
+               <option>Thomas Pieters</option>
+               
+               <option>Thriston Lawrence</option>
+               
+               <option>Tiger Woods</option>
+               
+               <option>Tommy Fleetwood</option>
+               
+               <option>Tony Finau</option>
+               
+               <option>Tyrrell Hatton</option>
+               
+               <option>Webb Simpson</option>
+               <option>Yuto Katsuragawa</option>
+               <option>Zach Johnson</option>  
+               <option>Zander Lombard</option>
+               
+              </select><input type="submit" class="btn btn-dark" id="subpick" name="submit" value="Pick">
+              <input type="hidden" name="who" value="Steve">
+              <input type="hidden" name="event_id" value="2304">
+              <input type="hidden" name="pick_no" value="17">
+              </form>
+      </p></div>
+        </div>
+        <div class="col">
+          <label class="mb-2">Search: <input type="text" name="name" placeholder="Name" /></label>
+          <table class="table-sm">
+            <thead>
+              <tr><th class="heading" colspan="5"> 2023 Masters: Players</th></tr>
+              <tr>
+                  <th>Rank</th>
                   <th>Player Name</th>
-                  <th>R1</th>
-                  <th>R2</th>
-                  <th>R3</th>
-                  <th>R4</th>
-                  <th>Total</th>
                   <th>Points</th>
+                  <th>Odds</th>
                   <th>Picked-By</th>
               </tr>
             </thead>
             <tbody>
-              <tr ng-repeat="player in players">
-                <td ng-bind="player.POS"></td>
-                <td ng-bind="player.Name"></td>
-                <td ng-bind="player.R1"></td>
-                <td ng-bind="player.R2"></td>
-                <td ng-bind="player.R3"></td>
-                <td ng-bind="player.R4"></td>
-                <td ng-bind="player.Total"></td>
-                <td ng-bind="player.Points"></td>
-                <td ng-bind="player.Picker"></td>
+           
+              <tr>
+                <td>21</td>
+                <td>Abraham Ancer</td>
+                <td>188.07</td>
+                <td>125</td>
+                <td><button type="button" class="btn btn-dark btn-sm">Pick</button></td>
               </tr>
+            
+              <tr>
+                <td>42</td>
+                <td>Adam Scott</td>
+                <td>103.93</td>
+                <td>100</td>
+                <td>0</td>
+              </tr>
+            
+              <tr>
+                <td>160</td>
+                <td>Alexander Bjork</td>
+                <td>48.16</td>
+                <td>300</td>
+                <td>0</td>
+              </tr>
+            
+              <tr>
+                <td>517</td>
+                <td>Ashley Chesters</td>
+                <td>16.13</td>
+                <td>500</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <td>367</td>
+                <td>Zander Lombard</td>
+                <td>25.24</td>
+                <td>500</td>
+                <td>0</td>
+              </tr>
+            
             </tbody>
-          </table> 
-          
+          </table>
+                     
+        </div>
+      </div>
+    </div>
+    
        
-    </div> <!-- col -->
-
-  </div> <!-- row -->
-  </div> <!-- container -->
-</div><!-- #tab1 -->
-
-<div id="tab2" class="tab_content"> 
-<div ng-controller="playersController">
- Player: <select ng-model="player" ng-options="player.Name for player in players track by player.rownum" ng-change="setPlayer()"></select> 
- Search: <input ng-model="query"> <p>  
-  <table ng-if="player">
-    <thead>
-      <tr><th colspan="9">{{player.Name}}</th></tr>
-      <tr>
-          <th><a href="#" ng-click="orderProp='Rank'">Pos</a></th>
-          <th><a href="#" ng-click="orderProp='ID'">Event Name</a></th>
-          <th><a href="#" ng-click="orderProp='R1'">R1</a></th>
-          <th><a href="#" ng-click="orderProp='R2'">R2</a></th>
-          <th><a href="#" ng-click="orderProp='R3'">R3</a></th>
-          <th><a href="#" ng-click="orderProp='R4'">R4</a></th>
-          <th><a href="#" ng-click="orderProp='Total'">Total</a></th>
-          <th><a href="#" ng-click="orderProp='-Points'">Points</a></th>
-          <th><a href="#" ng-click="orderProp='Picker'">Picked-By</a></th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr ng-repeat="event in events | filter:{Name: '!!'}| filter:query | orderBy:orderProp">
-        <td>{{event.POS}}</td>
-        <td>{{event.Name}}</td>
-        <td>{{event.R1}}</td>
-        <td>{{event.R2}}</td>
-        <td>{{event.R3}}</td>
-        <td>{{event.R4}}</td>
-        <td>{{event.Total}}</td>
-        <td>{{event.Points|number:2}}</td>
-        <td>{{event.Picker}}</td>
-      </tr>
-   </tbody>
-  </table>
-  <p>
-  <div ng-if="pickers" class="paddinglr5">
-    <table>
-    <thead>
-      <tr><th>Rank</th>
-          <th>Picker</th>	
-          <th>Players</a></th>	
-          <th>Points</th>
-         </tr>
-    </thead>
-   <tbody>
-       <tr ng-repeat="picker in pickers | filter:{Name: '!!'} | orderBy:'-Points'">
-        <td>{{picker.Rank}}</td>
-        <td>{{picker.Name}}</td>
-        <td>{{picker.Count}}</td>
-        <td class="paddinglr5">{{picker.Points|number:2}}</td>
-      </tr>   
-    </tbody>
-  </table>
-</div>
-</div>
-</div><!-- #tab2 -->
-
-
-<div id="tab3" class="tab_content">
-    <div ng-controller="eventsController">
-	<span>Search: <input ng-model="query"></span>   
- <p />
-  <table>
-     <thead>
-       <tr><th colspan="9">Events</th></tr>
-       <tr>
-           <th><a href="#" ng-click="orderProp='ID'">ID</a></th>
-           <th><a href="#" ng-click="orderProp='Name'">Event Name</a></th>
-           <th><a href="#" ng-click="orderProp='-ID'">Dates</a></th>
-           <th><a href="#" ng-click="orderProp='event_loc'">Location</a></th>
-           <th><a href="#" ng-click="orderProp='winner'">Winner</a></th>
-           <th><a href="#" ng-click="orderProp='-winner_points'">Winning Pts</a></th>
-           <th><a href="#" ng-click="orderProp='loser'">Loser</a></th>
-           <th><a href="#" ng-click="orderProp='-loser_points'">Losing Pts</a></th>
-           <th><a href="#" ng-click="orderProp='-winning_margin'">Winning Margin</a></th>
-       </tr>
-     </thead>
-     <tbody>
-       <tr ng-repeat="event in events | filter:query | orderBy:orderProp">
-         <td>{{event.ID}}</td>
-         <td>{{event.Name}}</td>
-         <td>{{event.event_dates}}</td>
-         <td>{{event.event_loc}}</td>
-         <td>{{event.winner}}</td>
-         <td>{{event.winner_points}}</td>
-         <td>{{event.loser}}</td>
-         <td>{{event.loser_points}}</td>
-         <td>{{event.winning_margin}}</td>
-       </tr>
-     </tbody>
-   </table>
-   <p></p>
-   <div ng-if="pickers" class="paddinglr5">
-     <table>
-     <thead>
-       <tr><th>Rank</th>
-           <th>Picker</th>
-           <th>Wins</th>
-           <th>Losses</th>
-           <th>Win Pct.</th>		   
-           <th>Avg Pts</th>
-          </tr>
-     </thead>
-    <tbody>
-        <tr ng-repeat="picker in pickers | filter:{Name: '!!'} | orderBy:'-points'">
-         <td>{{$index + 1}}</td>
-         <td>{{picker.Name}}</td>
-         <td>{{picker.Wins}}</td>
-         <td>{{picker.Losses}}</td>
-          <td class="paddinglr5">{{(100*picker.Wins/(picker.Wins+picker.Losses))|number:2}}</td>
-          <td class="paddinglr5">{{(picker.Points/(picker.Wins+picker.Losses))|number:2}}</td>
-       </tr>   
-     </tbody>
-   </table>
-   </div>
-</div><!-- #tab3 -->
-
-</div> <!-- .tab_container --> 
-</div> <!-- #container -->
-
-<script src="app.js"></script>
-<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-</body>
-
+    <!-- Option 1: Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+  </body>
 </html>

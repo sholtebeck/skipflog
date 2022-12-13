@@ -12,7 +12,7 @@ mypicks = [1,4,5,8,9,12,13,16,17,20,22]
 yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
 names={'sholtebeck':'Steve','mholtebeck':'Mark'}
 emails={'steve':'sholtebeck@gmail.com','mark':'mholtebeck@gmail.com'}
-numbers={'Steve':'5103005644@vtext.com','Mark':'5106739570@vmobl.com'}
+numbers={'Steve':'5103005644@tmomail.com','Mark':'5106739570@sms.boostmobile.com'}
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
 event_list=[]
 events_api="https://skipflog3.appspot.com/api/event/2000"
@@ -528,31 +528,38 @@ def post_players():
     odds=fetch_odds()
     odds_names=[o for o in odds.keys() if not o.startswith("event")]
     odds_names.sort()
-    rankings=get_rankings(500)
-    rank_names=[rank['name'] for rank in rankings]
+    rankings=get_rankings()
+    rank_names=[rank['Name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
     row=2
+    players=[]
 #   event=json_results(event_json)
     for pname in odds_names:
         print(pname)
         cell_list = worksheet.range('A'+str(row)+':F'+str(row))
         if match_name(pname,rank_names) in rank_names:
             player=rankings[rank_names.index(match_name(pname,rank_names))]
-            cell_list[0].value=player['rank']
-            cell_list[1].value=player['name']
-            cell_list[2].value=player['points']
-            cell_list[3].value=player['country']
-            cell_list[4].value=odds.get(pname)
+            player["Odds"]=odds.get(pname)
+            player["Picked"]=0
+            cell_list[0].value=player['Rank']
+            cell_list[1].value=player['Name']
+            cell_list[2].value=player['Points']
+            cell_list[3].value=player['Country']
+            cell_list[4].value=player['Odds']
             cell_list[5].value=0
+            row+=1
+            update=worksheet.update_cells(cell_list)
+            players.append(player)
         else:
-            cell_list = worksheet.range('B'+str(row)+':E'+str(row))
-            cell_list[0].value=pname
-            cell_list[1].value=0
-            cell_list[2].value='???'    
-            cell_list[3].value=odds.get(pname)
-        update=worksheet.update_cells(cell_list)
-        row+=1
+            print("NOT RANKED")
+#            cell_list = worksheet.range('B'+str(row)+':E'+str(row))
+#            cell_list[0].value=pname
+#            cell_list[1].value=0
+#            cell_list[2].value='???'    
+#            cell_list[3].value=odds.get(pname)
+#        update=worksheet.update_cells(cell_list)
         sleep(1)
+    return players
 
 
 # Post the rankings to the "Rankings" tab

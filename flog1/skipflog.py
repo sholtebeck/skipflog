@@ -11,8 +11,8 @@ events={ 4:'Masters',6:'US Open', 7:'Open Championship', 8:'PGA Championship'}
 mypicks = [1,4,5,8,9,12,13,16,17,20,22]
 yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
 names={'sholtebeck':'Steve','mholtebeck':'Mark'}
-emails={"steve":"sholtebeck@gmail.com","mark":"mholtebeck@gmail.com","skipflog":"skipfloguser@gmail.com"}
-numbers={'Steve':'5103005644@vtext.com','Mark':'5106739570@vmobl.com'}
+emails={"Steve":"sholtebeck@gmail.com","Mark":"mholtebeck@gmail.com","skipflog":"skipfloguser@gmail.com"}
+numbers={'Steve':'5103005644@tmomail.com','Mark':'5106739570@sms.myboostmobile.com'}
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
 event_list=[]
 skipflog_url='https://skipflog.appspot.com/'
@@ -85,7 +85,7 @@ def debug_values(number, string):
     if debug:
         print (number, string)
 
-# Handler for string values to ASCII or integer
+# Handler for string values to ASCII or integerp
 def xstr(string):
     if string is None:
         return None 
@@ -93,6 +93,12 @@ def xstr(string):
         return int(string)
     else:
         return str(''.join([i if ord(i) < 128 else ' ' for i in string]))
+		
+def get_date(datestr):
+    months=("","January","February","March","April","May","June","July","August","September","October","November","December")
+    (mm,dd,yyyy)=datestr.replace(',','').split()
+    return yyyy+str(months.index(mm)).zfill(2)+dd.zfill(2)
+
 
 # Function to get_points for a Position
 def get_rank(position):
@@ -111,9 +117,8 @@ def get_points(rank):
         return 0
 
 # Get the rankings from the getRankings cloud function
-def get_rankings(size=150):
-    rankings=json_results(ranking_url)
-    return rankings.get("players")
+def get_rankings(size=200):
+    return json_results(ranking_url)
 
 # Get the value for a string
 def get_value(string):
@@ -145,11 +150,10 @@ def get_pickers(first):
     return [{"name":p,"number": numbers.get(p), "picks":[],"points":0} for p in pickers]
 
 def open_worksheet(spread,work):
-#    gc = gspread.service_account('../../skipflog/skipflog.json')
-#    spreadsheet=gc.open(spread)
-#    worksheet=spreadsheet.worksheet(work)
-#    return worksheet
-     pass
+    gc = gspread.service_account('../../skipflog/skipflog.json')
+    spreadsheet=gc.open(spread)
+    worksheet=spreadsheet.worksheet(work)
+    return worksheet
 
 def fetch_worksheet(spread,sheet):
     if cache.get(sheet):
@@ -209,6 +213,7 @@ def default_event(event_id=current_event()):
     event["event_id"]=int(event['ID'])
     event["event_year"]=int(event['Name'][:4])
     event["event_name"]=event['Name']
+    event["lastpick"]=""
     event["next"]=event["first"]
     event["nextpick"]=event["next"]+"'s First Pick"
     event["pickers"]=get_pickers(event["first"])
@@ -485,7 +490,7 @@ def pick_player(event, player):
     if picker in picknames and player in playnames:
         p=picknames.index(picker)
         q=playnames.index(player)
-        new_event["pickers"][p]["picks"].append(player)
+        new_event["pickers"][p].get("picks",[]).append(player)
         new_event["players"][q]["picked"]=1
         new_event["pick_no"]=event["pick_no"]+1
         if event.get("lastpick") and event["lastpick"].startswith(picker):
@@ -520,8 +525,8 @@ def post_players():
     odds=fetch_odds()
     odds_names=list(odds.keys())
     odds_names.sort()
-    rankings=get_rankings(1500)
-    rank_names=[rank['name'] for rank in rankings]
+    rankings=get_rankings().get("players")
+    rank_names=[rank['Name'] for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
     row=2
 #   event=json_results(event_json)
