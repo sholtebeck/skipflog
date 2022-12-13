@@ -100,7 +100,7 @@ $(document).ready(function() {
   <td class="no-border" width="25%">
 {% if user %}
 <form action="/logout" method="post">
- <button id="signout">Sign Out</button>
+ <button id="signout" class="submit-btn">Sign Out</button>
   <label>Logged in as <b>{{ user }}</b>
 </form>
 {% else %}
@@ -118,7 +118,9 @@ $(document).ready(function() {
   <ul class="tabs"> 
         <li class="active" rel="tab1"> Picks </li>
         <li rel="tab2"> Players </li>
+  {% if results %}
         <li rel="tab3"> Results </li>
+  {% endif %}
   </ul>
 
 <div class="tab_container"> 
@@ -134,12 +136,12 @@ $(document).ready(function() {
 	<col width="250">
     <tr>
    {% for picker in event.pickers %}
-	<th class="heading">{{picker.Name}}</th>
+	<th class="heading">{{picker.name}}</th>
    {% endfor %}
     <tr>
    {% for picker in event.pickers %}
 	<td><ol>
-        {% for player in picker.Picks %}
+        {% for player in picker.picks %}
         <li>{{ player }}
         {% endfor %}
      </ol></td>
@@ -148,11 +150,11 @@ $(document).ready(function() {
   {% endif %}
    {% if user==event.next %}
     <p><form action="/pick" method="post">
-    <div>{{event.nextpick}}: <select name="player"> 
+    <div>{{event.nextpick}}: <select name="player">
   	 {% for player in event.players if player.picked ==0 %}
      <option>{{player.name}}</option>
      {% endfor %}
-     </select><input type="submit" class="submit-btn" id="subpick" name="submit" value="Pick"></div>
+    </select><input type="submit" class="submit-btn" id="subpick" name="submit" value="Pick"></div>
     <input type="hidden" name="who" value="{{user}}">
     <input type="hidden" name="event_id" value="{{event.event_id}}">
     <input type="hidden" name="pick_no" value="{{event.pick_no}}">
@@ -179,7 +181,7 @@ $(document).ready(function() {
    Search: <input ng-model="query"> <p>  
     <table>
       <thead>
-      <tr><th class="heading" colspan="7" ng-bind="event.event_name"></th></tr>
+      <tr><th class="heading" colspan="7" ng-bind="event_name"></th></tr>
         <tr>
       <th>#</th>
             <th><a href="#" ng-click="orderProp='name'">Player</a>  <a href="#" ng-click="orderProp='lastname'">Last Name</a></th>	
@@ -191,16 +193,16 @@ $(document).ready(function() {
           </tr>
       </thead>
       <tbody>
-        <tr ng-repeat="player in players | filter:query |orderBy:orderProp">
+        <tr ng-repeat="player in players | filter:query |orderBy:orderProp" ng-if="player.picked==0">
           <td ng-bind="$index + 1"></td>
-          <td ng-bind="player.Name"></td>
+          <td ng-bind="player.name"></td>
           <td ng-bind="player.country"></td>
-          <td ng-bind="player.Points |number:2"></td>
-          <td ng-bind="player.Rank"></td>
+          <td ng-bind="player.points |number:2"></td>
+          <td ng-bind="player.rank"></td>
           <td ng-bind="player.odds">/1</td>
           <td><span ng-if="player.picked>0">Picked</span>
 				   <form ng-if="player.picked==0" action="/pick" method="post">
-				<input type="hidden" name="who" ng-value="event.picker"><input type="hidden" name="player" ng-value="player.name"><input type="hidden" name="event_id" ng-value="event.event_id">
+				<input type="hidden" name="who" ng-value="event.picker"><input type="hidden" name="player" ng-value="player.name"><input type="hidden" name="event_id" ng-value="event_id">
 				<button id="submit-pick" type="submit" class="submit-btn" ng-disabled="event.nopick" >Pick</button>
           </form></td>
         </tr>
@@ -210,8 +212,9 @@ $(document).ready(function() {
   var skipflog = angular.module('skipflog', []);
   skipflog.controller('playersController', ['$scope', '$http',
     function($scope, $http) {
-      $http.get('/api/players').success(function(data) {
-        $scope.event = data.event;
+      $http.get('/api/event/{{event.event_id}}').success(function(data) {
+        $scope.event_name = data.event_name;
+        $scope.event_id = data.event_id;
         $scope.players = data.players;
       });
       $scope.orderProp = 'name';

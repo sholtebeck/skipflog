@@ -50,13 +50,20 @@
           font-size: 1.1em;
 	  background-color:#DDDDDD;
 	}
-	select {
+	input {
+		font-family: Helvetica, Arial, sans-serif;
+		font-size: 1.0em;
+		  }
+	option {
 	  font-family: Helvetica, Arial, sans-serif;
 	  font-size: 1.0em;
         }
 	#container {
 		width: 1300px;
 		margin: 0 auto;	
+	}
+	.largefont {
+		font-size: 1.1em;
 	}
 	table { 
 	color: #222222; /* Lighten up font color */

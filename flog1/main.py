@@ -13,10 +13,15 @@ app.secret_key = str.encode(firestore_json.get("apiKey"))
    
    
 def currentEvent():
-    now=datetime.datetime.now()
-    event_month=min(max(now.month,4),8)
-    event_current=100*(now.year-2000)+event_month
-    return event_current
+#    now=datetime.datetime.now()
+#    event_month=min(max(now.month,4),8)
+#    event_current=100*(now.year-2000)+event_month
+    return "2304"
+
+def lastSunday():
+    today=datetime.date.today()
+    sunday=today-datetime.timedelta(today.isoweekday())
+    return sunday.strftime('%Y%m%d')
 
 def fetchEvents():
     events = [{"event_id":int(f["ID"]),"event_dates":f["event_dates"], "event_loc":f["event_loc"],"event_name":f["Name"]} for f in fetch_events() if len(f["ID"])==4]
@@ -40,9 +45,10 @@ def getResults(event_id):
             results=None
     return results
 
-def getEvent(event_id=0):
+def getEvent(event_id=2304):
     event=models.get_event(event_id)
-#   event["results"]=models.get_results(event_id)
+    for picker in event['pickers']:
+        picker['picks']=picker.get("picks",[])
     return event
 
 def getUser(id_token=None):
@@ -69,19 +75,9 @@ def getLastPick(event,picker,player):
     else:
         return picker+" picked "+player
 
+  
 def updateLastPick(event):
-    # send alert if needed
-    pick_no = event['pick_no']
-    if (pick_no%2==0 or pick_no==21):
-        nextnum=[p["number"] for p in event["pickers"] if p["name"]==event["next"]]
-        mail.send_message(nextnum[0], event["event_name"], event["lastpick"])
-        mail.send_mail(event["event_name"], event["lastpick"])
-        models.send_message(event["lastpick"],current_time())
-    return True
-
-    
-def updateLastPick(event):
-    lastpick=getLastPick(event['lastpick'])
+    lastpick=getLastPick(event.get('lastpick',""))
     # send alert if needed
     pick_no = event['pick_no']
     event["next"]=event['pickers'][0] if mypicks.count(pick_no)>0 else event["pickers"][1]
@@ -104,17 +100,17 @@ def api_event(event_id=currentEvent()):
 
 @app.route('/api/events', methods=['GET','POST'])
 def api_events():
-    events=fetchEvents()    
+    events=models.get_events()
     return jsonify({'events': events })
 
-@app.route('/api/pick', methods=['POST'])
-def api_pick():
+@app.route('/api/pick/<string:event_id>', methods=['PUT'])
+def api_pick(event_id=currentEvent()):
     if not request.json or not 'player' in request.json:
         abort(400)
     picker=request.json.get("picker")
     player=request.json.get('player')
-    event=models.get_event('current')
-    picker=event["next"]
+    event=getEvent(event_id)
+#   picker=event["next"]
     if picker != event["next"]:
         return jsonify({'success':False,'message':event["nextpick"]})
     if player not in [p["name"] for p in event["players"] if p["picked"]==0]:
@@ -122,9 +118,9 @@ def api_pick():
     new_event=pick_player(event,player)
     if new_event != event: 
         success=updateEvent(new_event)
-        updateLastPick(new_event)
+#       updateLastPick(new_event)
         message=new_event.get("lastpick")
-    return jsonify({'success':success,'message':message})
+    return jsonify({'request': request.json, 'success':success,'message':message,'event':new_event })
 
 @app.route('/api/picks', methods=['GET'])
 @app.route('/api/picks/<int:event_id>', methods=['GET'])
@@ -138,17 +134,25 @@ def picks_handler(event_id=currentEvent()):
             pick_dict[player]=pickname
     return jsonify({'picks': pick_dict })
 
+@app.route('/api/player/<int:player_id>', methods=['GET'])
+def api_player(player_id=0): 
+    player=models.get_document("players",player_id)
+    return jsonify({"player":player})
+
 @app.route('/api/players', methods=['GET'])
-@app.route('/api/players/<int:picked>', methods=['GET'])
-def ApiPlayers(picked=None):   
-    event=getEvent(currentEvent())
-    eventdict={k:event[k] for k in [e for e in event.keys() if e.startswith("event") or e.endswith("pick")]}
-    eventdict["picker"]=getUser()
-    eventdict["nopick"]=(event["next"]!=eventdict["picker"])
-    players=event["players"]
-    if picked in (0,1):
-        players=[p for p in players if p.get("picked")==picked]
-    return jsonify({"event":eventdict, "players":players})
+def api_players(picked=None):   
+    players=[{"ID": p["rownum"],"Name":p["Name"],"POS":p["POS"],"Picked-Mark":p["picked"]["Mark"],"Picked-Steve":p["picked"]["Steve"],"Picked-Total":p["picked"]["Total"],"Points": p["picked"]["Points"]} for p in models.get_players() if p]
+    return jsonify({"players":players})
+
+@app.route('/api/rankings', methods=['GET','POST'])
+@app.route('/api/rankings/<int:date_id>', methods=['GET'])
+def api_rankings(date_id=lastSunday()):   
+    if request.method=="POST":
+        rankings=get_rankings() 
+        models.set_document("rankings", rankings["ID"], rankings)
+    else:
+        rankings = models.get_document('rankings',date_id)
+    return jsonify(rankings)
 
 @app.route('/api/results', methods=['GET'])
 @app.route('/api/results/<int:event_id>', methods=['GET','POST'])
@@ -171,7 +175,8 @@ def main_page():
     if user in skip_pickers or user=="skipflog":
 #       event_id=currentEvent()
         event=getEvent()
-        results=getResults()
+#        results=getResults()
+        results={}
         return render_template('index.html',event=event,results=results,user=user)
     else:
         return redirect('/login')
@@ -196,10 +201,9 @@ def login():
             usr=models.auth.sign_in_with_email_and_password(email, password)
             token=models.auth.refresh(usr['refreshToken'])
             session["user"]=user
-            return jsonify({"user":user, "session":session})
-#            return redirect("/")
+            return redirect("/")
         except Exception as e:
-            return jsonify({"user":user, "email":email, "error": str(e) })
+            return jsonify({"form":request.form, "user":user, "email":email,"error": str(e) })
     else:
         user=getUser()
         title='skipflog - major golf picks'
@@ -229,16 +233,16 @@ def mail_handler(event_id=currentEvent()):
 @app.route('/pick', methods=['GET','POST'])
 def pick_handler(event_id = currentEvent()): 
     if request.method=="POST":
-        event = getEvent(event_id)
-        event_id = request.form.get('event_id')
+        event_id = request.form.get('event_id',event_id)
         picker = request.form.get('who')
         player = request.form.get('player')
+        event = getEvent(event_id)
         # update event (add to picks, remove from field)
         if player in [p["name"] for p in event["players"]]:
             new_event=pick_player(event,player)
             if new_event != event:
                 updateEvent(new_event)
-                updateLastPick(new_event)
+#               updateLastPick(new_event)
     # redirect to main page
     return redirect('/',code=302)
 
@@ -254,7 +258,7 @@ def Players(event_id=currentEvent()):
     event=getEvent(event_id)
     event_name=event["Name"]
     players=event.get("players")
-    return render_template('players.html',event_name=event_name)
+    return render_template('players.html',event=event)
 
 @app.route('/ranking', methods=['GET'])
 def RankingHandler(): 
