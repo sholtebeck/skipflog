@@ -1,9 +1,9 @@
 # Main program for golfpicks app (skipflog3.appspot.com)
-from flask import Flask, abort, jsonify, render_template, redirect, request, session, send_from_directory
+from flask import Flask, abort, jsonify, render_template, redirect, request, session
 
 #from flask_cors import CORS
-from google.auth.transport import requests
-import google.oauth2.id_token
+#from google.auth.transport import requests
+#import google.oauth2.id_token
 import datetime, mail, models
 from skipflog import *
 
@@ -93,40 +93,16 @@ def getUser(id_token=None):
             return None 
     return user
 
-@app.route('/login', methods=['GET','POST'])
-def login_page(): 
-    message=""
-    if request.method == "POST":
-        user=request.form.get('user')
-        password=request.form.get('password')
-        email=emails.get(user.lower())
-        try:
-            usr=models.auth.sign_in_with_email_and_password(email, password)
-            token=models.auth.refresh(usr['refreshToken'])
-            session["user"]=user
-            return redirect('/')
-        except Exception as e:
-            message=str(e)
-
-    title='skipflog - major golf picks'
-    return render_template('login.html',title=title,message=message)
-
-@app.route('/logout', methods=['POST'])
-def logout(): 
-    title='skipflog - major golf picks'
-    session.pop('user', None)
-    return redirect('/login')
-
 @app.route('/', methods=['GET','POST'])
 def main_page(): 
     return render_template("index.html")
 
 @app.route("/manifest.json")
 def manifest():
-    return send_from_directory('./static', 'manifest.json')
+    return redirect('/static/manifest.json')
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory('./static', 'favicon.ico')
+    return redirect('/static/favicon.ico')
 
 @app.route('/api/events', methods=['GET','POST'])
 def api_events():
