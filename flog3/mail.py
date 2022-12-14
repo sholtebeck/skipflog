@@ -2,7 +2,7 @@
 # https://github.com/sendgrid/sendgrid-python
 import json
 from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+from sendgrid.helpers.mail import Mail, Content
 sg_config=json.load(open('config/sendgrid.json'))
 
 def send_message(message_to,mail_subject,message_content):
