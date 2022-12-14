@@ -171,7 +171,7 @@ def api_pick(event_id=currentEvent()):
     new_event=pick_player(event,player)
     if new_event != event: 
         success=updateEvent(new_event)
-#       updateLastPick(new_event)
+        updateLastPick(new_event)
         message=new_event.get("lastpick")
     return jsonify({'event':new_event, 'success':success,'message':message})
 
