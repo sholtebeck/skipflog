@@ -1,0 +1,263 @@
+body {
+  font-family: Helvetica, Arial, sans-serif;	
+        font-size: 1.1em;
+  background-color:#DDDDDD;
+}
+input,h5,ol,label {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 1.1em;
+    }
+option {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 1.0em;
+      }
+#container {
+  width: 1300px;
+  margin: 0 auto;	
+}
+.largefont {
+  font-size: 1.1em;
+}
+.smallfont {
+  font-size: 1.0em;
+}
+table { 
+color: #222222; /* Lighten up font color */
+font-family: Helvetica, Arial, sans-serif; /* Nicer font */
+border-collapse: 
+collapse; border-spacing: 0; 
+}
+.no-border { 
+  border: none!important; 
+  border-collapse: collapse;
+}
+td, th { border: solid; 
+  font-family: Helvetica, Arial, sans-serif; /* Nicer font */
+  font-size: 1.1em;
+} /* Make cells a bit taller */
+
+#submit {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 1.0em;
+}
+.submit-btn {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 1.0em;
+  }
+.heading {
+  font-size: 1.0em;
+  justify-content: center;
+  color: black;
+  background-color: lightgray;
+}
+.center {
+  text-align: center;
+  }
+.right {
+  float: right;
+}
+
+.App {
+  margin-top: 10px;
+}
+
+.login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui.card.login-card {
+  width: 450px;
+  align-items: center;
+}
+
+.ui.form input[type='text'],
+.ui.form input[type='date'],
+.ui.form input[type='password'],
+.ui.form select {
+  margin-top: 10px;
+}
+
+.login-button {
+  width: 80%;
+  align-content: center;
+}
+
+.logout {
+  float: right;
+  position: relative;
+  top: 4px;
+  right: 15px;
+}
+
+.small-button {
+  height: 30px;
+}
+.actions {
+  text-align: right;
+}
+
+.actions button {
+  margin-right: 5px;
+}
+
+.actions a {
+  margin-left: 5px;
+}
+
+/* profile image */
+.profile-image {
+  padding: 5px;
+  width: 100%;
+}
+
+.profile-image img {
+  width: 100%;
+  height: auto;
+}
+
+.file-input {
+  display: none;
+}
+
+.upload-button {
+  float: left;
+  width: 110px;
+}
+.delete-button {
+  float: right;
+  width: 50px;
+}
+
+
+select {
+  width: 100px;
+  height: 25px;
+}
+
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+
+.test-button{
+  height:15px;
+  width: 15px;
+  float: left;
+}
+
+.left-aligned {
+  float: left;
+}
+
+.table-header {
+  text-align:left;
+  background-color:lightgrey;
+}
+
+.column-header {
+  text-align:center;
+  background-color: whitesmoke;
+  font-weight: 600;
+}
+
+.no-border {
+  float: left; 
+  border: none;
+}
+
+nav {
+  border-bottom: 4px solid black;
+  text-align: left;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  background: white;
+}
+
+nav ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+nav li {
+  display: inline-block;
+  font-size: 16px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+nav a {
+  text-decoration: none;
+  color: black;
+  font-weight: bold;
+  padding: 10px 20px;
+}
+
+nav a:hover {
+  background: black;
+  color: white;
+}
+
+.nav-right {
+  position: absolute;
+  top: 1px;
+  right: 8px;
+}
+
+#page-body {
+  margin: auto;
+  padding-top: 50px;
+}
+
+div.halfsize {
+  max-width: 600px;
+  margin: 10px;
+  border: none;
+}
+
+div.photo-update {
+  max-width: 170px;
+  margin: 0px;
+  border: none;
+}
+
+.top-table {
+  margin-top: 30px;
+}
+
+.grid-5x5 {
+	/* Activate grid layout */
+	display: grid;
+	/* Create 5 columns, each 1 "fractional unit" wide */
+	grid-template-columns: repeat(5, 1fr);
+	/* Create 5 rows, each 1 "fractional unit" high */
+	grid-template-rows: repeat(5, 1fr);
+	/* Add a 10px gap between columns and rows */
+	grid-gap: 10px;
+}
+
+.grid-item {
+	background-color: rgba(229, 229, 229, 0.5);
+	border: 1px solid rgba(128, 128, 128, 0.5);
+	padding: 0.25em;
+  vertical-align: center; 
+}
+
+.pick-table {
+  width: 80%;
+  align-content: center;
+  margin: 10px;
+}
+
+.points-table {
+  width: 30%;
+  align-content: right;
+  margin: 10px;
+}
+
+.select-option {
+  width: 200px;
+}
