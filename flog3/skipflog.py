@@ -535,7 +535,6 @@ def post_players():
     players=[]
 #   event=json_results(event_json)
     for pname in odds_names:
-        print(pname)
         cell_list = worksheet.range('A'+str(row)+':F'+str(row))
         if match_name(pname,rank_names) in rank_names:
             player=rankings[rank_names.index(match_name(pname,rank_names))]
@@ -551,13 +550,17 @@ def post_players():
             update=worksheet.update_cells(cell_list)
             players.append(player)
         else:
-            print("NOT RANKED")
-#            cell_list = worksheet.range('B'+str(row)+':E'+str(row))
-#            cell_list[0].value=pname
-#            cell_list[1].value=0
-#            cell_list[2].value='???'    
-#            cell_list[3].value=odds.get(pname)
-#        update=worksheet.update_cells(cell_list)
+            print(pname + " NOT RANKED")
+            player={"Rank": 999, "Name": pname, "Points": 0, "Country": "???", "Odds": odds.get(pname)}
+            cell_list[0].value=player['Rank']
+            cell_list[1].value=player['Name']
+            cell_list[2].value=player['Points']
+            cell_list[3].value=player['Country']
+            cell_list[4].value=player['Odds']
+            cell_list[5].value=0
+            row+=1
+            update=worksheet.update_cells(cell_list)
+            players.append(player)
         sleep(1)
     return players
 

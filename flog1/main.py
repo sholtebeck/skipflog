@@ -16,12 +16,12 @@ def currentEvent():
 #    now=datetime.datetime.now()
 #    event_month=min(max(now.month,4),8)
 #    event_current=100*(now.year-2000)+event_month
-    return "2304"
+    return "2212"
 
 def lastSunday():
     today=datetime.date.today()
     sunday=today-datetime.timedelta(today.isoweekday())
-    return sunday.strftime('%Y%m%d')
+    return sunday.strftime('%y%m%d')
 
 def fetchEvents():
     events = [{"event_id":int(f["ID"]),"event_dates":f["event_dates"], "event_loc":f["event_loc"],"event_name":f["Name"]} for f in fetch_events() if len(f["ID"])==4]
@@ -45,7 +45,7 @@ def getResults(event_id):
             results=None
     return results
 
-def getEvent(event_id=2304):
+def getEvent(event_id=currentEvent()):
     event=models.get_event(event_id)
     for picker in event['pickers']:
         picker['picks']=picker.get("picks",[])

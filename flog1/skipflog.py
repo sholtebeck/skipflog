@@ -2,7 +2,7 @@
 import csv,datetime,json,sys,urllib.request
 from time import gmtime, strftime, sleep
 #import gspread
-from bs4 import BeautifulSoup
+#from bs4 import BeautifulSoup
 
 # Misc properties
 cache={}
@@ -185,6 +185,7 @@ def json_results(url):
         return {}
 
 def soup_results(url):
+    from bs4 import BeautifulSoup
     page=urllib.request.urlopen(url)
     soup = BeautifulSoup(page.read(),"html.parser")
     return soup
