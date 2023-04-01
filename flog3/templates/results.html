@@ -5,9 +5,12 @@
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
+{% if lastupdate %}
+  <p>Last Update: {{lastupdate}}</p>
+{% endif %}
 <table>
     <thead>
-      <tr><th colspan="9">{{results.event.Year }} {{results.event.Name }} ({{results.event.Status}})</th></tr>
+      <tr><th colspan="9">{{results.event.Name }} ({{results.event.Status}})</th></tr>
       <tr>
           <th>Pos</th>
           <th>Player Name</th>

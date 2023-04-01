@@ -32,7 +32,7 @@ def getResults(event_id):
     results = models.get_results(event_id)
     if not results:
         try:
-            results=new_results(int(event_id))
+            results=get_results(int(event_id))
             models.update_results(results)
         except:
             results=None
@@ -93,6 +93,14 @@ def getUser(id_token=None):
             return None 
     return user
 
+def sendResults(results_html):
+    event_name=fetch_header(results_html)
+    sent=models.is_sent(event_name)
+    if not sent:
+        sent=mail.send_mail(event_name,results_html)
+        models.send_message(event_name,current_time())
+    return sent
+
 @app.route('/', methods=['GET','POST'])
 def main_page(): 
     return render_template("index.html")
@@ -133,11 +141,8 @@ def mail_handler(event_id=currentEvent()):
         results_html=fetch_tables(picks_url)
     else:
         results_html=fetch_tables(results_url)
-    event_name = fetch_header(results_html)
-    sent=models.is_sent(event_name)
-    if not sent:
-        sent=mail.send_mail(event_name,results_html)
-        models.send_message(event_name,current_time())
+    event_name=fetch_header(results_html)
+    sent=sendResults(results_html)
     return jsonify({'event': event_name, "sent":sent })
 
 @app.route('/pick', methods=['GET','POST'])
@@ -191,6 +196,10 @@ def picks_handler(event_id=currentEvent()):
 @app.route('/picks/<int:event_id>', methods=['GET'])
 def Picks(event_id=currentEvent()):   
     event=getEvent(event_id)
+    for p in range(len(event["pickers"])):
+        if len(event["pickers"][p]["picks"])>10:
+            event["pickers"][p]["altpick"]=event["pickers"][p]["picks"][10]
+            event["pickers"][p]["picks"]=event["pickers"][p]["picks"][:10]
     return render_template('picks.html',event=event)
 
 @app.route('/api/players', methods=['GET'])
@@ -245,6 +254,17 @@ def ResultsHandler(event_id=currentEvent()):
 def ApiUser(event_id=currentEvent()):   
     user= getUser()
     return jsonify(models.get_document("users",user))
+
+@app.route('/updateresults', methods=['GET'])
+@app.route('/updateresults/<int:event_id>', methods=['GET'])
+def updateResults(event_id=currentEvent()):
+    savedResults=getResults(event_id)   
+    results=get_results(event_id)
+    if results['event']["Complete"] and results["event"]["Status"]!=savedResults["event"]["Status"]:
+        models.update_results(results)
+        results_html=fetch_tables(results_url)
+        sendResults(results_html)
+    return render_template('results.html',results=results,lastupdate=results["event"]["Last Update"])
 
 
 if __name__ == '__main__':
