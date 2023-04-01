@@ -201,6 +201,14 @@ def default_event(event_id=current_event()):
     event["pick_no"]=1 
     return event
 
+# Get the event data for a given event
+def fetch_event(event_id):
+    fevents=[f for f in fetch_events() if f["ID"]==str(event_id)]
+    if len(fevents)>0:
+        return fevents[0]
+    else:
+        return {"ID": event_id, "espn_url": espn_url }
+
 # Pull the ESPN url for a given event
 def fetch_url(event_id):
     fevents=[f for f in fetch_events() if f["ID"]==str(event_id)]
@@ -399,12 +407,14 @@ def get_results(event_id):
     picks=get_picks(event_id)
     for name in skip_pickers:
        picks[name]={"Name":name, "Count":0, "Points":0}
-    res_url=fetch_url(event_id)
+    res_event=fetch_event(event_id)
+    res_url=res_event["espn_url"]
     page=soup_results(res_url)
     results={}
     tie={"Points":100,"Players":[]}
     results['event']=fetch_headers(page)
     results['event']['ID']=event_id
+    results['event']['Name']=res_event["Name"]
     results['players']=[]
     rows=fetch_rows(page)
     for row in rows:
