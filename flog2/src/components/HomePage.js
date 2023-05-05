@@ -10,7 +10,7 @@ import { getEvent } from '../firebase-config';
 const currentEventID = () => {
     let today=new Date();
     const months=["04","04","04","04","05","06","07","07","07","07"];
-    return (today.getYear()-100).toString()+months[today.getMonth()+1];
+    return (today.getYear()-100).toString()+months[today.getMonth()];
 }
 
 
