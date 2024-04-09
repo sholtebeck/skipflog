@@ -20,6 +20,7 @@ mail_url="https://skipflog3.appspot.com/api/mail"
 events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AF21&output=csv"
 players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB155&output=csv"
 results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
+rankings_url="https://espn.com/golf/rankings"
 ranking_url="https://us-west2-skipflog.cloudfunctions.net/getRankings"
 result_url="https://us-west2-skipflog.cloudfunctions.net/getResults"
 result_api="https://skipflog3.appspot.com/api/results/"
@@ -94,6 +95,12 @@ def xstr(string):
     else:
         return str(''.join([i if ord(i) < 128 else ' ' for i in string]))
 
+# get Date in yymmdd format
+def get_date(datestr):
+    months=("","January","February","March","April","May","June","July","August","September","October","November","December")
+    (mm,dd,yyyy)=datestr.replace(',','').split()
+    return yyyy[2:]+str(months.index(mm)).zfill(2)+dd.zfill(2)
+
 # Function to get_points for a Position
 def get_rank(position):
     if not position.replace('T','').isdigit():
@@ -112,12 +119,37 @@ def get_points(rank):
 
 # Get the rankings from the getRankings cloud function
 def get_rankings(size=200):
-    rankings=json_results(ranking_url)
-    return rankings.get("players")[:size]
+    columns=("avg pts","points","events","points lost","points gained")
+    countries={'Argentina': 'ARG', 'Australia': 'AUS', 'Austria': 'AUT', 'Belgium': 'BEL', 'Canada': 'CAN', 'Chile': 'CHL', 'China': 'CHN', 'Chinese Taipei': 'TAI', 'Colombia': 'COL', 'Denmark': 'DEN', 'England': 'ENG', 'France': 'FRA', 'Germany': 'GER', 'India': 'IND', 'Ireland': 'IRE', 'Italy': 'ITA', 'Japan': 'JPN', 'Mexico': 'MEX', 'Netherlands':'NLD','New Zealand': 'NZL', 'Northern Ireland': 'NIR', 'Norway': 'NOR', 'Poland': 'POL', 'Scotland': 'SCO', 'South Africa': 'RSA', 'South Korea': 'KOR', 'Spain': 'ESP', 'Sweden': 'SWE', 'Thailand': 'THA', 'United States': 'USA', 'Venezuela': 'VEN', 'Wales': 'WAL', 'Zimbabwe': 'ZIM'}
+    rankings=[]
+    soup=soup_results(rankings_url)
+    lastdate=str(soup.find("p"))[80:-4]
+    headers=[th.string for th in soup.findAll("th")]
+    rank=pos=0
+    for row in soup.findAll('tr'):
+        #This is a header row
+        if row.find('a') and row.find("img") and len(row.findAll("td"))<4: 
+            rank+=1
+            name = row.find('a').string
+            url = row.find('a').get("href")
+            if (url):
+                id = url.split('/')[7]
+            country="USA"
+            if (row.find("img")):
+                country=row.find("img").get("title")
+            player={"ID":id,"Rank":rank,"Name":name,"Country": countries.get(country,country[:3].upper),"Points":0 }
+            rankings.append(player)
+        elif len(row.findAll("td"))>4: 
+            dlist=[float(t.string) for t in row.findAll("td")]
+            for d in range(len(dlist)):
+                if pos<len(rankings):
+                    rankings[pos][columns[d].capitalize().replace(" ","_")]=dlist[d]
+            pos+=1
+    return {"ID": get_date(lastdate), "date":lastdate,"players":rankings}
 
 # Get the value for a string
 def get_value(string):
-    string=string.replace(',','').replace('-','0')
+    string=str(string).replace(',','').replace('-','0')
     try:
         value=round(float(string),2)
     except:
@@ -172,7 +204,7 @@ def soup_results(url):
     soup = BeautifulSoup(page.read(),"html.parser")
     return soup
 
-def fetch_events(nrows=10):
+def fetch_events(nrows=50):
     if cache.get("events"):
         return cache["events"]
     if nrows>0:
@@ -180,6 +212,17 @@ def fetch_events(nrows=10):
     if len(event_list)==0:
         cache["events"]=event_list
     return event_list
+
+# Get the list of events from the spreadsheet 
+def get_events():
+    worksheet=open_worksheet('Majors','Events')
+    events=[]
+    all_rows=worksheet.get_all_values()
+    cols=[c for c in all_rows[0] if len(c)>0]
+    for r in range(1,len(all_rows)):
+        event={cols[c]:all_rows[r][c] for c in range(len(cols))}
+        events.append(event)
+    return events
 
 def fetch_players():
     players=cache.get("players",[])
@@ -265,10 +308,12 @@ def fetch_odds():
     locdate=[s.strip() for s in spans[2].text.split('\r\n')]
     odds["event_loc"]=" ".join(locdate[:2])
     odds["event_dates"]=locdate[2]
-    for tr in soup.findAll('tr')[:100]:
+    for tr in soup.findAll('tr')[:120]:
         td =tr.findAll('td')
         if len(td)==2 and td[0].string and '/' in td[1].string:
-            odds[xstr(td[0].string)]=xstr(td[1].string.split('/')[0])
+            name=xstr(td[0].string)
+            if name not in odds.keys():
+                odds[name]=xstr(td[1].string.split('/')[0])
     return odds        
 
 def fetch_rankings(row):
@@ -387,20 +432,19 @@ def get_players():
     cnum=ncols=6
     worksheet=open_worksheet('Majors','Players')
     players=[]
-    cols=[worksheet.cell(1,k).value for k in range(1,ncols+1)]
+    all_rows=worksheet.get_all_values()
     r=len(players)+2
-    while r < 108:
-        player={cols[c]:worksheet.cell(r,c+1).value for c in range(ncols)}
+    cols=all_rows[0]
+    for r in range(1,len(all_rows)):
+        player={cols[c]:all_rows[r][c] for c in range(len(cols))}
         player['rownum']=r
-        player['rank']=get_value(player.get('rank',9999))
+        player['rank']=get_value(player.get('rank',999))
         player['lastname']=player['name'].split(" ")[-1]
         player['points']=float(player['points'])
         player['odds']=int(player.get('odds',9999))
         player['picked']=0
         players.append(player)
-        print(player["name"])
-        r+=1
-        sleep(4)
+#       print(player["name"])
     return players
 
 def get_results(event_id):
@@ -517,8 +561,17 @@ def pick_player(event, player):
             new_event["nextpick"]=picknum
     return new_event
 
+def rank_name(name):
+    ranknames={'Ludvig Åberg':'Ludvig Aberg','Nicolai Højgaard':'Nicolai Hojgaard','Thorbjørn Olesen':'Thorbjorn Olesen'}
+    if name in ranknames.keys():
+        return ranknames.get(name)
+    else:
+        return name
+ 
+
 # Get a matching name from a list of names
-def match_name(name, namelist):
+def match_name(mname, namelist):
+    name=mname
     if name in namelist:
         new_name=name
     else:
@@ -537,21 +590,21 @@ def post_players():
 #    names=[name[1] for name in rows[3:] if name[1]!='']
     odds=fetch_odds()
     odds_names=[o for o in odds.keys() if not o.startswith("event")]
-    odds_names.sort()
-    rankings=get_rankings()
-    rank_names=[rank['Name'] for rank in rankings]
+    odds_names.sort(key=lambda o:odds[o])
+    rankings=get_rankings().get('players',[])
+    rank_names=[rank_name(rank['Name']) for rank in rankings]
     worksheet=open_worksheet('Majors','Players')
     row=2
     players=[]
 #   event=json_results(event_json)
     for pname in odds_names:
         cell_list = worksheet.range('A'+str(row)+':F'+str(row))
-        if match_name(pname,rank_names) in rank_names:
+        if pname in rank_names:
             player=rankings[rank_names.index(match_name(pname,rank_names))]
             player["Odds"]=odds.get(pname)
             player["Picked"]=0
             cell_list[0].value=player['Rank']
-            cell_list[1].value=player['Name']
+            cell_list[1].value=pname
             cell_list[2].value=player['Points']
             cell_list[3].value=player['Country']
             cell_list[4].value=player['Odds']
@@ -561,7 +614,7 @@ def post_players():
             players.append(player)
         else:
             print(pname + " NOT RANKED")
-            player={"Rank": 999, "Name": pname, "Points": 0, "Country": "???", "Odds": odds.get(pname)}
+            player={"Rank": 999, "Name": pname, "Points": 0, "Country": "USA", "Odds": odds.get(pname)}
             cell_list[0].value=player['Rank']
             cell_list[1].value=player['Name']
             cell_list[2].value=player['Points']
@@ -745,3 +798,13 @@ def mail_results():
     else:
         res={"last update":res["event"]["Last Update"], "status":status}
     return res
+    
+def post_event(event):
+    event_api=events_api.replace('2000',str(event["ID"]))
+    req = urllib.request.Request(event_api)
+    req.add_header('Content-Type', 'application/json; charset=utf-8')
+    jsondata = json.dumps(event)
+    jsonbytes = jsondata.encode('utf-8')   # needs to be bytes
+    req.add_header('Content-Length', len(jsonbytes))
+    response = urllib.request.urlopen(req, jsonbytes)
+    return response

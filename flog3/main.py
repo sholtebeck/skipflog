@@ -75,7 +75,7 @@ def updateLastPick(event):
         nextnum=[p.get("number") for p in event["pickers"] if p["name"]==event["next"]]
         if nextnum:
             mail.send_message(nextnum[0], event["event_name"], event["lastpick"])
-            mail.send_mail(event["event_name"], event["lastpick"])
+            mail.smtp_mail(event["event_name"], event["lastpick"])
         models.send_message(event["lastpick"],current_time())
     return True
 
@@ -97,7 +97,7 @@ def sendResults(results_html):
     event_name=fetch_header(results_html)
     sent=models.is_sent(event_name)
     if not sent:
-        sent=mail.send_mail(event_name,results_html)
+        sent=mail.smtp_mail(event_name,results_html)
         models.send_message(event_name,current_time())
     return sent
 

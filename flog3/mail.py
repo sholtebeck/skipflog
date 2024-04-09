@@ -1,9 +1,12 @@
 # sendmail using SendGrid's Python Library
 # https://github.com/sendgrid/sendgrid-python
-import json
+import json, smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Content
 sg_config=json.load(open('config/sendgrid.json'))
+sm_config=json.load(open('config/sendmail.json'))
 
 def send_message(message_to,mail_subject,message_content):
     try:
@@ -21,4 +24,17 @@ def send_message(message_to,mail_subject,message_content):
 def send_mail(mail_subject,mail_content):
     for sg_to_email in sg_config["sg_to"]:
         send_message(sg_to_email,mail_subject,mail_content)
+    return True
+
+# send mail using smtp library 
+def smtp_email(message_to,mail_subject,message_content):
+    msg = MIMEMultipart('alternative')
+    html = MIMEText(message_content,"html")
+    msg['Subject'] = mail_subject
+    msg['From'] = sm_config["sm_from"]
+    msg['To'] = message_to
+    msg.attach(html)
+    with smtplib.SMTP_SSL(sm_config["sm_server"], sm_config["sm_port"]) as smtp_server:
+       smtp_server.login(msg["From"], sm_config["sm_pass"])
+       smtp_server.sendmail(msg["From"], msg["To"], msg.as_string())
     return True
