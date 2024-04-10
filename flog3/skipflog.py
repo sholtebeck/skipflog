@@ -334,7 +334,7 @@ def fetch_results(row, columns):
     results={}
     player=row.find('a')
     if player:
-        results['Name']=str(player.string)
+        results['Name']=rank_name(player.string)
         debug_values('Name',results['Name'])
 #       results['Link']=yahoo_base_url+str(player.get('href'))
 #       debug_values('Link',results['Link'])

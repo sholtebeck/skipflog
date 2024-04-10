@@ -97,7 +97,7 @@ def sendResults(results_html):
     event_name=fetch_header(results_html)
     sent=models.is_sent(event_name)
     if not sent:
-        sent=mail.smtp_mail(event_name,results_html)
+        sent=mail.send_mail(event_name,results_html)
         models.send_message(event_name,current_time())
     return sent
 
@@ -135,9 +135,9 @@ def post_event(event_id=currentEvent()):
     return jsonify(event_json)
 
 @app.route('/mail', methods=['GET','POST'])
-@app.route('/mail/<int:event_id>', methods=['GET'])
+@app.route('/mail/<string:event_id>', methods=['GET'])
 def mail_handler(event_id=currentEvent()):
-    if request.method=="POST":
+    if request.method=="POST" or event_id=="picks":
         results_html=fetch_tables(picks_url)
     else:
         results_html=fetch_tables(results_url)
