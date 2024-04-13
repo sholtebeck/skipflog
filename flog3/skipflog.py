@@ -1,4 +1,4 @@
-# skipflog functions
+﻿# skipflog functions
 import csv,datetime,json,sys,urllib
 from time import gmtime, strftime, sleep
 import gspread
@@ -808,3 +808,21 @@ def post_event(event):
     req.add_header('Content-Length', len(jsonbytes))
     response = urllib.request.urlopen(req, jsonbytes)
     return response
+
+def event_results(event_id=current_event()):
+    event_api=events_api.replace('2000',str(current_event()))
+    new_event=json_results(event_api)
+    new_results=get_results(current_event())
+    top20_picks=[]    
+    for p in range(2):
+        r=[q["Name"] for q in new_results["pickers"]].index(new_event["pickers"][p]["name"])
+        new_event["pickers"][p]["points"]=new_results["pickers"][r]["Points"]
+        new_event["pickers"][p]["rank"]=new_results["pickers"][r]["Rank"]
+        if len(new_event["pickers"][p]["picks"])>10:
+            new_event["pickers"][p]["altpick"]=new_event["pickers"][p]["picks"][-1]
+            new_event["pickers"][p]["picks"]=new_event["pickers"][p]["picks"][:10]
+            top20_picks=top20_picks+new_event["pickers"][p]["picks"]            
+    new_event["lastupdate"]=new_results.get("event").get("Last Update")
+    new_event["status"]=new_results.get("event").get("Status")
+    new_event["players"]=[{k:p[k] for k in p.keys() if p[k] and p[k]!='--'} for p in new_results["players"]]
+    return new_event
