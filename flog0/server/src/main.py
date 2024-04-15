@@ -1,136 +1,117 @@
-import urllib
-from time import gmtime, strftime
-from bs4 import BeautifulSoup
-from flask import request,jsonify
+import urllib.request,json
+api_folder="D:\\Users\\sholtebeck\\GitHub\\skipflog3\\flog0\\static\\api\\"
+events_json=api_folder+"events.json"
+events_api="http://skipflog3.appspot.com/api/events"
+event_api="http://skipflog3.appspot.com/api/event/"
+results_api="http://skipflog3.appspot.com/api/results/"
 
-# Function to get_points for a Position
-def getRank(position):
-    if not position.replace('T','').isdigit():
-        return 99
-    else:
-        rank = int(position.replace('T',''))
-        return rank
+def json_results(url):
+    print("fetching",url)
+    try:
+        if url[:4]=="http":
+            page=urllib.request.urlopen(url)
+        else:
+            page=open(url)
+        results=json.load(page)
+        return results
+    except:
+        return {}
 
-def getPoints(rank):
-    points=[0, 100, 60, 40, 30, 24, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9.5, 9, 8.5,8,7.5,7,6.5,6,5.5,5,4.5,4,4,3.5,3.5,3,3,2.5,2.5,2,2,2,1.5,1.5]
-    if rank < len(points):
-        return points[rank]
-    elif rank <= 60:
-        return 1
-    else:
-        return 0
-		
-# Handler for string values to ASCII or integer
-def xStr(string):
-    if string is None:
-        return None 
-    elif string.isdigit():
-        return int(string)
-    else:
-        return str(''.join([i if ord(i) < 128 else ' ' for i in string]))
+def event_results(event_id):
+    cevent=json_results(event_api+str(event_id))
+    event={k:cevent[k] for k in cevent.keys() if k not in ('first', 'lastpick', 'next', 'nextpick', 'pick_no')}
+    cresults=json_results(results_api+str(event_id)).get("results")
+    # get a list of pickers
+    cpickers=cresults.get("pickers")
+    for p in range(2):
+        cpickers[p]["Picks"]=[e["picks"][:10] for e in cevent["pickers"] if e["name"]==cpickers[p]["Name"]][0]
+    event["pickers"]=cpickers
+    event['event_url']=cevent['espn_url']
+    event['winner']=cpickers[0]["Name"]
+    event['winner_points']=cpickers[0]["Points"]
+    event['loser']=cpickers[1]["Name"]
+    event['loser_points']=cpickers[1]["Points"]
+    event['winning_margin']=event['winner_points']-event['loser_points']
+    # get a list of players
+    cplayers=[]
+    for player in cresults["players"]:
+        if player.get("Picker") or player["Rank"]==1:
+            eplayer=[e for e in cevent["players"] if e.get("Name",e.get("name"))==player["Name"]][0]
+            cplayer={"Name":player["Name"],"Agg": int(player["TOT"]),"Cntry":player.get("country","USA"),"Pos":player["POS"],"Ranking Points":player['Points']}
+            for ckey in ['R4', 'R1', 'R2', 'R3', 'Rank', 'Points', 'Name', 'Total', 'POS', 'Picker']:
+                cplayer[ckey]=player.get(ckey,'')
+            cplayers.append(cplayer)
+    event["players"]=cplayers
+    return event
 
-def fetchHeaders(soup):
-    if not soup:
-        return None
-    headers={}
-    headers['Year']=strftime("%Y",gmtime())
-    event_name = soup.find('title')
-    if event_name and event_name.string:
-        event_string=str(event_name.string.replace(u'\xa0',u''))
-        headers['Name']=event_string[:event_string.index(' Golf')]
-    last_update = soup.find('span',{'class': "ten"})
-    if last_update:
-        headers['Last Update']= str(last_update.string[-13:])
-    else:
-        headers['Last Update']= str(strftime("%c",gmtime()))
-    dates=soup.find("span",{"class":"Leaderboard__Event__Date"})
-    if dates:
-        headers['Dates']=xStr(dates.string) 
-        headers['Year']=int(headers['Dates'][-4:])
-    location=soup.find("div",{"class":"Leaderboard__Course__Location"})
-    if location:
-        headers['Location']=xStr(location.text)
-    thead=soup.find('thead')
-    if soup.find("div",{"class":"status"}):
-        headers['Status']=str(soup.find("div",{"class":"status"}).find("span").string)
-        if headers['Status'].startswith("Round "):
-            headers['Round']=headers['Status'][6]
-    else:
-        headers['Round']=0
-    tables=soup.findAll("table")
-    if tables:
-        headers['Columns']=[]
-        for th in tables[-1].findAll('th'):
-            if th.a:
-                headers['Columns'].append(str(th.a.string))
-            elif th.string:
-                headers['Columns'].append(str(th.string))
-    return headers
+def update_players(json_events):
+    pickers=("Mark","Steve")
+    players=[]
+    pnames=[]
+    for event in json_events:
+        for player in [p for p in event['players'] if p.get("Picker")]:
+            pname=player["Name"]
+            if pname not in pnames:
+                pnames.append(pname)
+                nplayer={"Name":pname,"events":[],"pickers":[{'Name': picker, 'Count': 0, 'Points': 0.0, 'Rank': pickers.index(picker)+1} for picker in pickers]}
+                nplayer["rownum"]=len(pnames)-1
+                nplayer["picked"]={'Mark': 0, 'Steve': 0, 'Total': 0, 'Points': 0.0}
+                nplayer['POS']=len(pnames)
+                players.append(nplayer)
+                pnum=len(pnames)-1
+            else:
+                pnum=pnames.index(pname)
+            picker=player.get("Picker")
+            points=round(player.get("Points"),2)
+            pknum=pickers.index(picker)
+            players[pnum]["picked"][picker]+=1
+            players[pnum]["picked"]["Total"]+=1
+            players[pnum]["picked"]["Points"]+=points
+            players[pnum]["pickers"][pknum]["Count"]+=1
+            players[pnum]["pickers"][pknum]["Points"]+=points
+            pevent={k:player[k] for k in player.keys()}
+            pevent["Name"]=event["Name"]
+            pevent["ID"]=event["ID"]
+            pevent["Points"]=points
+            players[pnum]["events"].append(pevent)
+    for p in range(len(players)):
+        players[p]["rownum"]=len([player for player in players if player["Name"]<=players[p]["Name"]])        
+        players[p]["POS"]=len([player for player in players if player["picked"]["Points"]>=players[p]["picked"]["Points"]]) 
+        if players[p]["pickers"][1]["Points"]>players[p]["pickers"][0]["Points"]:
+            players[p]["pickers"][1]["Rank"]=1
+            players[p]["pickers"][0]["Rank"]=2
+            players[p]["pickers"]=players[p]["pickers"][::-1]           
+    players.sort(key=lambda p:p["rownum"])  
+    return players  
 
-def fetchResults(row, columns):
-    results={}
-    player=row.find('a')
-    if player:
-        results['Name']=str(player.string)
-        values=[val.string for val in row.findAll('td')]
-        for col,val in zip(columns,values):
-            if col not in ("None",None):
-                results[col]=str(val)
-        # Get Rank and Points
-        results['Rank']=getRank(results.get('POS','99'))
-        results['Points']=getPoints(results['Rank'])
-        # Get Scores
-        scores=[]
-        for round in ("R1","R2","R3","R4"):
-            if results.get(round) and results.get(round) not in ("--"):
-                scores.append(results.get(round))
-                results["Today"]=results[round]
-        results['Scores']="-".join(scores)
-        # Get Today
-        if not results.get('THRU'):
-            results['THRU']='-'
-        elif results.get('THRU')=='F':
-            results['Today']+='('+results['TODAY']+')'
-        elif results.get('THRU').isdigit():
-            results['Today']='('+results['TODAY']+') thru '+results['THRU']
-            results['Total']='('+results.get('SCORE')+') thru '+results['THRU']
-        elif results['THRU'][-2:] in ('AM','PM'):
-            results['Time']='@ '+results['THRU']
-        elif results['THRU'] in ('MC','CUT'):
-            results['Rank']=results['THRU']
-            results['Today']=results['THRU']
-        # Get Total
-        if results.get('TOT') not in (None,"--"):
-            results['Total']=results['TOT']+'('+results.get('SCORE')+')'
-    #remove unneeded values from the dictionary
-    for key in [k for k in results.keys() if k in ('EARNINGS','FEDEX PTS','TO PAR','PLAYER','THRU','Today')]:
-        results.pop(key)
-    return results
+def update_event(event_id):
+    events_json=api_folder+"events.json"
+    json_events=json_results(events_json)
+    players_json=api_folder+"players.json"
+    json_players=json_results(players_json)
+    event_ids=[e["ID"] for e in json_events["events"]]
+    event=event_results(event_id)
+    if event["ID"] not in event_ids:
+        json_events["events"].insert(0,event)
+    else:
+        i=event_ids.index(event["ID"])
+        json_events["events"][i]=event
+    epickers=json_events.get("pickers")
+    for p in range(2):
+        epickers[p]["Wins"]=len([e for e in json_events["events"] if e["winner"]== epickers[p]["Name"] ])
+        winner_points=sum([e["winner_points"] for e in json_events["events"] if e["winner"]== epickers[p]["Name"] ])
+        epickers[p]["Losses"]=len([e for e in json_events["events"] if e["loser"]== epickers[p]["Name"] ])
+        loser_points=sum([e["loser_points"] for e in json_events["events"] if e["loser"]== epickers[p]["Name"] ])
+        epickers[p]["Points"]=winner_points+loser_points
+        epickers[p]["Rank"]=p+1
+    json_events["pickers"]=epickers
+    with open(events_json, 'w') as f:
+        json.dump(json_events, f)   
+    json_players["players"]=update_players(json_events["events"])
+    with open(players_json, 'w') as f:
+        json.dump(json_players, f)   
 
-def getResults():
-    """Responds to any HTTP request.
-    Args:
-        request (flask.Request): HTTP request object.
-    Returns:
-        The response text or any set of values that can be turned into a
-        Response object using
-        `make_response <http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response>`.
-    """
-    url="http://www.espn.com/golf/leaderboard"
-    page = BeautifulSoup(urllib.request.urlopen(url).read(),"html.parser")
-    results={}
-    results['event']=fetchHeaders(page)
-    results['players']=[]
-    rows=page.findAll('tr') 
-    tie={"Points":100,"Players":[]}
-    for row in rows:
-        res=fetchResults(row, results.get('event').get('Columns'))
-        if res.get("Points",None)!=tie.get("Points"):
-            if len(tie["Players"])>1:
-                tie["Points"]=float(sum([skip_points[p+1] for p in tie["Players"]]))/len(tie["Players"])
-                for p in tie["Players"]:
-                    results["players"][p]["Points"]=tie["Points"]
-                tie={"Players": [len(results['players'])], "Points":res["Points"], "POS":res["POS"]}        
-        if res.get('R1'):
-            results['players'].append(res)
-    return results
+if __name__ == "__main__":
+    from time import gmtime, strftime
+    current_event=strftime("%y%m",gmtime())
+    update_event(current_event) 

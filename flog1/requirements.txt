@@ -1,5 +1,4 @@
-# Testing the new appengine libraries in python3
-# removing BeautifulSoup and Gspread libraries
-gunicorn
-Flask
-Pyrebase4
+# Building a new requirements
+fastapi
+uvicorn
+BeautifulSoup

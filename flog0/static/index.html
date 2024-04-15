@@ -179,7 +179,7 @@ $(document).ready(function() {
                 <td ng-bind="player.R3"></td>
                 <td ng-bind="player.R4"></td>
                 <td ng-bind="player.Total"></td>
-                <td ng-bind="player.Points"></td>
+                <td ng-bind="player.Points | number : 2"></td>
                 <td ng-bind="player.Picker"></td>
               </tr>
             </tbody>
