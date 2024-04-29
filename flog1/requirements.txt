@@ -1,4 +1,6 @@
-# Building a new requirements
+# Testing the new appengine libraries in python3
+BeautifulSoup4
 fastapi
 uvicorn
-BeautifulSoup
+requests
+
