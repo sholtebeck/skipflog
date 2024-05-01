@@ -6,6 +6,8 @@ import PicksTable from './PicksTable';
 import { Datatable } from './Datatable';
 import Button from "react-bootstrap/Button";
 import { getEvent } from '../firebase-config';
+import PointsTable from './PointsTable';
+import Results from './Results';
 
 const currentEventID = () => {
     let today=new Date();
@@ -18,6 +20,7 @@ const HomePage = () => {
     const [isLoading,setLoading] = useState(false);
     const [eventInfo, setEventInfo] = useState({});
     const [availablePlayers, setAvailablePlayers] = useState([]);
+    const [selectedPlayers, setSelectedPlayers] = useState([]);
     const [player, setPlayer] = useState("");
     const eventId=currentEventID();
     const { logOut, user } = useUserAuth();
@@ -30,9 +33,12 @@ const HomePage = () => {
         return eventInfo.players && userName() === eventInfo.next; 
     }
 
+    const complete = () => {
+        return eventInfo.status === "Final";
+    }
     const nextPick = () => {
         if (eventInfo.pick_no>22) {
-            return "We're Done"
+            return ""
         } else if (eventInfo.next !== userName()) {
             return "Waiting For "+ eventInfo.nextpick
         } else {
@@ -56,6 +62,7 @@ const HomePage = () => {
 //        const newEvent = response.data;
             setEventInfo(newEvent);
             setAvailablePlayers(newEvent.players.filter(function (player) { return player.picked === 0; }));
+            setSelectedPlayers(newEvent.players.filter(function (player) { return player.picker && player.points > 0; }));
             setPlayer(availablePlayers[0]);
         }
 
@@ -94,9 +101,12 @@ const HomePage = () => {
        <option >{player.name}</option>  ))}
      </select><Button variant="dark" onClick={() => handlePick()}>Pick</Button></h5>  
      : <h5>{nextPick()}</h5>}
+     
      </div>
       <div className="col">
       {canPick() && <Datatable rows={availablePlayers} columns={columns} pageSize="10" canPick={canPick()} handlePick={(player) => handlePick(player)} setPlayer={setPlayer} /> }
+      {complete() && <Results results={selectedPlayers} event_name={eventInfo.name} /> } <p/>
+      {complete() && <PointsTable pickers={eventInfo.pickers} /> }
       </div>
     </div>
     </div>

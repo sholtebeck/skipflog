@@ -1,6 +1,6 @@
-# Testing the new appengine libraries in python3
+# App Engine with BeautifulSoup4 and gspread
 BeautifulSoup4
 fastapi
 uvicorn
-requests
+gspread
 

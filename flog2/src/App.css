@@ -152,7 +152,7 @@ table, th, td {
 }
 
 .table-header {
-  text-align:left;
+  text-align:center;
   background-color:lightgrey;
 }
 
@@ -253,11 +253,41 @@ div.photo-update {
 }
 
 .points-table {
-  width: 30%;
+  width: 50%;
   align-content: right;
   margin: 10px;
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+
+
+.results-table {
+  width: 90%;
+  align-content: right;
+  margin: 5px;
+  border: 1px solid black;
+  border-collapse: collapse;
 }
 
 .select-option {
   width: 200px;
+}
+
+.table-data {
+  text-align:center;
+  border: 1px solid;
+  border-collapse: collapse;
+}
+
+.table-data-left {
+  text-align:left;
+  border: 1px solid;
+  border-collapse: collapse;
+}
+
+.table-border {
+  text-align:center;
+  background-color:lightgrey;
+  border: 1px solid;
+  border-collapse: collapse;
 }

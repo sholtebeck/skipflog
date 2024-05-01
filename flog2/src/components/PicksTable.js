@@ -12,8 +12,11 @@ const PicksTable = ({ pickers }) => (
 <tbody>
     <tr key="picks">
     {pickers.map(picker => (
-        <td><PickList picker={picker} /></td>
+        <td><PickList picker={picker} /> 
+        {picker.altpick && <div>Alt: {picker.altpick}</div>}
+        </td>
     ))}
+
     </tr>
 </tbody>
 </table>

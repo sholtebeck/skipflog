@@ -13,8 +13,6 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
 
-
-
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -24,6 +22,14 @@ export default app;
 export const getEvent = async (id) => {
   const db=getFirestore(app)
   const docRef = doc(db, "events", id);
+  const docSnap = await getDoc(docRef);
+  return (docSnap.exists() ? docSnap.data() : {} );
+};
+
+// Get Results from Firestore db 
+export const getResults = async (id) => {
+  const db=getFirestore(app)
+  const docRef = doc(db, "results", id);
   const docSnap = await getDoc(docRef);
   return (docSnap.exists() ? docSnap.data() : {} );
 };
