@@ -1,14 +1,22 @@
 from fastapi import FastAPI
-from soupflog import fetch_events,fetch_odds,fetch_players,fetch_rankings
+from soupflog import fetch_event,fetch_events,fetch_majors,fetch_odds,fetch_players,fetch_rankings
 app = FastAPI()
 
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
 
+@app.get("/event/{event_id}")
+async def event(event_id:int):
+    return fetch_event(event_id)
+
 @app.get("/events")
 async def events():
     return fetch_events()
+
+@app.get("/majors/{season}")
+async def majors(season:int):
+    return fetch_majors(season)
 
 @app.get("/odds")
 async def odds():
