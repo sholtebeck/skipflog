@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useUserAuth } from "../context/userAuthContext";
-import NavBar from './NavBar';
-import PicksTable from './PicksTable';
-import { Datatable } from './Datatable';
+//import axios from 'axios';
+import { useUserAuth } from "./context/userAuthContext";
+import NavBar from './components/NavBar';
+import PicksTable from './components/PicksTable';
+import { Datatable } from './components/Datatable';
 import Button from "react-bootstrap/Button";
-import { getEvent } from '../firebase-config';
-import PointsTable from './PointsTable';
-import Results from './Results';
+import { getEvent } from './firebase-config';
+import PointsTable from './components/PointsTable';
+import Results from './components/Results';
+import newEvent from './assets/event.json';
 
 const currentEventID = () => {
     let today=new Date();
@@ -57,7 +58,7 @@ const HomePage = () => {
     useEffect(() => {
         const loadEventInfo = async () => {
             setLoading(true);
-            const newEvent=await getEvent(eventId);
+//          const newEvent=await getEvent(eventId);
 //        const response = await axios.get(`/api/event/${eventId}`);
 //        const newEvent = response.data;
             setEventInfo(newEvent);
@@ -75,11 +76,11 @@ const HomePage = () => {
 
     const handlePick = async () => {
 
-            const response = await axios.put(`/api/pick/${eventInfo.ID}`, {
-                picker: userName(),
-                player: player
-            });
-            const newEvent = response.data.event;
+            //const response = await axios.put(`/api/pick/${eventInfo.ID}`, {
+            //    picker: userName(),
+            //    player: player
+            //});
+            //const newEvent = response.data.event;
             setEventInfo(newEvent);
             setAvailablePlayers(availablePlayers.filter(function (p) { return p.name !== player; }));
             setLoading(false);
