@@ -17,7 +17,7 @@ def currentEvent():
     return e["events"][0]["ID"]
 
 def fetchEvents():
-    events = [{"event_id":int(f["ID"]),"event_dates":f["event_dates"], "event_loc":f["event_loc"],"event_name":f["Name"]} for f in fetch_events()[:10] if len(f["ID"])==4]
+    events = fetch_events()
     return events
 
 def getPlayers(event_id='current'):
@@ -74,8 +74,8 @@ def updateLastPick(event):
     if (pick_no%2==0 or pick_no==21):
         nextnum=[p.get("number") for p in event["pickers"] if p["name"]==event["next"]]
         if nextnum:
-            mail.send_message(nextnum[0], event["event_name"], event["lastpick"])
-            mail.smtp_mail(event["event_name"], event["lastpick"])
+            mail.send_message(nextnum[0], event["Name"], event["lastpick"])
+            mail.send_mail(event["Name"], event["lastpick"])
         models.send_message(event["lastpick"],current_time())
     return True
 
@@ -260,10 +260,11 @@ def ApiUser(event_id=currentEvent()):
 def updateResults(event_id=currentEvent()):
     savedResults=getResults(event_id)   
     results=get_results(event_id)
-    if results['event']["Complete"] and results["event"]["Status"]!=savedResults["event"]["Status"]:
+    if results["event"]["Status"]!=savedResults["event"]["Status"]:
         models.update_results(results)
-        results_html=fetch_tables(results_url)
-        sendResults(results_html)
+        if "Complete" in results["event"]["Status"]:
+            results_html=fetch_tables(results_url)
+            sendResults(results_html)
     return render_template('results.html',results=results,lastupdate=results["event"]["Last Update"])
 
 
