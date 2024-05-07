@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc,getFirestore } from "firebase/firestore";
+import { doc,getDoc,getFirestore,setDoc } from "firebase/firestore";
 import firebaseConfig from './assets/firebase.json';
 
 // Firebase configuration (from .env file)
@@ -28,10 +28,9 @@ export const getEvent = async (id) => {
   return (docSnap.exists() ? docSnap.data() : {} );
 };
 
-// Get Results from Firestore db 
-export const getResults = async (id) => {
+// Update Event in Firestore db 
+export const updateEvent = async (eventInfo) => {
   const db=getFirestore(app)
-  const docRef = doc(db, "results", id);
-  const docSnap = await getDoc(docRef);
-  return (docSnap.exists() ? docSnap.data() : {} );
+  const docRef = doc(db, "events", eventInfo.ID);
+  await setDoc(docRef, eventInfo);
 };

@@ -98,4 +98,35 @@ export function isEmpty(obj = {}) {
   export function paginateRows(sortedRows, activePage, rowsPerPage) {
     return [...sortedRows].slice((activePage - 1) * rowsPerPage, activePage * rowsPerPage)
   }
+
+  export function pickPlayer(eventInfo,playerName) {
+    let player="";
+	  let turn=[0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1]
+	  let ord=["First","Second","Third","Fourth","Fifth","Sixth","Seventh","Eighth","Ninth","Tenth","Alt"]
+	  for (let p=0; p<eventInfo.players.length; p++) {
+		  if (eventInfo.players[p].name == playerName && eventInfo.players[p].picked == 0) { 	eventInfo.players[p].picked=1; player=playerName;	}
+	  }
+	  if (player) {
+	    for (let p=0; p<eventInfo.pickers.length; p++) { 
+			 if (eventInfo.pickers[p].name == eventInfo.next && eventInfo.pickers[p].picks.indexOf(player)==-1) { 
+			if (eventInfo.pick_no<=20) { eventInfo.pickers[p].picks.push(player); } else { eventInfo.pickers[p].altpick=player; }
+			} 
+		}
+    if (eventInfo.pick_no>1 && eventInfo.lastpick[0] == eventInfo.next[0]) {
+		  eventInfo.lastpick+=" and "+playerName
+		} else {
+			eventInfo.lastpick=eventInfo.next+" picked "+player
+		}
+		if (eventInfo.pick_no < turn.length) {
+			let t=turn[eventInfo.pick_no]
+			let n=eventInfo.pickers[t].picks.length;
+			eventInfo.next=eventInfo.pickers[t].name;
+			eventInfo.nextpick=eventInfo.next+"'s "+ord[n]+" Pick";
+			eventInfo.pick_no+=1;
+		  } else {
+		    eventInfo.next=eventInfo.nextpick="Pau";
+		  } 
+    }
+	return eventInfo;
+}
   

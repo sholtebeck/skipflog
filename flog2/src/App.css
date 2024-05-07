@@ -291,3 +291,7 @@ div.photo-update {
   border: 1px solid;
   border-collapse: collapse;
 }
+
+.table-top {
+  vertical-align: top;
+}

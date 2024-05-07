@@ -5,9 +5,10 @@ import NavBar from './NavBar';
 import PicksTable from './PicksTable';
 import { Datatable } from './Datatable';
 import Button from "react-bootstrap/Button";
-import { getEvent } from '../firebase-config';
+import { getEvent, updateEvent } from '../firebase-config';
 import PointsTable from './PointsTable';
 import Results from './Results';
+import {pickPlayer} from './helpers';
 
 const currentEventID = () => {
     let today=new Date();
@@ -26,7 +27,8 @@ const HomePage = () => {
     const { logOut, user } = useUserAuth();
 
     const userName = () => {         
-        return user && user.displayName ? user.displayName.split(" ")[0] : ""; 
+       return user && user.displayName ? user.displayName.split(" ")[0] : ""; 
+     //return eventInfo.next;
     }
 
     const canPick = () => {
@@ -37,9 +39,9 @@ const HomePage = () => {
         return eventInfo.status === "Final";
     }
     const nextPick = () => {
-        if (eventInfo.pick_no>22) {
+        if (!eventInfo.nextpick||eventInfo.pick_no>22) {
             return ""
-        } else if (eventInfo.next !== userName()) {
+        } else if (eventInfo.next !== userName() && eventInfo.next != "Pau") {
             return "Waiting For "+ eventInfo.nextpick
         } else {
             return eventInfo.nextpick
@@ -74,12 +76,13 @@ const HomePage = () => {
 //   if (!eventInfo) {        return <NotFoundPage />    }
 
     const handlePick = async () => {
-
-            const response = await axios.put(`/api/pick/${eventInfo.ID}`, {
-                picker: userName(),
-                player: player
-            });
-            const newEvent = response.data.event;
+        //    const response = await axios.put(`/api/pick/${eventInfo.ID}`, {
+        //        picker: userName(),
+        //        player: player
+        //    });
+        //    const newEvent = response.data.event;
+            const newEvent = pickPlayer(eventInfo,player);
+            await updateEvent(newEvent);
             setEventInfo(newEvent);
             setAvailablePlayers(availablePlayers.filter(function (p) { return p.name !== player; }));
             setLoading(false);
@@ -92,7 +95,7 @@ const HomePage = () => {
         <div className="row align-items-start">
         <div className="col">     
         {eventInfo.lastpick && <h5><b>Last Pick:</b> {eventInfo.lastpick} </h5>}
-        {eventInfo.pickers && <PicksTable pickers={eventInfo.pickers} />  }
+        {eventInfo.pickers && <PicksTable pickers={eventInfo.pickers} next={eventInfo.next} />  }
 
         {canPick() ? <h5 className="pick-table">{eventInfo.nextpick}: 
          <select className="select-option" name="player"  value={player}  onChange={(event) => {setPlayer(event.target.value)}}>

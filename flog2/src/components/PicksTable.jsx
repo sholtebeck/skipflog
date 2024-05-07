@@ -1,6 +1,6 @@
 import PickList from './PickList';
 
-const PicksTable = ({ pickers }) => (
+const PicksTable = ({ pickers, next }) => (
 <table className="pick-table">
 <thead>
     <tr className="heading">
@@ -12,7 +12,7 @@ const PicksTable = ({ pickers }) => (
 <tbody>
     <tr key="picks">
     {pickers.map(picker => (
-        <td><PickList picker={picker} /> 
+        <td><PickList picker={picker} next={picker.name == next && picker.picks.length<10 } /> 
         {picker.altpick && <div>Alt: {picker.altpick}</div>}
         </td>
     ))}

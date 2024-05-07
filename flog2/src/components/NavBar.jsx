@@ -37,9 +37,9 @@ const LogButton = () => {
         <LogButton />
         {error && <label>{error}</label>}
         {eventInfo && <>
-          <label><b>Event:</b>{eventInfo.Name} </label>
+          <label><b>Event:</b> {eventInfo.Name} </label>
           <label><b>Dates:</b> {eventInfo.event_dates} </label>
-          <label><b>Location:</b>{eventInfo.event_loc} </label>
+          <label><b>Location:</b> {eventInfo.event_loc} </label>
           </>
          }
         </div>
