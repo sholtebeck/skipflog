@@ -44,12 +44,12 @@ def update_event(event_data):
 def update_results(results_data):
     set_document('results',str(results_data['event']['ID']),results_data)
 
-def is_sent(name):
-    msg=get_document('messages',name)
+def is_sent(id):
+    msg=get_document('messages',id)
     if msg:
         return True
     else:
         return False 
             
-def send_message(name,sent):
-    set_document('messages',name,{"name":name, "sent": sent })    
+def send_message(id,name,sent):
+    set_document('messages',id,{"name":name, "sent": sent })    

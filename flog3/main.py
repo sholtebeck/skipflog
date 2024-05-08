@@ -72,12 +72,14 @@ def updateLastPick(event):
     # send alert if needed
     pick_no = event['pick_no']
     if (pick_no%2==0 or pick_no==21):
+        msgid=str(int(event["ID"])*100+event["pick_no"])
         nextnum=[p.get("number") for p in event["pickers"] if p["name"]==event["next"]]
-        if nextnum:
-            mail.send_message(nextnum[0], event["Name"], event["lastpick"])
+        if nextnum and not is_sent(msgid):
+            mail.smtp_email(nextnum[0], event["Name"], event["lastpick"])
             mail.send_mail(event["Name"], event["lastpick"])
-        models.send_message(event["lastpick"],current_time())
-    return True
+            models.send_message(msgid,event["lastpick"],current_time())
+            return True
+    return False  
 
 def getUser(id_token=None):
     user=session.get("user")
@@ -254,6 +256,12 @@ def ResultsHandler(event_id=currentEvent()):
 def ApiUser(event_id=currentEvent()):   
     user= getUser()
     return jsonify(models.get_document("users",user))
+
+@app.route('/updatelastpick', methods=['GET'])
+def updatePick():
+    evt=getEvent(currentEvent())
+    upd=updateLastPick(evt)
+    return jsonify({"update":upd})
 
 @app.route('/updateresults', methods=['GET'])
 @app.route('/updateresults/<int:event_id>', methods=['GET'])
