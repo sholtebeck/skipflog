@@ -226,13 +226,14 @@ def default_event(event_id=current_event()):
     event=fetch_event(event_id)
     event["event_id"]=int(event['ID'])
     event["event_year"]=int(event['Name'][:4])
+    event["lastpick"]=""
     event["next"]=event["first"]
     event["nextpick"]=event["next"]+"'s First Pick"
     event["pickers"]=get_pickers(event["first"])
     event["pick_no"]=1 
     odds=fetch_odds()
     odds_names=[o for o in odds.keys() if not o.startswith("event")]
-    players=[]
+    players=fetch_players()
     player_keys=['country', 'lastname', 'name', 'odds', 'picked', 'points', 'rank', 'rownum']
     ranks={p["name"]:{k:p.get(k) for k in player_keys} for p in fetch_rankings().get("players") if p["name"] in odds_names}
     for pname in ranks.keys():
@@ -329,6 +330,7 @@ def fetch_headers(soup):
 def fetch_majors(season=current_year()):
     majorevents=('Masters Tournament','PGA Championship','U.S. Open','The Open')
     majormap=(" Masters"," PGA Championship"," US Open"," Open Championship")
+    pickers=("Mark","Steve")
     majors=[]
     page=soup_results("https://www.espn.com/golf/schedule/_/season/"+str(season))
     for row in fetch_rows(page):
@@ -340,6 +342,7 @@ def fetch_majors(season=current_year()):
             event["espn_url"]=row.find('a').get("href")
             event["event_dates"]=event_dates(row.find('td').string,season)
             event["event_loc"]=[div.string for div in row.findAll('div') if div.string and div.string!=row.find('td').string][0]
+            event["first"]=pickers[sum(int(i) for i in event["ID"])%2]
             majors.append(event)
     return majors 
 
@@ -392,31 +395,6 @@ def fetch_details(row, columns):
         details['total']=vals.get("TOT")+'('+vals.get('SCORE')+')'
     return details
 
-def fetch_scores(url):
-    scores=[[],[], 0,0]
-    page=soup_results(url)
-    rows=fetch_rows(page)
-    cols=[]
-    if len(rows)>4:
-        cols=rows[3].findAll('td')
-    holenum=0
-    for col in cols:
-        if col.string.isdigit():
-            score=int(col.string)
-            if score < 20:
-                debug_values(holenum, score)
-                if holenum<10:
-                    scores[0].append(str(score))
-                    scores[2]+=score
-                else:
-                    scores[1].append(str(score))
-                    scores[3]+=score
-            else:
-                holenum-=1 
-        holenum+=1
-    scores.append(scores[2]+scores[3])
-    return scores       
-
 def fetch_tables(url):
     page=soup_results(url)
     tables=page.findAll('table')
@@ -445,16 +423,6 @@ def fetch_value(td):
     elif td.find("a"):
         return td.find("a").string   
 
-# Get the list of players
-def get_playerpicks(playlist):
-    current_rank=1
-    players=[]
-    for player in playlist:
-        if player.get('Picker'):
-            players.append([current_rank,player['Name'],player['Avg'],player['Week'],player['Rank'],player["points"],player['Picker']])
-            current_rank+=1
-    return players
-
 # Fetch the list of players from the spreadsheet 
 def fetch_players():
     cnum=ncols=6
@@ -482,6 +450,9 @@ def fetch_results(event_id):
     picked_players=[p["name"] for p in event["players"]]
     picks=get_picks(event["pickers"])
     page=soup_results(event["espn_url"])
+    headers=fetch_headers(page)
+    event["lastupdate"]=headers.get("lastupdate")
+    event["status"]=headers.get("status")
     rows=fetch_rows(page)
     hdr=[fetch_value(th) for th in rows[0].findAll('th')]
     players=[fetch_details(row,hdr) for row in rows[1:]]
@@ -510,6 +481,7 @@ def fetch_results(event_id):
     return event
 
 def next_pick(picknames,pick_no):
+    nextpick=[0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1]
     mypicks = [1,4,5,8,9,12,13,16,17,20,22]
     yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
     pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
@@ -524,10 +496,12 @@ def next_pick(picknames,pick_no):
 # Update an event with a picked player. Passing an event dict and an "X picked Y message"
 #  Verify that picker X is next and player Y is available (not picked yet)
 def pick_player(event, player):
+    nextpick=[0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1]
+    pick_ord=["First","Second","Third","Fourth","Fifth", "Sixth","Seventh","Eighth","Ninth","Tenth","Alt."]
     new_event=event.copy()
     picker=event["next"]
     picknames=[n["name"] for n in event["pickers"]]
-    playnames=[p["name"]+("z"*p["picked"]) for p in event["players"]]
+    playnames=[("*"*p["picked"])+p["name"] for p in event["players"]]
     if picker in picknames and player in playnames:
         p=picknames.index(picker)
         q=playnames.index(player)
@@ -538,16 +512,15 @@ def pick_player(event, player):
             new_event["lastpick"]=event["lastpick"]+" and "+player
         else:
             new_event["lastpick"]=picker+" picked "+player
-        picknext,picknum=next_pick(picknames,new_event["pick_no"])
-        new_event["next"]=picknext
-        if picknext:
-            new_event["nextpick"]=picknext+"'s "+picknum+" Pick"
+        p=new_event["pick_no"]
+        if p<len(nextpick):
+            n=nextpick[p]
+            ord=pick_ord[len(new_event["pickers"][n]["picks"])]
+            new_event["next"]=picknames[n]
+            new_event["nextpick"]=new_event["next"]+"'s "+ord+" Pick"
         else:
-            new_event["nextpick"]=picknum
+            new_event["nextpick"]=new_event["next"]="Pau"
     return new_event
-
-
- 
 
 # Get a matching name from a list of names
 def match_name(mname, namelist):
@@ -578,9 +551,8 @@ def post_players(players):
     return True
 
 # Post the rankings to the "Rankings" tab
-def post_rankings():
+def post_rankings(rankings):
     this_week=str((current_year()-2000)*100+current_week())
-    rankings=fetch_rankings()
     worksheet=open_worksheet('Majors','Rankings')
     #get date and week number from header
     cell_list=worksheet.range('A3:G202')
@@ -633,6 +605,22 @@ def post_event(event):
     response = urllib.request.urlopen(req, jsonbytes)
     return response
 
+def post_events(events):
+    worksheet=open_worksheet('Majors','Events')
+    cell_list=worksheet.range('A2:F'+str(len(events)+2))
+    for e in range(len(events)):
+        cell=e*6
+        cell_list[cell].value=events[e]["ID"]
+        cell_list[cell+1].value=events[e]["Name"]
+        cell_list[cell+2].value=events[e]["espn_url"]
+        cell_list[cell+3].value=events[e]["first"]
+        cell_list[cell+4].value=events[e]["event_dates"]
+        cell_list[cell+5].value=events[e]["event_loc"]
+    update=worksheet.update_cells(cell_list)
+
+def new_event():
+    pass   
+
 # Set up Event once Picks are done and field is verified     
 def update_event(event_id=current_event()):
     event=fetch_event(event_id)
@@ -643,10 +631,10 @@ def update_event(event_id=current_event()):
         if len(event["pickers"][p]["picks"])>10:
               event["pickers"][p]["altpick"]=event["pickers"][p]["picks"][-1]
               event["pickers"][p]["picks"]=event["pickers"][p]["picks"][:10] 
-              event["players"]=[player for player in event["players"] if player["name"]!=event["pickers"][p]["altpick"]]
+        event["players"]=[player for player in event["players"] if player["name"]!=event["pickers"][p]["altpick"]]
     picks=get_picks(event["pickers"])
     for q in range(len(event["players"])):
         event["players"][q]["picker"]=picks.get(event["players"][q]["name"])
         event["players"][q]["points"]=0
-        event["players"][q]["scores"]=event["players"][q]["total"]=""
+        event["players"][q]["scores"]=event["players"][q]["pos"]=event["players"][q]["total"]=""
     return event
