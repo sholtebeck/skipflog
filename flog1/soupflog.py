@@ -118,10 +118,12 @@ def get_points(rank):
 
 def tie_points(pos,num):
     rank=get_rank(pos)
-    if rank>40:
+    if rank>cut_rank():
+        return 0
+    elif rank>40:
         return 1
     elif num in (0,1):
-        return skip_points[pos]
+        return skip_points[rank]
     else:
         return get_value(sum(skip_points[rank:rank+num])/num)
 
@@ -455,7 +457,7 @@ def fetch_results(event_id):
     event["status"]=headers.get("status")
     rows=fetch_rows(page)
     hdr=[fetch_value(th) for th in rows[0].findAll('th')]
-    players=[fetch_details(row,hdr) for row in rows[1:]]
+    players=[fetch_details(row,hdr) for row in rows[1:] if row.find('a')]
     ties={t:tie_points(t,len([p for p in players if p["pos"]==t])) for t in set(p['pos'] for p in players if p['pos'][0]=='T')}
     for player in players:
         player["points"]=ties.get(player["pos"],player["points"])
