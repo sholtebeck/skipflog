@@ -19,7 +19,7 @@ const Results = ({results, event_name}) => (
              <td className="table-data-left">{result.name}</td>
              <td className="table-data">{result.scores}</td>
              <td className="table-data">{result.total}</td>
-             <td className="table-data">{ Math.floor(result.points) }</td>
+             <td className="table-data">{ result.points.toFixed(2) }</td>
              <td className="table-data">{result.picker}</td>
            </tr>
   ))}

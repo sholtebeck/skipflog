@@ -108,7 +108,7 @@ const HomePage = () => {
      </div>
       <div className="col">
       {canPick() && <Datatable rows={availablePlayers} columns={columns} pageSize="10" canPick={canPick()} handlePick={(player) => handlePick(player)} setPlayer={setPlayer} /> }
-      {complete() && <Results results={selectedPlayers} event_name={eventInfo.name} /> } <p/>
+      {complete() && <Results results={selectedPlayers} event_name={eventInfo.Name} /> } <p/>
       {complete() && <PointsTable pickers={eventInfo.pickers} /> }
       </div>
     </div>
