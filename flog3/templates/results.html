@@ -1,40 +1,34 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="knarflog">
+<html>
 <head>
   <title>skipflog:results</title>
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
-{% if lastupdate %}
-  <p>Last Update: {{lastupdate}}</p>
+{% if event.lastupdate %}
+  <p>Last Update: {{event.lastupdate}}</p>
 {% endif %}
 <table>
     <thead>
-      <tr><th colspan="9">{{results.event.Name }} ({{results.event.Status}})</th></tr>
+      <tr><th colspan="6">{{event.Name }} ({{event.status}})</th></tr>
       <tr>
           <th>Pos</th>
           <th>Player Name</th>
-          <th>R1</th>
-          <th>R2</th>
-          <th>R3</th>
-          <th>R4</th>
+          <th>Scores</th>
           <th>Total</th>
           <th>Points</th>
           <th>Picked-By</th>
       </tr>
     </thead>
     <tbody>
-   {% for player in results.players %}
+   {% for player in event.players %}
       <tr>
-        <td>{{player.POS}}</td>
-        <td>{{player.Name}}</td>
-        <td>{{player.R1}}</td>
-        <td>{{player.R2}}</td>
-        <td>{{player.R3}}</td>
-        <td>{{player.R4}}</td>
-        <td>{{player.Total}}</td>
-        <td>{{"%.2f"|format(player.Points)}}</td>
-        <td>{{player.Picker}}</td>
+        <td>{{player.pos}}</td>
+        <td>{{player.name}}</td>
+        <td>{{player.scores}}</td>
+        <td>{{player.total}}</td>
+        <td>{{"%.2f"|format(player.points)}}</td>
+        <td>{{player.picker}}</td>
       </tr>
     {% endfor %}
     </tbody>
@@ -50,16 +44,16 @@
          </tr>
     </thead>
    <tbody>
-{% for picker in results.pickers %}
+{% for picker in event.pickers %}
      <tr>
-        <td>{{picker.Rank}}</td>
-        <td>{{picker.Name}}</td>
-        <td>{{picker.Count}}</td>
-        <td>{{"%.2f"|format(picker.Points)}}</td>
+        <td>{{picker.rank}}</td>
+        <td>{{picker.name}}</td>
+        <td>{{picker.count}}</td>
+        <td>{{"%.2f"|format(picker.points)}}</td>
       </tr>   
 {% endfor %}
     </tbody>
   </table>
-</div><!-- #tab3 -->
+</div>
 </body>
 </html>

@@ -3,7 +3,6 @@
 import json,smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-sm_config=json.load(open('config/sendmail.json'))
 
 def send_message(message_to,mail_subject,message_content):
     try:
@@ -22,6 +21,11 @@ def send_message(message_to,mail_subject,message_content):
 
 # send mail using smtp library 
 def smtp_email(message_to,mail_subject,message_content):
+    try:
+        sm_config=json.load(open('config/sendmail.json'))
+    except:
+        from models import get_document
+        sm_config=get_document('messages','config')
     msg = MIMEMultipart('alternative')
     html = MIMEText(message_content,"html")
     msg['Subject'] = mail_subject

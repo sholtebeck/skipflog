@@ -1,12 +1,13 @@
-﻿# skipflog functions
+# skipflog functions
 import csv,datetime,json,sys,urllib
 from time import gmtime, strftime, sleep
+from urllib import request
 #import gspread
 from bs4 import BeautifulSoup
 
 # Misc properties
 cache={}
-#firestore_json=json.load(open('config/firestore.json'))
+firestore_json=json.load(open('config/firestore.json'))
 events={ 4:'Masters',6:'US Open', 7:'Open Championship', 8:'PGA Championship'}
 mypicks = [1,4,5,8,9,12,13,16,17,20,22]
 yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
@@ -15,7 +16,8 @@ emails={'steve':'sholtebeck@gmail.com','mark':'mholtebeck@gmail.com'}
 numbers={'Steve':'5103005644@tmomail.com','Mark':'5106739570@sms.boostmobile.com'}
 pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
 event_list=[]
-events_api="https://skipflog3.appspot.com/api/event/2000"
+event_api="https://skipflog3.appspot.com/api/event/"
+events_api="http://skipflog.appspot.com/events"
 mail_url="https://skipflog3.appspot.com/mail"
 events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AF21&output=csv"
 players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB155&output=csv"
@@ -23,7 +25,7 @@ results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU0
 rankings_url="https://espn.com/golf/rankings"
 ranking_url="https://us-west2-skipflog.cloudfunctions.net/getRankings"
 result_url="https://us-west2-skipflog.cloudfunctions.net/getResults"
-result_api="https://skipflog3.appspot.com/api/results/"
+results_api="https://skipflog.appspot.com/results/"
 results_url="https://skipflog3.appspot.com/results"
 players_api="http://knarflog.appspot.com/api/players"
 players_json="https://spreadsheets.google.com/feeds/cells/0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E/2/public/full?alt=json"
@@ -43,8 +45,8 @@ pgatour_url="http://www.pgatour.com/leaderboard.html"
 picks_csv = "picks.csv"
 picks_api = "https://skipflog3.appspot.com/api/picks/"
 picks_url = "https://skipflog3.appspot.com/picks"
-rankings_api="https://us-west2-skipflog.cloudfunctions.net/getRankings"
-results_api="https://us-west2-skipflog.cloudfunctions.net/getResults"
+rankings_api="https://skipflog.appspot.com/rankings"
+results_api="https://skipflog.appspot.com/results/"
 owg_ranking_url="http://www.owgr.com/ranking"
 yahoo_base_url="http://sports.yahoo.com"
 yahoo_url=yahoo_base_url+"/golf/pga/leaderboard"
@@ -159,37 +161,18 @@ def get_value(string):
     return value
     
 # Get the picks for an event
-def get_picks(event_id):
+def get_picks(pickers):
     picks={}
-    pickdict=json_results(picks_api+str(event_id))
-    if pickdict.get('picks'):
-        for picker in skip_pickers:
-            picklist=[str(pick) for pick in pickdict["picks"][picker][:10]]
-            picks[picker]={'Name':picker,'Count':len(picklist),'Picks':picklist,'Points':0}
-            for pick in picklist:
-                picks[str(pick)]=picker
-    else:
-        for picker in skip_pickers:
-            if pickdict.get(picker):
-                picklist=[str(pick) for pick in pickdict[picker][:10]]
-                picks[picker]={'Name':picker,'Count':len(picklist),'Picks':picklist,'Points':0}
-                for pick in picklist:
-                    picks[str(pick)]=picker
+    for picker in pickers:
+        picker_name=picker["name"]
+        picks[picker_name]={k:picker.get(k) for k in ("picks","points")}
+        for pick in picker['picks'][:10]:
+            picks[str(pick)]=picker_name
     return picks
 
 def get_pickers(first):
     pickers=[sp for sp in skip_pickers if sp==first]+[sp for sp in skip_pickers if sp!=first]
     return [{"name":p,"number": numbers.get(p), "picks":[],"points":0} for p in pickers]
-
-def open_worksheet(spread,work):
-    try:
-        import gspread
-        gc = gspread.service_account('config/skipflog.json')
-        spreadsheet=gc.open(spread)
-        worksheet=spreadsheet.worksheet(work)
-        return worksheet
-    except:
-        return None
 
 # json_results -- get results for a url (or file)
 def json_results(url):
@@ -209,13 +192,13 @@ def soup_results(url):
     return soup
 
 def fetch_events(nrows=50):
-    get_events()
+    return json_results(events_api)
 
 # Get the list of events from the spreadsheet 
 def get_events():
     events=cache.get("events",[])
     if len(events)==0:
-        events=json_results(events_api).get("events")
+        events=json_results(events_api)
         cache["events"]=events
     return events
 
@@ -239,13 +222,17 @@ def default_event(event_id=current_event()):
     event["pick_no"]=1 
     return event
 
+# Get the event name for an event ID
+def event_name(event_id):
+    ename={"04":" Masters","05":" PGA Championship","06":" US Open","07":" Open Championship","08":" PGA Championship"}
+    return "20"+str(event_id)[:2]+ename.get(str(event_id)[2:])
+
 # Get the event data for a given event
 def fetch_event(event_id):
-    fevents=[f for f in fetch_events() if f["ID"]==str(event_id)]
-    if len(fevents)>0:
-        return fevents[0]
-    else:
-        return {"ID": event_id, "espn_url": espn_url }
+    event=json_results(event_api+str(event_id))
+    if not event:
+        event={"ID": event_id, "Name":event_name(event_id), "espn_url": espn_url }
+    return event
 
 # Pull the ESPN url for a given event
 def fetch_url(event_id):
@@ -259,57 +246,45 @@ def fetch_headers(soup):
     if not soup:
         return None
     headers={}
-    headers['Year']=current_year()
+    headers['year']=current_year()
     event_name = soup.find('title')
     if event_name and event_name.string:
         event_string=str(event_name.string.replace(u'\xa0',u''))
-        headers['Name']=event_string[:event_string.index(' Golf')]
+        headers['name']=event_string[:event_string.index(' Golf')]
     last_update = soup.find('span',{'class': "ten"})
     if last_update:
-        headers['Last Update']= str(last_update.string[-13:])
+        headers['lastupdate']= str(last_update.string[-13:])
     else:
-        headers['Last Update']= current_time()
+        headers['lastupdate']= current_time()
     dates=soup.find("div", { "class" : "date"})
     if dates:
-        headers['Dates']=xstr(dates.string) 
-        headers['Year']=int(headers['Dates'][-4:])
+        headers['dates']=xstr(dates.string) 
+        headers['year']=int(headers['Dates'][-4:])
     thead=soup.find('thead')
     if soup.find("div",{"class":"status"}):
-        headers['Status']=str(soup.find("div",{"class":"status"}).find("span").string)
-        if headers['Status'].startswith("Round "):
-            headers['Round']=headers['Status'][6]
-        if "Complete" in headers["Status"] or "Final" in headers["Status"]:
-            headers["Complete"]=True
+        headers['status']=str(soup.find("div",{"class":"status"}).find("span").string)
+        if headers['status'].startswith("round "):
+            headers['round']=headers['status'][6]
+        if "Complete" in headers["status"] or "Final" in headers["status"]:
+            headers["complete"]=True
         else:
-            headers["Complete"]=False
+            headers["complete"]=False
     else:
-        headers['Round']=0
+        headers['round']=0
     tables=soup.findAll("table")
     if tables:
-        headers['Columns']=[]
+        headers['columns']=[]
         for th in tables[-1].findAll('th'):
             if th.a:
-                headers['Columns'].append(str(th.a.string))
+                headers['columns'].append(str(th.a.string))
             elif th.string:
-                headers['Columns'].append(str(th.string))
+                headers['columns'].append(str(th.string))
     return headers
+
     
 def fetch_odds():
-    odds_url='http://golfodds.com/upcoming-major-odds.html'
-    soup=soup_results(odds_url)
-    odds={}
-    spans=soup.findAll("span")
-    odds["event_name"]=str(current_year())+" "+" ".join(spans[1].text.split())
-    locdate=[s.strip() for s in spans[2].text.split('\r\n')]
-    odds["event_loc"]=" ".join(locdate[:2])
-    odds["event_dates"]=locdate[2]
-    for tr in soup.findAll('tr')[:120]:
-        td =tr.findAll('td')
-        if len(td)==2 and td[0].string and '/' in td[1].string:
-            name=xstr(td[0].string)
-            if name not in odds.keys():
-                odds[name]=xstr(td[1].string.split('/')[0])
-    return odds        
+    odds_api='https://skipflog.appspot.com/odds'
+    return json_results(odds_api) 
 
 def fetch_rankings(row):
     name = row.find('a')
@@ -325,70 +300,23 @@ def fetch_rankings(row):
         player['Points']=float(cols[9].text) 
     return player
        
-def fetch_results(row, columns):
-    results={}
-    player=row.find('a')
-    if player:
-        results['Name']=rank_name(player.string)
-        debug_values('Name',results['Name'])
-#       results['Link']=yahoo_base_url+str(player.get('href'))
-#       debug_values('Link',results['Link'])
-        values=[val.string for val in row.findAll('td')]
-        for col,val in zip(columns,values):
-            if col not in ("None",None):
-                results[col]=str(val)
-        # Get Rank and Points
-        results['Rank']=get_rank(results.get('POS','99'))
-        results['Points']=get_points(results['Rank'])
+def fetch_details(row, columns):
+    dcols=["name","pos","rank","points","scores","total"]
+    details={dc:"" for dc in dcols}
+    name=row.find('a')
+    if name:
+        details['name']=rank_name(name.string)
+        vals={col:fetch_value(val) for col,val in zip(columns,row.findAll('td')) if col and val}
+        # Get POS, Rank and Points
+        details['pos']=vals.get("POS")
+        details['rank']=get_rank(str(vals.get('POS','99')))
+        details['points']=get_points(details['rank'])
         # Get Scores
-        scores=[]
-        for round in ("R1","R2","R3","R4"):
-            if results.get(round) and results.get(round) not in ("--"):
-                scores.append(results.get(round))
-                results["Today"]=results[round]
-        results['Scores']="-".join(scores)
-        # Get Today
-        if not results.get('THRU'):
-            results['THRU']='-'
-        elif results.get('THRU')=='F':
-            results['Today']+='('+results['TODAY']+')'
-        elif results.get('THRU').isdigit():
-            results['Today']='('+results['TODAY']+') thru '+results['THRU']
-            results['Total']='('+results.get('SCORE')+') thru '+results['THRU']
-        elif results['THRU'][-2:] in ('AM','PM'):
-            results['Time']='@ '+results['THRU']
-        elif results['THRU'] in ('MC','CUT'):
-            results['Rank']=results['THRU']
-            results['Today']=results['THRU']
+        details['scores']='-'.join([str(vals.get(round)) for round in ("R1","R2","R3","R4") if vals.get(round) and vals.get(round) not in ("-","--")])
         # Get Total
-        if results.get('TOT') not in (None,"--"):
-            results['Total']=results['TOT']+'('+results['SCORE']+')'
-    return results
-
-def fetch_scores(url):
-    scores=[[],[], 0,0]
-    page=soup_results(url)
-    rows=fetch_rows(page)
-    cols=[]
-    if len(rows)>4:
-        cols=rows[3].findAll('td')
-    holenum=0
-    for col in cols:
-        if col.string.isdigit():
-            score=int(col.string)
-            if score < 20:
-                debug_values(holenum, score)
-                if holenum<10:
-                    scores[0].append(str(score))
-                    scores[2]+=score
-                else:
-                    scores[1].append(str(score))
-                    scores[3]+=score
-            else:
-                holenum-=1 
-        holenum+=1
-    scores.append(scores[2]+scores[3])
-    return scores       
+        #total=sum([int(score) for score in scores])
+        details['total']=vals.get("TOT")+'('+vals.get('SCORE')+')'
+    return details
 
 def fetch_tables(url):
     page=soup_results(url)
@@ -424,86 +352,45 @@ def get_playerpicks(playlist):
 
 # Get the list of players from the spreadsheet 
 def get_players():
-    fetch_players()
+    return fetch_players()
 
-def get_results(event_id):
-    picks=get_picks(event_id)
-    for name in skip_pickers:
-       picks[name]={"Name":name, "Count":0, "Points":0}
-    res_event=fetch_event(event_id)
-    res_url=res_event["espn_url"]
-    page=soup_results(res_url)
-    results={}
-    tie={"Points":100,"Players":[]}
-    results['event']=fetch_headers(page)
-    results['event']['ID']=event_id
-    results['event']['Name']=res_event["Name"]
-    results['players']=[]
-    rows=fetch_rows(page)
-    for row in rows:
-        res=fetch_results(row, results.get('event').get('Columns'))
-        if res.get('Name') in picks.keys():
-            picker=xstr(picks[res['Name']])
-            res['Picker']=picker
-        if res.get('Points',0)>=9:
-            if res["Points"]!=tie.get("Points"):
-                if len(tie["Players"])>1:
-                   tie["Points"]=float(sum([skip_points[p+1] for p in tie["Players"]]))/len(tie["Players"])
-                   for p in tie["Players"]:
-                        results["players"][p]["Points"]=tie["Points"]
-                tie={"Players": [len(results['players'])], "Points":res["Points"], "POS":res["POS"]}
-            else:
-                tie["Players"].append(len(results['players']))
-        if res.get('Picker') or res.get('Points',0)>=9:
-            res["Points"]=round(res["Points"],2)
-            del res["PLAYER"]
-            results['players'].append(res)
-    # get last tie
-    if len(tie["Players"])>1:
-        tie["Points"]=float(sum([skip_points[p+1] for p in tie["Players"]]))/len(tie["Players"])
-        for p in tie["Players"]:
-            results["players"][p]["Points"]=tie["Points"]
-    # filter players
-    results["players"]=[p for p in results["players"] if p["Points"]>20 or p.get("Picker")]
-    for picker in skip_pickers:
-        picks[picker]["Count"]=len([player for player in results.get("players") if player.get("Picker")==picker])
-        picks[picker]["Points"]=sum([player["Points"] for player in results.get("players") if player.get("Picker")==picker])
-    results['pickers']=[picks[key] for key in picks.keys() if key in skip_pickers]
-    if results['pickers'][1]['Points']>results['pickers'][0]['Points']:
-        results['pickers'].reverse()
-    for r in range(len(results["pickers"])):
-        results['pickers'][r]['Points']=round(results['pickers'][r]['Points'],2)
-        results['pickers'][r]['Rank']=r+1
-    return results
+def fetch_results(event_id):
+    event=fetch_event(event_id)
+    if event.get("status")!="Final":
+        picks=get_picks(event["pickers"])
+        pickedplayers=[p["name"] for p in event["players"]]
+        page=soup_results(event["espn_url"])
+        headers=fetch_headers(page)
+        event["lastupdate"]=headers.get("lastupdate")
+        event["status"]=headers.get("status")
+        rows=fetch_rows(page)
+        hdr=[fetch_value(th) for th in rows[0].findAll('th')]
+        players=[fetch_details(row,hdr) for row in rows[1:] if row.find('a')]
+        ties={t:tie_points(t,len([p for p in players if p["pos"]==t])) for t in set(p['pos'] for p in players if p['pos'][0]=='T')}
+        for player in players:
+            player["points"]=ties.get(player["pos"],player["points"])
+            if player["name"] in pickedplayers:
+                player["picker"]=picks[player["name"]]
+                pp=picked_players.index(player["name"])
+                for key in player.keys():
+                    event["players"][pp][key]=player[key]
+        event["players"].sort(key=lambda p:p["points"],reverse=True)
+        # filter players
+        if event['pickers'][1]["points"]>event['pickers'][0]['points']:
+            event['pickers']=[event['pickers'][1],event['pickers'][0]]
+            event["pickers"][0]["rank"]=1
+            event["pickers"][1]["rank"]=2
+    return event
 
-def new_results(event_id):
-    picks=get_picks(event_id)
-    for name in skip_pickers:
-       picks[name]={"Name":name, "Count":0, "Points":0}
-    res_url=fetch_url(event_id)
-    page=soup_results(res_url)
-    tie={"Points":100,"Players":[]}
-    results=json_results(results_api)
-    pts=[get_points(r) for r in range(len(results["players"])) if get_points(r)>0]
-    positions={p["POS"]: sum(1 for q in results["players"] if q["POS"]==p["POS"]) for p in results["players"]}
-    points={p:round(sum(pts[get_rank(p):get_rank(p)+positions[p]])/positions[p],2) for p in positions.keys() if get_rank(p)<len(pts)}
-    results['event']['ID']=event_id
-    for res in results["players"]:
-        res["Points"]=points.get(res["POS"],get_points(res["Rank"]))
-        if res.get('Name') in picks.keys():
-            picker=xstr(picks[res['Name']])
-            res['Picker']=picker
-    # filter players
-    results["players"]=[p for p in results["players"] if p["Points"]>20 or p.get("Picker")]
-    for picker in skip_pickers:
-        picks[picker]["Count"]=len([player for player in results.get("players") if player.get("Picker")==picker])
-        picks[picker]["Points"]=sum([player["Points"] for player in results.get("players") if player.get("Picker")==picker])
-    results['pickers']=[picks[key] for key in picks.keys() if key in skip_pickers]
-    if results['pickers'][1]['Points']>results['pickers'][0]['Points']:
-        results['pickers'].reverse()
-    for r in range(len(results["pickers"])):
-        results['pickers'][r]['Points']=round(results['pickers'][r]['Points'],2)
-        results['pickers'][r]['Rank']=r+1
+def fetch_value(td):
+    if td.string:
+        return td.string
+    elif td.find("a"):
+        return td.find("a").string
+
+
+def event_results(event_id=current_event()):
+    results=json_results(results_api+str(event_id))
     return results
 
 def next_pick(picknames,pick_no):
@@ -546,20 +433,6 @@ def rank_name(name):
         return ranknames.get(name)
     else:
         return name
- 
-
-# Get a matching name from a list of names
-def match_name(mname, namelist):
-    name=mname
-    if name in namelist:
-        new_name=name
-    else:
-        firstinitial=name[:2]
-        lastname=name.split()[-1]
-        listnames=[n for n in namelist if n.startswith(firstinitial) and n.endswith(lastname)]
-        listnames.append(name)
-        new_name=listnames[0]
-    return new_name
    
 # This will check results and send mail if complete
 def send_results():

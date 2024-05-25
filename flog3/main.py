@@ -237,20 +237,15 @@ def RankingHandler():
 @app.route('/api/results', methods=['GET'])
 @app.route('/api/results/<int:event_id>', methods=['GET','POST'])
 def ApiResults(event_id=currentEvent()): 
-    if request.method=="POST":
-        results=get_results(event_id) 
-        if results:
-            models.update_results(results) 
-            return render_template('results.html',results=results)
-    results = getResults(event_id)
-    return jsonify({"results":results})   
+    event = event_results(event_id)
+    return jsonify(event)   
     
 
 @app.route('/results', methods=['GET'])
 @app.route('/results/<int:event_id>', methods=['GET'])
 def ResultsHandler(event_id=currentEvent()):   
-    results = getResults(event_id)
-    return render_template('results.html',results=results)
+    event=getEvent(event_id)
+    return render_template('results.html',event=event)
 
 @app.route('/api/user', methods=['GET'])
 def ApiUser(event_id=currentEvent()):   
@@ -266,14 +261,15 @@ def updatePick():
 @app.route('/updateresults', methods=['GET'])
 @app.route('/updateresults/<int:event_id>', methods=['GET'])
 def updateResults(event_id=currentEvent()):
-    savedResults=getResults(event_id)   
-    results=get_results(event_id)
-    if results["event"]["Status"]!=savedResults["event"]["Status"]:
-        models.update_results(results)
-        if "Complete" in results["event"]["Status"]:
-            results_html=fetch_tables(results_url)
-            sendResults(results_html)
-    return render_template('results.html',results=results,lastupdate=results["event"]["Last Update"])
+    savedEvent=event=getEvent(event_id)
+    if savedEvent["status"]!="Complete": 
+        event=event_results(event_id)
+        if event["status"]!=savedEvent["status"]:
+            models.update_event(event)
+            if "Complete" in event["status"]:
+                results_html=fetch_tables(results_url)
+                sendResults(results_html)
+    return render_template('results.html',event=event)
 
 
 if __name__ == '__main__':
