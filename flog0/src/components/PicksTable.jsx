@@ -13,7 +13,7 @@ const PicksTable = ({ pickers }) => (
 <tbody>
     <tr className="table-row" key="picks">
     {pickers.map(picker => (
-        <td className="table-data"><PickList picker={picker} />
+        <td className="table-data-left"><PickList picker={picker} />
 		</td>
     ))}
     </tr>

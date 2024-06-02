@@ -6,50 +6,28 @@ from urllib import request
 from bs4 import BeautifulSoup
 
 # Misc properties
-cache={}
-firestore_json=json.load(open('config/firestore.json'))
-events={ 4:'Masters',6:'US Open', 7:'Open Championship', 8:'PGA Championship'}
-mypicks = [1,4,5,8,9,12,13,16,17,20,22]
-yrpicks = [2,3,6,7,10,11,14,15,18,19,21]
 names={'sholtebeck':'Steve','mholtebeck':'Mark'}
 emails={'steve':'sholtebeck@gmail.com','mark':'mholtebeck@gmail.com'}
 numbers={'Steve':'5103005644@tmomail.com','Mark':'5106739570@sms.boostmobile.com'}
-pick_ord = ["None", "First","First","Second","Second","Third","Third","Fourth","Fourth","Fifth","Fifth", "Sixth","Sixth","Seventh","Seventh","Eighth","Eighth","Ninth","Ninth","Tenth","Tenth","Alt.","Alt.","Done"]
-event_list=[]
-event_api="https://skipflog3.appspot.com/api/event/"
-events_api="http://skipflog.appspot.com/events"
-mail_url="https://skipflog3.appspot.com/mail"
-events_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=0&range=A1%3AF21&output=csv"
-players_url="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=1&range=B2%3AB155&output=csv"
-results_tab="https://docs.google.com/spreadsheet/pub?key=0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E&single=true&gid=2&output=html"
-rankings_url="https://espn.com/golf/rankings"
-ranking_url="https://us-west2-skipflog.cloudfunctions.net/getRankings"
-result_url="https://us-west2-skipflog.cloudfunctions.net/getResults"
-results_api="https://skipflog.appspot.com/results/"
-results_url="https://skipflog3.appspot.com/results"
-players_api="http://knarflog.appspot.com/api/players"
-players_json="https://spreadsheets.google.com/feeds/cells/0AgO6LpgSovGGdDI4bVpHU05zUDQ3R09rUnZ4LXBQS0E/2/public/full?alt=json"
-leaderboard_url="http://sports.yahoo.com/golf/pga/leaderboard"
-skip_user="skipfloguser"
-skip_picks={}
 skip_pickers=["Steve","Mark"]
 #skip_points=[0, 100, 60, 40, 35, 30, 25, 20, 15, 10, 9, 9, 8, 8, 7, 7, 7, 6, 6, 5, 5, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2]
 skip_points=[0, 100, 60, 40, 30, 24, 20, 18, 16, 15, 14, 13, 12, 11, 10, 9.5, 9, 8.5,8,7.5,7,6.5,6,5.5,5,4.5,4,4,3.5,3.5,3,3,2.5,2.5,2,2,2,1.5,1.5]
 # Misc urls
 espn_url="http://www.espn.com/golf/leaderboard"
-feed_url='https://spreadsheets.google.com/feeds'
-golfchannel_url="http://www.golfchannel.com/tours/usga/2014/us-open/"
-owg_url="http://www.owgr.com/en/Events/EventResult.aspx?eventid=5520"
-pga_url="http://www.pga.com/news/golf-leaderboard/pga-tour-leaderboard"
-pgatour_url="http://www.pgatour.com/leaderboard.html"
-picks_csv = "picks.csv"
-picks_api = "https://skipflog3.appspot.com/api/picks/"
-picks_url = "https://skipflog3.appspot.com/picks"
-rankings_api="https://skipflog.appspot.com/rankings"
-results_api="https://skipflog.appspot.com/results/"
-owg_ranking_url="http://www.owgr.com/ranking"
-yahoo_base_url="http://sports.yahoo.com"
-yahoo_url=yahoo_base_url+"/golf/pga/leaderboard"
+results_url="https://skipflog3.appspot.com/results"
+# feed_url='https://spreadsheets.google.com/feeds'
+# golfchannel_url="http://www.golfchannel.com/tours/usga/2014/us-open/"
+# owg_url="http://www.owgr.com/en/Events/EventResult.aspx?eventid=5520"
+# pga_url="http://www.pga.com/news/golf-leaderboard/pga-tour-leaderboard"
+# pgatour_url="http://www.pgatour.com/leaderboard.html"
+# picks_csv = "picks.csv"
+# picks_api = "https://skipflog3.appspot.com/api/picks/"
+# picks_url = "https://skipflog3.appspot.com/picks"
+# rankings_api="https://skipflog.appspot.com/rankings"
+# results_api="https://skipflog.appspot.com/results/"
+# owg_ranking_url="http://www.owgr.com/ranking"
+# yahoo_base_url="http://sports.yahoo.com"
+# yahoo_url=yahoo_base_url+"/golf/pga/leaderboard"
 debug=False
 
 # get current week and year

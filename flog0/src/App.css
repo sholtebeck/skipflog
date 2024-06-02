@@ -16,18 +16,16 @@ collapse; border-spacing: 0;
 }
 td, th { border: solid; 
   font-family: Helvetica, Arial, sans-serif; /* Nicer font */
-  font-size: 1.1em;
 } /* Make cells a bit taller */
 
 .heading {
-  font-size: 1.0em;
   justify-content: center;
   color: black;
   background-color: lightgray;
 }
 
 .pick-table {
-  width: 70%;
+  width: 80%;
   align-content: left;
   margin: 5px;
   border: 1px solid;
@@ -42,7 +40,6 @@ td, th { border: solid;
 
 input,h5,ol,label {
   font-family: Helvetica, Arial, sans-serif;
-  font-size: 1.0em;
   margin-left: 30px;
 }
 
@@ -81,7 +78,7 @@ input,h5,ol,label {
 }
 
 .event-table {
-  width: 90%;
+  width: 95%;
   align-content: center;
   margin: 20px;
 }
@@ -102,7 +99,7 @@ input,h5,ol,label {
   float: left;
 }
 .heading {
-	font-size: 1.0em;
+	font-size: 16px;
 	justify-content: center;
 	color: black;
 	background-color: lightgray;
@@ -113,14 +110,14 @@ input,h5,ol,label {
 }
 
 .strong {
-  font-size: 1.2em;
+  font-size: 18px;
     font-weight: bold;
     margin: 10px;
     text-align: left;
   }
 
   .weak {
-    font-size: 1.1em;
+    font-size: 18px;
       font-weight: 600;
       margin: 10px;
       text-align: left;

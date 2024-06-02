@@ -32,7 +32,7 @@ async def rankings():
 
 @app.post("/rankings/{id}")
 async def postrank(id:int):
-    rankings=get_rankings()
+    rankings=fetch_rankings()
     if rankings.get("ID")==id:
         post_rankings()
     return rankings

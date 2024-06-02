@@ -34,10 +34,9 @@ export const Players = () => {
     { accessor: 'points', label: 'Points'}
         ];	
 
-  return <div className="container">
+return <div className="container">
  <div className="row">
-        <div className="col-6"> 
-       <p />
+        <div className="col-6 mt-1"> 
        <Datatable rows={players} columns={columns} pageSize="12" headerName="Players:" />
        <p/>
        {player.pickers && <PointsTable pickers={player.pickers} /> }

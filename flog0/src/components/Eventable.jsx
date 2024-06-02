@@ -98,8 +98,8 @@ export function Eventable({ columns, rows, pageSize }) {
                         return (
                             <tr key={row.name}>
                                 {columns.map((column) => {
-                                    if (column.format) {
-                                        return <td className="table-data-left" key={column.accessor}>{column.format(row[column.accessor])}</td>
+                                    if (column.fixed) {
+                                        return <td className="table-data-left" key={column.accessor}>{row[column.accessor].toFixed(column.fixed)}</td>
                                     }                                  
                                     return <td className="table-data-left" key={column.accessor}>{row[column.accessor]}</td>
                                 })}

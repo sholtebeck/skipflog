@@ -10,10 +10,10 @@ export const Events = () => {
         { accessor: 'event_dates', label: 'Dates' },
         { accessor: 'event_loc', label: 'Location' },
         { accessor: 'winner', label: 'Winner'},
-        { accessor: 'winner_points', label: 'Winning Pts'},
+        { accessor: 'winner_points', label: 'Winning Pts',fixed:2},
         { accessor: 'loser', label: 'Loser'},
-        { accessor: 'loser_points', label: 'Losing Pts'},
-        { accessor: 'margin', label: 'Margin'}
+        { accessor: 'loser_points', label: 'Losing Pts',fixed:2},
+        { accessor: 'margin', label: 'Margin', fixed:2}
             ];	
 	
   return <div> <p /> <Eventable rows={events} columns={columns} pageSize="12" /> 
