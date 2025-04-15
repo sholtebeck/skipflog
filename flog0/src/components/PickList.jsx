@@ -1,8 +1,8 @@
 const PickList = ({ picker }) => (
     <>
-    <ol>
+    <ol class="list-group-numbered">
     {picker.picks.map(pick => (
-        <li className="left" key={pick}>{pick}</li>
+        <li class="list-group-item left ml-1" key={pick}>{pick}</li>
     ))}
     </ol>
     </>

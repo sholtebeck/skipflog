@@ -1,5 +1,5 @@
 import urllib.request,json
-api_folder="D:\\users\\sholtebeck\\GitHub\\flog0\\src\\data\\"
+api_folder="F:\\users\\sholtebeck\\GitHub\\flog0\\src\\data\\"
 events_json=api_folder+"events.json"
 players_json=api_folder+"players.json"
 event_api="http://skipflog3.appspot.com/api/event/"
